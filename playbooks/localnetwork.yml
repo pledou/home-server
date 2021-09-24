@@ -1,16 +1,14 @@
-#TODO
-
 ---
 - hosts: all
   pre_tasks:
     - name: create resolv-file for dnsmasq
       copy:
         content: |
-          nameserver 8.8.8.8
+          nameserver 8.8.8.8 #TODO
           nameserver 8.8.4.4
         dest: /etc/resolv.dnsmasq
   roles:
-    - dnsmasq
+    - oefenweb.dnsmasq
     - adfinis-sygroup.isc_dhcp_server
   vars:
     dnsmasq_dnsmasq_conf:

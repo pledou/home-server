@@ -1,23 +1,23 @@
 ---
 - hosts: all
   roles: 
-    host-defaults
+    - host-defaults
 
 - hosts: swarm_managers
   roles: 
-    docker
-    swarm-managers
+    - docker
+    - swarm-managers
 
 - hosts: swarm_workers
   roles: 
-    docker
-    swarm-workers
+    - docker
+    - swarm-workers
 
 - hosts: gluster_nodes
   roles: 
-    gluster
+    - gluster
 
 - hosts: swarm_managers
   roles:
-    traefik
-    portainer
+    - traefik
+    - portainer
