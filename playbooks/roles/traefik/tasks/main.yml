@@ -10,10 +10,19 @@
   shell: echo $(htpasswd -nb {{traefik_admin_user}} {{traefik_admin_password}}) | sed -e s/\\$/\\$\\$/g
   register: traefikpassword
 
+- name: Set host facts
+  when: inventory_hostname == groups['swarm_managers'][0]
+  set_fact:
+    USERNAME: "{{traefik_admin_user}}"
+    HASHED_PASSWORD: "{{traefikpassword}}"
+    DUCKDNS_SUBDOMAIN: "{{duckdns_subdomain}}"
+    DUCKDNS_TOKEN: "{{traefik_duckdns_token}}"
+    EMAIL: "{{traefik_email}}"
+
 - name: Create docker-compose stack file (on first swarm node)
   when: inventory_hostname == groups['swarm_managers'][0]
-  template:
-    src: traefik-stack.j2
+  copy:
+    src: docker-compose.yml
     dest: /home/{{ansible_user}}/stacks/traefik-stack.yml
     mode: 0775
 
