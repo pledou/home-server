@@ -1,1 +1,50 @@
 #TODO
+
+---
+- hosts: all
+  pre_tasks:
+    - name: create resolv-file for dnsmasq
+      copy:
+        content: |
+          nameserver 8.8.8.8
+          nameserver 8.8.4.4
+        dest: /etc/resolv.dnsmasq
+  roles:
+    - dnsmasq
+    - adfinis-sygroup.isc_dhcp_server
+  vars:
+    dnsmasq_dnsmasq_conf:
+      - |
+        port=53
+        listen-address={{ ansible_lo['ipv4']['address'] }}
+        bind-interfaces
+    dnsmasq_dnsmasq_d_files_present:
+      cache:
+        - |
+          domain-needed
+          bogus-priv
+          no-hosts
+          dns-forward-max=150
+          cache-size=1000
+          neg-ttl=3600
+          resolv-file=/etc/resolv.dnsmasq
+          no-poll
+
+    # isc_dhcp_server related packages
+    isc_dhcp_server_pkg: isc-dhcp-server
+
+    # isc_dhcp_server daemon
+    isc_dhcp_server_service: isc-dhcp-server
+
+    # OMAPI synchronization port
+    isc_dhcp_server_omapi_port: 7911
+
+    # DHCP server subnet configuration. Default is not to configure any subnets.
+    isc_dhcp_server_subnet:
+      - netaddress: 192.168.121.0
+        netmask: 255.255.255.0
+        routers: 192.168.121.1
+        domain: lab.local
+        domain_search: lab.local
+        dns: 192.168.121.1
+        range: 192.168.121.20 192.168.121.100
