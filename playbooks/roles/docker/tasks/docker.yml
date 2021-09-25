@@ -1,36 +1,26 @@
 ---
 - name: Install Docker Python library
   become: true
-  become_method: sudo
   pip:
-    name: docker
-
-- name: Remove old versions of Docker
-  become: true
-  become_method: sudo
-  apt:
-    state: absent
-    pkg:
-      - docker
-      - docker-engine
-      - docker.io
-      - containerd
-      - runc
-    force_apt_get: true
+    name: "{{ item }}"
+  loop:
+    - docker
+    - jsondiff
+    - pyyaml
 
 - name: Install Docker GPG key
   become: true
-  become_method: sudo
-  shell: "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -"
+  apt-key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
 
 - name: Add Docker repository
   become: true
-  become_method: sudo
-  shell: add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+  apt_repository:
+    repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable
 
 - name: Install Docker
   become: true
-  become_method: sudo
   apt:
     pkg:
       - docker-ce
@@ -40,26 +30,22 @@
     force_apt_get: true
     update_cache: yes
 
-- name: Add "{{ansible_user}}" user to "docker" group
+- name: Add "{{ ansible_user }}" user to "docker" group
   become: true
-  become_method: sudo
-  shell: "adduser {{ansible_user}} docker"
+  user: 
+    name: "{{ ansible_user }}"
+    group: docker
 
 - name: Waiting for Docker service to become available
   wait_for:
     path: /var/run/docker.sock
 
-- name: Reboot host(s) after Docker install
-  shell: sleep 2 && /sbin/shutdown -r now "ansible reboot request"
-  async: 1
-  poll: 0
-  ignore_errors: true
-  become: true
-  become_method: sudo
-  when: inventory_hostname != "127.0.0.1" and inventory_hostname != "localhost"
+- name: check for reboot request
+  stat:
+    path: /var/run/reboot-required
+  register: reboot_request
 
-- name: Waiting for host(s) to reboot
-  local_action: "wait_for host={{inventory_hostname}} port=22 state=started delay=60"
-  become: false
-  ignore_errors: true
-  when: inventory_hostname != "127.0.0.1" and inventory_hostname != "localhost"
+- name: Reboot host(s) after package upgrade
+  reboot:
+    reboot_timeout: 60
+  when: reboot_request.stat.exists

@@ -1,49 +1,26 @@
 ---
-- name: Verify stacks directory exists (on first swarm node)
+- name: Install traefik on first swarm_manager
   when: inventory_hostname == groups['swarm_managers'][0]
-  file:
-    path: "/home/{{ansible_user}}/stacks"
-    state: directory
+  block:
+  - name: Verify stacks directory exists (on first swarm node)
+    file:
+      path: "/home/{{ ansible_user }}/stacks"
+      state: directory
+      mode: 0644
 
-- name: Generate admin password hash
-  when: inventory_hostname == groups['swarm_managers'][0]
-  shell: echo $(htpasswd -nb {{traefik_admin_user}} {{traefik_admin_password}}) | sed -e s/\\$/\\$\\$/g
-  register: traefikpassword
+  - name: Generate admin password hash
+    command: echo $(htpasswd -nb {{ traefik_admin_user }} {{ traefik_admin_password }}) | sed -e s/\\$/\\$\\$/g
+    register: traefikpassword
 
-- name: Set host facts
-  when: inventory_hostname == groups['swarm_managers'][0]
-  set_fact:
-    USERNAME: "{{traefik_admin_user}}"
-    HASHED_PASSWORD: "{{traefikpassword}}"
-    DUCKDNS_SUBDOMAIN: "{{duckdns_subdomain}}"
-    DUCKDNS_TOKEN: "{{traefik_duckdns_token}}"
-    EMAIL: "{{traefik_email}}"
+  - name: Create docker-compose stack file (on first swarm node)
+    copy:
+      src: docker-compose.yml
+      dest: /home/{{ ansible_user }}/stacks/traefik-stack.yml
+      mode: 0775
 
-- name: Create docker-compose stack file (on first swarm node)
-  when: inventory_hostname == groups['swarm_managers'][0]
-  copy:
-    src: docker-compose.yml
-    dest: /home/{{ansible_user}}/stacks/traefik-stack.yml
-    mode: 0775
-
-- name: Install jsondiff Python library
-  when: inventory_hostname == groups['swarm_managers'][0]
-  become: true
-  become_method: sudo
-  pip:
-    name: jsondiff
-
-- name: Install pyyaml Python library
-  when: inventory_hostname == groups['swarm_managers'][0]
-  become: true
-  become_method: sudo
-  pip:
-    name: pyyaml
-
-- name: Deploy stack from a compose file (on first swarm node)
-  when: inventory_hostname == groups['swarm_managers'][0]
-  docker_stack:
-    state: present
-    name: traefik
-    compose:
-      - /home/{{ansible_user}}/stacks/traefik-stack.yml
+  - name: Deploy stack from a compose file (on first swarm node)
+    docker_stack:
+      state: present
+      name: traefik
+      compose:
+        - /home/{{ ansible_user }}/stacks/traefik-stack.yml

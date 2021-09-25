@@ -1,48 +1,31 @@
 ---
 - name: Check if Gluster volume is initialized
   stat:
-    path: "{{gluster_volume_path}}/{{inventory_hostname}}/brick"
+    path: "{{ gluster_volume_path }}/{{ inventory_hostname }}/brick"
   register: glustervolume
 
 - name: Verify Gluster volume path
   become: true
-  become_method: sudo
   file:
-    path: "{{gluster_volume_path}}/{{inventory_hostname}}/brick"
+    path: "{{ gluster_volume_path }}/{{ inventory_hostname }}/brick"
     state: directory
+    mode: 0644
 
-- name: Initialize Gluster Cluster (on first node)
-  when: glustervolume.stat.exists == false and inventory_hostname == groups['gluster_nodes'][0]
-  become: true
-  become_method: sudo
-  loop: "{{ groups['gluster_nodes'] }}"
-  shell: gluster peer probe {{ item }}
+- name: Configure Gluster volume.
+  gluster_volume:
+    state: present
+    name: "{{ gluster_volume_name }}"
+    brick: "{{ gluster_volume_path }}"
+    replicas: 2
+    cluster: "{{ groups.gluster_nodes | join(',') }}"
+    host: "{{ inventory_hostname }}"
+    force: yes
+  run_once: true
 
-- name: Create Gluster Volume (on first node)
-  when: glustervolume.stat.exists == false and inventory_hostname == groups['gluster_nodes'][0]
-  become: true
-  become_method: sudo
-  shell: >
-    gluster volume create {{gluster_volume_name}} \
-    replica 3 \
-    {{groups['gluster_nodes'][0]}}:{{gluster_volume_path}}/{{groups['gluster_nodes'][0]}}/brick \
-    {{groups['gluster_nodes'][1]}}:{{gluster_volume_path}}/{{groups['gluster_nodes'][1]}}/brick \
-    {{groups['gluster_nodes'][2]}}:{{gluster_volume_path}}/{{groups['gluster_nodes'][2]}}/brick
-- name: Secure Gluster Volume (on first node)
-  when: inventory_hostname == groups['gluster_nodes'][0]
-  become: true
-  become_method: sudo
-  shell: >
-    gluster volume set {{gluster_volume_name}} auth.allow  \
-    {{groups['gluster_nodes'][0]}},{{groups['gluster_nodes'][1]}},{{groups['gluster_nodes'][2]}}
-- name: Start Gluster Volume (on first node)
-  when: glustervolume.stat.exists == false and inventory_hostname == groups['gluster_nodes'][0]
-  become: true
-  become_method: sudo
-  shell: gluster volume start {{gluster_volume_name}}
-
-- name: Wait 60s for Gluster volume to be replicated
-  when: glustervolume.stat.exists == false and inventory_hostname == groups['gluster_nodes'][0]
-  become: true
-  become_method: sudo
-  shell: sleep 60
+- name: Ensure Gluster volume is mounted.
+  mount:
+    name: "{{ gluster_mount_dir }}"
+    src: "{{ inventory_hostname }}:/{{ gluster_brick_name }}"
+    fstype: glusterfs
+    opts: "defaults,_netdev"
+    state: mounted

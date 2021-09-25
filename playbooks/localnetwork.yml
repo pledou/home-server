@@ -2,11 +2,10 @@
 - hosts: all
   pre_tasks:
     - name: create resolv-file for dnsmasq
-      copy:
-        content: |
-          nameserver 8.8.8.8 #TODO
-          nameserver 8.8.4.4
+      template:
+        src: resolvconf.dnsmasq.j2
         dest: /etc/resolv.dnsmasq
+        mode: 0644
   roles:
     - oefenweb.dnsmasq
     - adfinis-sygroup.isc_dhcp_server
@@ -28,21 +27,15 @@
           resolv-file=/etc/resolv.dnsmasq
           no-poll
 
-    # isc_dhcp_server related packages
-    isc_dhcp_server_pkg: isc-dhcp-server
-
-    # isc_dhcp_server daemon
-    isc_dhcp_server_service: isc-dhcp-server
-
     # OMAPI synchronization port
     isc_dhcp_server_omapi_port: 7911
 
     # DHCP server subnet configuration. Default is not to configure any subnets.
     isc_dhcp_server_subnet:
-      - netaddress: 192.168.121.0
+      - netaddress: 192.168.21.2
         netmask: 255.255.255.0
-        routers: 192.168.121.1
-        domain: lab.local
-        domain_search: lab.local
-        dns: 192.168.121.1
-        range: 192.168.121.20 192.168.121.100
+        routers: 192.168.21.1
+        domain: leducd.local
+        domain_search: leducd.local
+        dns: 192.168.121.2, 192.168.21.1
+        range: 192.168.21.20 192.168.21.100

@@ -1,7 +1,6 @@
 ---
 - name: Install Gluster and dependencies
   become: true
-  become_method: sudo
   apt:
     pkg:
       - xfsprogs
@@ -14,8 +13,7 @@
     update_cache: yes
 
 - name: Enable Gluster service
-  become: true
-  become_method: sudo
+  become: true 
   systemd:
     name: glusterd
     enabled: yes
