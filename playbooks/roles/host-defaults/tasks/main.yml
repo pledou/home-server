@@ -22,8 +22,22 @@
   register: reboot_request
 
 - name: Reboot host(s) after package upgrade
-  reboot:
-    reboot_timeout: 60
+  become: true
+  block:
+    - name: Drain node
+      docker_node:
+        hostname: "{{ ansible_hostname }}"
+        availability: drain
+    - name: Wait end of drain process
+      wait_for:
+        timeout: 60
+    - name: Reboot
+      reboot:
+        reboot_timeout: 60
+    - name: Active node
+      docker_node:
+        hostname: "{{ ansible_hostname }}"
+        availability: active
   when: reboot_request.stat.exists
 
 - name: Upgrade all packages to the latest version

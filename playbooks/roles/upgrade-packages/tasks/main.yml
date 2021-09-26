@@ -14,6 +14,7 @@
   register: reboot_request
 
 - name: Reboot host(s) after package upgrade
+  become: true
   reboot:
     reboot_timeout: 60
   when: reboot_request.stat.exists

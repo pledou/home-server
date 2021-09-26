@@ -1,0 +1,256 @@
+version: "3.4"
+services:
+
+  ncdb:
+    deploy:
+      replicas: 1
+      labels:
+        - traefik.enable=false
+    environment:
+      - POSTGRES_DB=default
+      - POSTGRES_USER=nextcloud
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      - PGDATA=/var/lib/postgresql/data
+    image: postgres
+    networks:
+      - nc_backend
+    tty: true
+    user: postgres:postgres
+    volumes:
+      #- nexcloud-database-vol:/var/lib/postgresql/data:rw
+      - nextcloud-database:/var/lib/postgresql/data:rw
+    secrets:
+      - postgres_password
+
+  nextcloud:
+    deploy:
+      replicas: 1
+      labels:
+        traefik.enable: 'true'
+        traefik.docker.network: traefik_backend
+        traefik.constraint-label: traefik_backend
+        
+        traefik.http.routers.nginx-http.rule: Host(`${duckdns_subdomain}.duckdns.org`)
+        traefik.http.routers.nginx-http.entrypoints: http
+        traefik.http.routers.nginx-http.middlewares: https-redirect
+        
+        traefik.http.routers.nginx-https.rule: Host(`${duckdns_subdomain}.duckdns.org`)
+        traefik.http.routers.nginx-https.entrypoints: https
+        traefik.http.routers.nginx-https.middlewares: nginx@docker
+        traefik.http.routers.nginx-https.tls: 'true'
+        traefik.http.routers.nginx-https.tls.certresolver: le
+
+        traefik.http.routers.nginx-websecure.rule: Host(`${duckdns_subdomain}.duckdns.org`)
+        traefik.http.routers.nginx-websecure.entrypoints: websecure
+        traefik.http.routers.nginx-websecure.middlewares: nginx@docker
+        traefik.http.routers.nginx-websecure.tls: 'true'
+        traefik.http.routers.nginx-websecure.tls.certresolver: le
+
+        traefik.http.services.nginx.loadbalancer.server.port: 80
+
+        traefik.http.middlewares.nginx.headers.SSLRedirect: 'true'
+        traefik.http.middlewares.nginx.headers.STSIncludeSubdomains: 'true'
+        traefik.http.middlewares.nginx.headers.STSPreload: 'true'
+        traefik.http.middlewares.nginx.headers.STSSeconds: 315360000
+        traefik.http.middlewares.nginx.headers.browserXSSFilter: 'true'
+        traefik.http.middlewares.nginx.headers.contentTypeNosniff: 'true'
+        traefik.http.middlewares.nginx.headers.customFrameOptionsValue: SAMEORIGIN
+        traefik.http.middlewares.nginx.headers.forceSTSHeader: 'true'
+        traefik.http.middlewares.nginx.headers.referrerPolicy: no-referrer
+    environment:
+      - POSTGRES_DB=default
+      - POSTGRES_USER=nextcloud
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+    image: registry.leducd.duckdns.org/nextcloud
+    networks:
+      - nc_backend
+      - traefik_backend
+    volumes:
+      - nextcloud-www:/var/www/html:rw
+      - nextcloud-config:/var/www/html/config:rw
+      - nextcloud-data:/var/nc-data:rw
+      - nginx_config:/etc/nginx:rw
+    working_dir: /var/www/html
+    depends_on:
+      - ncdb
+      - redis
+    secrets:
+      - postgres_password
+
+  redis:
+    deploy:
+      replicas: 1
+      labels:
+        - traefik.enable=false
+    command: redis-server --requirepass ***REMOVED_REDIS_PASSWORD***
+    image: redis:alpine
+    networks:
+      - nc_backend
+    volumes:
+      #- redis-data:/data:rw
+      - redis-data:/data:rw
+    working_dir: /data
+
+  elasticsearch_tesseract:
+    deploy:
+      replicas: 1
+      labels:
+        traefik.enable: 'false'
+    image: registry.leducd.duckdns.org/elasticsearchfr:latest
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data:rw
+    networks:
+      - nc_backend
+    working_dir: /usr/share/elasticsearch
+    environment:
+      - node.name=esearch
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+
+  collabora_online:
+    deploy:
+      replicas: 1
+      labels:
+        traefik.enable: 'true'
+        traefik.docker.network: traefik_backend
+        traefik.constraint-label: traefik_backend
+        
+        traefik.http.routers.collabora-http.rule: Host(`collabora.${duckdns_subdomain}.duckdns.org`)
+        traefik.http.routers.collabora-http.entrypoints: http
+        traefik.http.routers.collabora-http.middlewares: https-redirect
+        
+        traefik.http.routers.collabora-https.rule: Host(`collabora.${duckdns_subdomain}.duckdns.org`)
+        traefik.http.routers.collabora-https.middlewares: collabora@docker
+        traefik.http.routers.collabora-https.entrypoints: https
+        traefik.http.routers.collabora-https.tls: 'true'
+        traefik.http.routers.collabora-https.tls.certresolver: le
+
+        traefik.http.middlewares.collabora.headers.SSLRedirect: 'true'
+        traefik.http.middlewares.collabora.headers.STSIncludeSubdomains: 'true'
+        traefik.http.middlewares.collabora.headers.STSPreload: 'true'
+        traefik.http.middlewares.collabora.headers.STSSeconds: 315360000
+        traefik.http.middlewares.collabora.headers.browserXSSFilter: 'true'
+        traefik.http.middlewares.collabora.headers.contentTypeNosniff: 'true'
+        traefik.http.middlewares.collabora.headers.customFrameOptionsValue: SAMEORIGIN
+        traefik.http.middlewares.collabora.headers.forceSTSHeader: 'true'
+        traefik.http.middlewares.collabora.headers.referrerPolicy: no-referrer
+
+        traefik.http.services.collabora.loadbalancer.server.port: 9980
+
+    cap_add:
+      - MKNOD
+    image: collabora/code:latest
+    environment:
+          - domain=collabora.${duckdns_subdomain}.duckdns.org
+    networks:
+      - traefik_backend
+      - nc_backend
+    volumes:
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - collabora-conf:/etc/loolwsd:rw
+
+  turn_server:
+    deploy:
+      replicas: 1
+      labels:
+        - traefik.enable=false
+    command:
+      - '-n --log-file=stdout --external-ip=$$(detect-external-ip) --listening-port=3478
+        --no-cli --fingerprint --use-auth-secret --static-auth-secret=jzstsfmh41l4wdhcyrqdjmiegc0b8i48
+        --realm=leducd.duckdns.org --total-quota=100 --bps-capacity=0 --stale-nonce
+        --no-multicast-peers'
+    entrypoint:
+      - docker-entrypoint.sh
+    image: instrumentisto/coturn:latest
+    networks:
+      - nc_backend
+      - bridge
+    ports:
+      - 0.0.0.0:3478:3478/tcp
+      - 0.0.0.0:3478:3478/udp
+    volumes:
+      - turnserver-data:/var/lib/coturn:rw
+
+
+networks:
+  traefik_backend:
+    external: true
+  bridge:
+    external: true
+  nc_backend:
+
+volumes:
+  redis-data:
+    external: true
+  turnserver-data:
+    external: true
+  nextcloud-www: 
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/nextcloud/www
+  nextcloud-config: 
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/nextcloud/config
+  nextcloud-data: 
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/nextcloud/data
+  collabora-conf: 
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/nextcloud/collabora
+  redis-data: 
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/next/redis
+  nextcloud-database: 
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/next/nextcloud-db/
+  turnserver-data: 
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/next/turn
+  nginx_config: 
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/nextcloud/nginx
+  elastic_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/next/elastic/
+
+secrets:
+  nextcloud_admin_password:
+    file: /opt/nextcloud/secrets/nextcloud_admin_secret
+  postgres_password:
+    file: /opt/nextcloud/secrets/database_user_secret
+  talk_password:
+    file: /opt/nextcloud/secrets/talk_secret
+  redis_password:
+    file: /opt/nextcloud/secrets/redis_secret 
