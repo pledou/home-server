@@ -3,3 +3,11 @@
   roles: 
     - traefik
     - portainer
+    - registry
+    - nextcloud
+    - kresus
+    - swarmpit
+
+- hosts: hassio
+  roles:
+    - hassio

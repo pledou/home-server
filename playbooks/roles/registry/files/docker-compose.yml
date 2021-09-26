@@ -1,0 +1,62 @@
+version: '3'
+
+services:
+  registry:
+    deploy:
+      placement:
+        constraints: 
+          - node.role == manager
+      replicas: 1
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik_backend
+        - traefik.constraint-label=traefik_backend
+        - traefik.http.routers.registry-http.rule=Host(`registry.${duckdns_subdomain}.duckdns.org`)
+        - traefik.http.routers.registry-http.entrypoints=http
+        - traefik.http.routers.registry-http.middlewares=https-redirect
+        - traefik.http.routers.registry-https.rule=Host(`registry.${duckdns_subdomain}.duckdns.org`)
+        - traefik.http.routers.registry-https.entrypoints=https
+        - traefik.http.routers.registry-https.tls=true
+        - traefik.http.routers.registry-https.tls.certresolver=le
+        - traefik.http.services.registry.loadbalancer.server.port=5000
+    image: registry:2
+    volumes:
+    - registry:/var/lib/registry:Z
+    networks:
+      - traefik_backend
+    environment: 
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
+
+  frontend:
+    deploy:
+      replicas: 1
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik_backend
+        - traefik.constraint-label=traefik_backend
+        - traefik.http.routers.registryf-http.rule=Host(`registryf.${duckdns_subdomain}.duckdns.org`)
+        - traefik.http.routers.registryf-http.entrypoints=http
+        - traefik.http.routers.registryf-http.middlewares=https-redirect
+        - traefik.http.routers.registryf-https.rule=Host(`registryf.${duckdns_subdomain}.duckdns.org`)
+        - traefik.http.routers.registryf-https.entrypoints=https
+        - traefik.http.routers.registryf-https.tls=true
+        - traefik.http.routers.registryf-https.tls.certresolver=le
+        - traefik.http.services.registryf.loadbalancer.server.port=80
+    image: konradkleine/docker-registry-frontend:v2 
+    networks:
+      - traefik_backend
+    environment: 
+      ENV_DOCKER_REGISTRY_HOST: registry.${duckdns_subdomain}.duckdns.org 
+      ENV_DOCKER_REGISTRY_PORT: 443
+      ENV_DOCKER_REGISTRY_USE_SSL: 1
+    depends_on: 
+      - registry
+
+networks:
+  traefik_backend:
+    external: true
+
+volumes:
+  registry: 
+    driver: glusterfs
+    name: "gfs/registry"

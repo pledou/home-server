@@ -1,0 +1,72 @@
+version: "3.4"
+services:
+  homeassistant:
+    labels:
+      - traefik.enable='false'
+    entrypoint:
+      - /init
+    hostname: homeassistant
+    image: homeassistant/home-assistant:stable
+    network_mode: host
+    # ports:
+    #   - 8123:8123/tcp
+    privileged: true
+    restart: always
+    security_opt:
+      - label=disable
+    volumes:
+      - /run/dbus:/run/dbus:ro
+      - homeassistant:/config:rw
+      - /etc/machine-id:/etc/machine-id:ro
+    working_dir: /config
+    depends_on:
+      - mosquitto
+
+  mosquitto:
+    labels:
+      traefik.enable: 'false'
+    restart: always
+    image: eclipse-mosquitto
+    ports:
+      - 1883:1883/tcp
+      - 1884:1884/tcp
+      - 8883:8883/tcp
+      - 8884:8884/tcp
+    volumes:
+      - mosquitto-config:/mosquitto/config:rw
+      - mosquitto-data:/mosquitto/data:rw
+      - mosquitto-log:/mosquitto/log:rw
+
+  esphome:
+    labels:
+      traefik.enable: 'false'
+    restart: always
+    image: esphome/esphome
+    network_mode: host
+    ports:
+      - 0.0.0.0:6052:6052
+      - 0.0.0.0:6123:6123
+    volumes:
+      - esphome:/config:rw
+    command: config/ dashboard
+
+volumes:
+  homeassistant:
+    driver: glusterfs
+    name: "gfs/homeassistant"
+  esphome:
+    driver: glusterfs
+    name: "gfs/esphome"
+  mosquitto-config:
+    driver: glusterfs
+    name: "gfs/mosquitto-config"
+  mosquitto-data:
+    driver: glusterfs
+    name: "gfs/mosquitto-data"
+  mosquitto-log:
+    driver: glusterfs
+    name: "gfs/mosquitto-log"
+  
+
+
+

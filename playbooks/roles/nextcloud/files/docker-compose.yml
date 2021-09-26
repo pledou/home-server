@@ -191,59 +191,32 @@ volumes:
   turnserver-data:
     external: true
   nextcloud-www: 
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /opt/nextcloud/www
+    driver: glusterfs
+    name: "gfs/nextcloud-www"
   nextcloud-config: 
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /opt/nextcloud/config
+    driver: glusterfs
+    name: "gfs/nextcloud-config"
   nextcloud-data: 
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /opt/nextcloud/data
+    driver: glusterfs
+    name: "gfs/nextcloud-data"
   collabora-conf: 
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /opt/nextcloud/collabora
+    driver: glusterfs
+    dname: "gfs/collabora-conf"
   redis-data: 
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /opt/next/redis
+    driver: glusterfs
+    name: "gfs/redis-data"
   nextcloud-database: 
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /opt/next/nextcloud-db/
+    driver: glusterfs
+    name: "gfs/nextcloud-db"
   turnserver-data: 
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /opt/next/turn
+    driver: glusterfs
+    name: "gfs/turnserver-data"
   nginx_config: 
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /opt/nextcloud/nginx
+    driver: glusterfs
+    name: "gfs/nginx_config"
   elastic_data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /opt/next/elastic/
+    driver: glusterfs
+    name: "gfs/elastic_data"
 
 secrets:
   nextcloud_admin_password:

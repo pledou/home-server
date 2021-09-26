@@ -1,0 +1,2 @@
+sudo docker exec nextcloud-db pg_dump -c -U {{ nextcloud_db_user }} {{ nextcloud_db_name }} > {{ nextcloud_database_dump_dir }}/db_dump_{{ nextcloud_db_type }}_nextcloud.sql
+#TODO

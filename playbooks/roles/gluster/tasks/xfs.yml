@@ -11,6 +11,7 @@
   filesystem:
     fstype: xfs
     dev: "{{ device2_hdd_dev }}"
+  when: device2_hdd_dev is defined
 
 - name: Mount XFS volume {{ device2_hdd_dev }} to {{ gluster_volume_path }}/{{ inventory_hostname }}
   become: true
@@ -19,3 +20,4 @@
     src: "{{ device2_hdd_dev }}"
     fstype: xfs
     state: mounted
+  when: device2_hdd_dev is defined

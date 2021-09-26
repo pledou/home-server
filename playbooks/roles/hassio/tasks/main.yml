@@ -1,0 +1,40 @@
+---
+- name: Install hassio on first swarm_manager
+  when: inventory_hostname == groups['swarm_managers'][0]
+  block:
+  - name: Verify stacks directory exists
+    file:
+      path: "/home/{{ ansible_user }}/stacks"
+      state: directory
+      mode: 0644
+
+  - name: Verify homeassistant volume path (on first swarm node)
+    when: inventory_hostname == groups['swarm_managers'][0]
+    become: true
+    file:
+      path: "{{ gluster_mount_path }}/{{ item }}"
+      state: directory
+      mode: 0644
+    loop:
+      - homeassistant
+      - esphome
+      - mosquitto-config
+      - mosquitto-data
+      - mosquitto-log
+
+  - name: generate passwords if not existant
+    set_fact:
+      esphome_password: "{{ lookup('password', '{{ gluster_mount_path }}/secrets/esphome_password chars=ascii_letters,digits length=32') }}"
+ 
+
+  - name: Create docker-compose stack file
+    copy:
+      src: docker-compose.yml
+      dest: /home/{{ ansible_user }}/stacks/hassio-stack.yml
+      mode: 0775
+
+  - name: Deploy compose from a compose file
+    docker_compose:
+      state: present
+      compose:
+        - /home/{{ ansible_user }}/stacks/hassio-stack.yml

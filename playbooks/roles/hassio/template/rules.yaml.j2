@@ -1,0 +1,33 @@
+http:
+  middlewares:
+    auth-esphome:
+      basicauth:
+        users:
+          - {{ esphome_user }}:{{ esphome_password }}
+  routers:
+    router-homeassistant:
+      entryPoints:
+        - websecure
+        - https
+      rule: Host(`home.{{ duckdns_subdomain }}.duckdns.org`)
+      service: service-homeassistant
+      tls:
+        certResolver: le
+    router-esphome:
+      entryPoints:
+        - https
+      rule: Host(`esphome.{{ duckdns_subdomain }}.duckdns.org`)
+      service: service-esphome
+      tls:
+        certResolver: le
+      middlewares: 
+        - auth-esphome
+  services:
+    service-homeassistant:
+      loadBalancer:
+        servers:
+        - url: "http://192.168.21.2:8123" #TODO set public host name
+    service-esphome:
+      loadBalancer:
+        servers:
+        - url: "http://192.168.21.2:6052"

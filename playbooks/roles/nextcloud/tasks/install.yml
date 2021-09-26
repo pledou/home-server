@@ -23,7 +23,7 @@
       - nextcloud-data
       - collabora-conf
       - redis-data
-      - nextcloud-database
+      - nextcloud-db
       - nginx_config
       - elastic_data
       - secrets
@@ -35,6 +35,12 @@
       talk_secret: "{{ lookup('password', '{{ gluster_mount_path }}/secrets/talk_secret chars=ascii_letters,digits length=32') }}"
       redis_secret: "{{ lookup('password', '{{ gluster_mount_path }}/secrets/redis_secret chars=ascii_letters,digits length=32') }}"
 
+  - name: copy nginx configuration file
+    copy:
+      src: nginx.conf
+      dest: "{{ gluster_mount_path }}/nginx_config"
+      mode: '0644'
+
   - name: Create docker-compose stack file (on first swarm node)
     copy:
       src: docker-compose.yml
@@ -44,6 +50,6 @@
   - name: Deploy stack from a compose file (on first swarm node)
     docker_stack:
       state: present
-      name: nextcloud
+      name: nc
       compose:
         - /home/{{ ansible_user }}/stacks/nextcloud-stack.yml
