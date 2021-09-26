@@ -11,7 +11,9 @@
     mode: 0775
 - name: Build nextcloud Image
   docker_image:
-    path: /home/{{ ansible_user }}/stacks/nextcloud
+    build:
+      pull: yes
+      path: /home/{{ ansible_user }}/stacks/nextcloud
     name: registry.leducd.duckdns.org/nextcloud
     tag: latest
     push: yes
@@ -23,7 +25,9 @@
     mode: 0775
 - name: Build elastic Image
   docker_image:
-    path: /home/{{ ansible_user }}/stacks/elastic
+    build:
+      pull: yes
+      path: /home/{{ ansible_user }}/stacks/elastic
     name: registry.leducd.duckdns.org/elasticsearchfr
     tag: latest
     push: yes
