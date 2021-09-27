@@ -27,9 +27,9 @@
       k1_password: "{{ lookup('password', '{{ gluster_mount_path }}/secrets/k1_password chars=ascii_letters,digits length=32') }}"
 
   - name: Create docker-compose stack file
-    copy:
+    template:
       src: docker-compose.yml
-      dest: /home/{{ ansible_user }}/stacks/kresu-stack.yml
+      dest: /home/{{ ansible_user }}/stacks/kresus-stack.yml
       mode: 0775
 
   - name: Deploy stack from a compose file
