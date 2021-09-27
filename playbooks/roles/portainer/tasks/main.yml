@@ -20,7 +20,7 @@
     register: portainerpassword
 
   - name: Create docker-compose stack file
-    copy:
+    template:
       src: docker-compose.yml
       dest: /home/{{ ansible_user }}/stacks/portainer-agent-stack.yml
       mode: 0775

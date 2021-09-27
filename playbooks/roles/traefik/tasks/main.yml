@@ -24,11 +24,11 @@
       traefik_admin_password: "{{ lookup('password', '{{ gluster_mount_path }}/secrets/traefik_admin_password chars=ascii_letters,digits length=32') }}"
  
   - name: Generate admin password hash
-    command: echo $(htpasswd -nb {{ traefik_admin_user }} {{ traefik_admin_password }}) | sed -e s/\\$/\\$\\$/g
-    register: traefikpassword
+    command: echo $(htpasswd -nb admin {{ traefik_admin_password }}) | sed -e s/\\$/\\$\\$/g
+    register: traefik_hash
 
   - name: Create docker-compose stack file (on first swarm node)
-    copy:
+    template:
       src: docker-compose.yml
       dest: /home/{{ ansible_user }}/stacks/traefik-stack.yml
       mode: 0775

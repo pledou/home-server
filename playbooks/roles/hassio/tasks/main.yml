@@ -26,9 +26,12 @@
     set_fact:
       esphome_password: "{{ lookup('password', '{{ gluster_mount_path }}/secrets/esphome_password chars=ascii_letters,digits length=32') }}"
  
+  - name: Generate admin password hash
+    command: echo $(openssl passwd -apr1 {{ esphome_password }})| sed -e s/\\$/\\$\\$/g
+    register: esphome_hash
 
   - name: Create docker-compose stack file
-    copy:
+    template:
       src: docker-compose.yml
       dest: /home/{{ ansible_user }}/stacks/hassio-stack.yml
       mode: 0775

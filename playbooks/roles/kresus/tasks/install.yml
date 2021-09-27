@@ -26,6 +26,14 @@
       k_password: "{{ lookup('password', '{{ gluster_mount_path }}/secrets/k_password chars=ascii_letters,digits length=32') }}"
       k1_password: "{{ lookup('password', '{{ gluster_mount_path }}/secrets/k1_password chars=ascii_letters,digits length=32') }}"
 
+  - name: Generate k password hash
+    command: echo $(openssl passwd -apr1 {{ k_password }})| sed -e s/\\$/\\$\\$/g
+    register: k_hash
+
+  - name: Generate k password hash
+    command: echo $(openssl passwd -apr1 {{ k1_password }})| sed -e s/\\$/\\$\\$/g
+    register: k1_hash 
+
   - name: Create docker-compose stack file
     template:
       src: docker-compose.yml

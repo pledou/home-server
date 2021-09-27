@@ -42,7 +42,7 @@
       mode: '0644'
 
   - name: Create docker-compose stack file (on first swarm node)
-    copy:
+    template:
       src: docker-compose.yml
       dest: /home/{{ ansible_user }}/stacks/nextcloud-stack.yml
       mode: 0775

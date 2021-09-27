@@ -3,7 +3,7 @@ http:
     auth-esphome:
       basicauth:
         users:
-          - {{ esphome_user }}:{{ esphome_password }}
+          - {{ esphome_user }}:{{ esphome_hash }}
   routers:
     router-homeassistant:
       entryPoints:
@@ -26,8 +26,8 @@ http:
     service-homeassistant:
       loadBalancer:
         servers:
-        - url: "http://192.168.21.2:8123" #TODO set public host name
+        - url: "http://{{ inventory_hostname }}:8123"
     service-esphome:
       loadBalancer:
         servers:
-        - url: "http://192.168.21.2:6052"
+        - url: "http://{{ inventory_hostname }}:6052"

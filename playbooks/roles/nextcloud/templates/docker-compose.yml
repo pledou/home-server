@@ -30,17 +30,17 @@ services:
         traefik.docker.network: traefik_backend
         traefik.constraint-label: traefik_backend
         
-        traefik.http.routers.nginx-http.rule: Host(`${duckdns_subdomain}.duckdns.org`)
+        traefik.http.routers.nginx-http.rule: Host(`{{ duckdns_subdomain }}.duckdns.org`)
         traefik.http.routers.nginx-http.entrypoints: http
         traefik.http.routers.nginx-http.middlewares: https-redirect
         
-        traefik.http.routers.nginx-https.rule: Host(`${duckdns_subdomain}.duckdns.org`)
+        traefik.http.routers.nginx-https.rule: Host(`{{ duckdns_subdomain }}.duckdns.org`)
         traefik.http.routers.nginx-https.entrypoints: https
         traefik.http.routers.nginx-https.middlewares: nginx@docker
         traefik.http.routers.nginx-https.tls: 'true'
         traefik.http.routers.nginx-https.tls.certresolver: le
 
-        traefik.http.routers.nginx-websecure.rule: Host(`${duckdns_subdomain}.duckdns.org`)
+        traefik.http.routers.nginx-websecure.rule: Host(`{{ duckdns_subdomain }}.duckdns.org`)
         traefik.http.routers.nginx-websecure.entrypoints: websecure
         traefik.http.routers.nginx-websecure.middlewares: nginx@docker
         traefik.http.routers.nginx-websecure.tls: 'true'
@@ -120,11 +120,11 @@ services:
         traefik.docker.network: traefik_backend
         traefik.constraint-label: traefik_backend
         
-        traefik.http.routers.collabora-http.rule: Host(`collabora.${duckdns_subdomain}.duckdns.org`)
+        traefik.http.routers.collabora-http.rule: Host(`collabora.{{ duckdns_subdomain }}.duckdns.org`)
         traefik.http.routers.collabora-http.entrypoints: http
         traefik.http.routers.collabora-http.middlewares: https-redirect
         
-        traefik.http.routers.collabora-https.rule: Host(`collabora.${duckdns_subdomain}.duckdns.org`)
+        traefik.http.routers.collabora-https.rule: Host(`collabora.{{ duckdns_subdomain }}.duckdns.org`)
         traefik.http.routers.collabora-https.middlewares: collabora@docker
         traefik.http.routers.collabora-https.entrypoints: https
         traefik.http.routers.collabora-https.tls: 'true'
@@ -146,7 +146,7 @@ services:
       - MKNOD
     image: collabora/code:latest
     environment:
-          - domain=collabora.${duckdns_subdomain}.duckdns.org
+          - domain=collabora.{{ duckdns_subdomain }}.duckdns.org
     networks:
       - traefik_backend
       - nc_backend

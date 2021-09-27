@@ -10,10 +10,10 @@ services:
       labels:
         - traefik.enable=true
         - traefik.docker.network=traefik_backend
-        - traefik.http.middlewares.admin-auth.basicauth.users=admin:${traefikpassword?Variable not set}
+        - traefik.http.middlewares.admin-auth.basicauth.users=admin:{{ traefik_hash }}
         - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
         - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
-        - traefik.http.routers.traefik-public-https.rule=Host(`traefik.${duckdns_subdomain}.duckdns.org`)
+        - traefik.http.routers.traefik-public-https.rule=Host(`traefik.{{ duckdns_subdomain }}.duckdns.org`)
         - traefik.http.routers.traefik-public-https.entrypoints=https
         - traefik.http.routers.traefik-public-https.tls=true
         # Use the special Traefik service api@internal with the web UI/Dashboard
@@ -31,7 +31,7 @@ services:
         - traefik.http.routers.traefik-public-https.tls.domains[0].sans=*.$duckdns_subdomain.duckdns.org
 
     environment:
-      - traefik_duckdns_token=${traefik_duckdns_token?Variable not set}
+      - traefik_duckdns_token={{ traefik_duckdns_token }}
     hostname: traefik
     image: traefik:latest      
     command:
@@ -45,7 +45,7 @@ services:
       #- --entrypoints.http.http.redirections.entryPoint.to=https
       - --entrypoints.https.address=:443
       - --entrypoints.websecure.address=:8443
-      - --certificatesresolvers.le.acme.email=${traefik_email?Variable not set}
+      - --certificatesresolvers.le.acme.email={{ traefik_email }}
       - --certificatesresolvers.le.acme.storage=/certificates/acme.json
       # - --certificatesresolvers.le.acme.httpchallenge.entrypoint=http
       # - --certificatesresolvers.le.acme.tlschallenge=true
@@ -81,7 +81,7 @@ services:
     # if you have a static IP, yu can comment this out
     # using busybox due to it having an image for almost every platform
     image: busybox
-    command: /bin/sh -c "while true; do wget -O - 'https://www.duckdns.org/update?domains=${duckdns_subdomain}&token=${traefik_duckdns_token}&ip='; sleep 600; done"
+    command: /bin/sh -c "while true; do wget -O - 'https://www.duckdns.org/update?domains={{ duckdns_subdomain }}&token={{ traefik_duckdns_token }}&ip='; sleep 600; done"
     networks:
       - bridge
 
