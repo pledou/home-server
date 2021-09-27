@@ -38,3 +38,9 @@
       state: present
       compose:
         - /home/{{ ansible_user }}/stacks/hassio-stack.yml
+  
+  - name: Put traefik rules
+    template:
+      src: rules.yaml
+      dest: "{{ gluster_mount_path }}/traefik-rules/rules.yaml"
+      mode: 0644

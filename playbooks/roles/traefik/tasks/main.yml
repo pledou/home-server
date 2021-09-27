@@ -8,6 +8,21 @@
       state: directory
       mode: 0644
 
+  - name: Verify traefik volume path (on first swarm node)
+    when: inventory_hostname == groups['swarm_managers'][0]
+    become: true
+    file:
+      path: "{{ gluster_mount_path }}/{{ item }}"
+      state: directory
+      mode: 0644
+    loop:
+      - traefik-public-certificates
+      - traefik-rules
+
+  - name: generate passwords if not existant
+    set_fact:
+      traefik_admin_password: "{{ lookup('password', '{{ gluster_mount_path }}/secrets/traefik_admin_password chars=ascii_letters,digits length=32') }}"
+ 
   - name: Generate admin password hash
     command: echo $(htpasswd -nb {{ traefik_admin_user }} {{ traefik_admin_password }}) | sed -e s/\\$/\\$\\$/g
     register: traefikpassword
