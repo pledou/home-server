@@ -2,13 +2,13 @@
 - name: Install traefik on first swarm_manager
   when: inventory_hostname == groups['swarm_managers'][0]
   block:
-  - name: Verify stacks directory exists (on first swarm node)
+  - name: Verify stacks directory exists
     file:
       path: "/home/{{ ansible_user }}/stacks"
       state: directory
       mode: 0644
 
-  - name: Verify traefik volume path (on first swarm node)
+  - name: Verify traefik volume path
     when: inventory_hostname == groups['swarm_managers'][0]
     become: true
     file:
@@ -27,13 +27,13 @@
     command: echo $(htpasswd -nb admin {{ traefik_admin_password }}) | sed -e s/\\$/\\$\\$/g
     register: traefik_hash
 
-  - name: Create docker-compose stack file (on first swarm node)
+  - name: Create docker-compose stack file
     template:
       src: docker-compose.yml
       dest: /home/{{ ansible_user }}/stacks/traefik-stack.yml
       mode: 0775
 
-  - name: Deploy stack from a compose file (on first swarm node)
+  - name: Deploy stack from a compose file
     docker_stack:
       state: present
       name: traefik

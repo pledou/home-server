@@ -8,7 +8,7 @@
       state: directory
       mode: 0644
 
-  - name: Verify homeassistant volume path (on first swarm node)
+  - name: Verify homeassistant volume path
     when: inventory_hostname == groups['swarm_managers'][0]
     become: true
     file:
