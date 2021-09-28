@@ -50,6 +50,7 @@
   - name: Deploy stack from a compose file
     docker_stack:
       state: present
+      prune: yes
       name: nc
       compose:
         - /home/{{ ansible_user }}/stacks/nextcloud-stack.yml

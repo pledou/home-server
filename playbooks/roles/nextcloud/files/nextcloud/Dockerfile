@@ -55,8 +55,6 @@ RUN mkdir -p \
 
 COPY supervisord.conf /
 
-#TODO create cron to "php -f cron.php > /dev/null 2>&1" "-u www-data"
-
 ENV NEXTCLOUD_UPDATE=1
 
 # Autoriser les aperçus de PDF par ImageMagick

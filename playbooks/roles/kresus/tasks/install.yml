@@ -43,6 +43,7 @@
   - name: Deploy stack from a compose file
     docker_stack:
       state: present
+      prune: yes
       name: kresus
       compose:
         - /home/{{ ansible_user }}/stacks/kresus-stack.yml

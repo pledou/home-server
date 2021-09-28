@@ -28,6 +28,7 @@
   - name: Deploy stack from a compose file
     docker_stack:
       state: present
+      prune: yes
       name: swarmpit
       compose:
         - /home/{{ ansible_user }}/stacks/swarmpit-stack.yml

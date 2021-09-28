@@ -25,6 +25,7 @@
   - name: Deploy stack from a compose file
     docker_stack:
       state: present
+      prune: yes
       name: registry
       compose:
         - /home/{{ ansible_user }}/stacks/registry-stack.yml
