@@ -8,6 +8,16 @@
   include_tasks: install_rclone.yml
   when: ( 'rclone' in restic_repo )
 
+- name: Verify registry volume path
+  become: true
+  file:
+    path: "{{ gluster_mount_path }}/{{ item }}"
+    state: directory
+    mode: 0644
+  loop:
+    - secrets
+    - databases
+
 - name: generate restic secret if restic_backup_secret is empty
   set_fact:
     restic_backup_secret: "{{ lookup('password', '{{ gluster_mount_path }}/secrets/restic_backup_secret chars=ascii_letters,digits length=32') }}"
@@ -42,6 +52,15 @@
     mode:  '0750'
     force: false
     
+- name: create swarm execution script
+  copy:
+    src:   'swarm_exec'
+    dest:  '/usr/local/bin/swarm_exec'
+    owner: 'root'
+    group: 'root'
+    mode:  '0750'
+    force: false
+
 - name: cron gluster backup
   cron:
     name:   "backup selfhosted"

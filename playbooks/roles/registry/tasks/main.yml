@@ -9,7 +9,6 @@
       mode: 0644
 
   - name: Verify registry volume path
-    when: inventory_hostname == groups['swarm_managers'][0]
     become: true
     file:
       path: "{{ gluster_mount_path }}/registry"
