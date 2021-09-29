@@ -28,3 +28,11 @@
       name: registry
       compose:
         - /home/{{ ansible_user }}/stacks/registry-stack.yml
+
+  - name: Wait end of deployment
+    docker_stack_task_info:
+      name: registry
+    register: docker_services
+    until: docker_services[].CurrentState == "Running"
+    retries: 15
+    delay: 60

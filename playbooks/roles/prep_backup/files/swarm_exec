@@ -15,4 +15,3 @@ else
 echo "docker -H $node exec $options $service"".1.""$serviceID $bash"
 sudo docker -H $node exec $options $service".1."$serviceID $bash
 fi
-#TODO 

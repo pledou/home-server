@@ -40,3 +40,11 @@
       name: traefik
       compose:
         - /home/{{ ansible_user }}/stacks/traefik-stack.yml
+    
+  - name: Wait end of deployment
+    docker_stack_task_info:
+      name: registry
+    register: docker_services
+    until: docker_services[name=].CurrentState == "Running"
+    retries: 15
+    delay: 60
