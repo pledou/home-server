@@ -30,7 +30,7 @@
         - /home/{{ ansible_user }}/stacks/registry-stack.yml
 
   - name: Wait end of deployment
-    docker_stack_task_info:
+    community.docker.docker_stack_task_info:
       name: registry
     register: docker_services
     until: docker_services[].CurrentState == "Running"
