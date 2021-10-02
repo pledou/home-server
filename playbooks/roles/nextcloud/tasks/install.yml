@@ -1,6 +1,6 @@
 ---
 - name: Install nextcloud on first swarm_manager
-  when: inventory_hostname == groups['swarm_managers'][0]
+  run_once: true
   block:
   - name: Verify stacks directory exists
     file:
@@ -9,7 +9,6 @@
       mode: 0644
 
   - name: Verify nextcloud volume path
-    when: inventory_hostname == groups['swarm_managers'][0]
     become: true
     file:
       path: "{{ gluster_mount_path }}/{{ item }}"
