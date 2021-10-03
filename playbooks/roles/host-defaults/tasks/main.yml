@@ -28,6 +28,8 @@
       docker_node:
         hostname: "{{ ansible_hostname }}"
         availability: drain
+      ignore_errors: true
+      register: drained
     - name: Wait end of drain process
       wait_for:
         timeout: 60
@@ -38,6 +40,7 @@
       docker_node:
         hostname: "{{ ansible_hostname }}"
         availability: active
+      when: drained is defined
   when: reboot_request.stat.exists
 
 - name: Upgrade all packages to the latest version
