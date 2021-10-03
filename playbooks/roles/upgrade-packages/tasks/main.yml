@@ -1,10 +1,9 @@
 ---
 - name: Upgrade all packages to the latest version
   become: true
-  
   apt:
     name: "*"
-    state: present
+    state: latest # noqa package-latest
     force_apt_get: true
     update_cache: yes
 

@@ -8,7 +8,7 @@
       - glusterfs-server
       - glusterfs-common
       - glusterfs-client
-    state: present
+    state: latest # noqa package-latest
     force_apt_get: true
     update_cache: yes
 

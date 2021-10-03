@@ -44,7 +44,7 @@
   become: true 
   apt:
     name: "*"
-    state: present
+    state: latest # noqa package-latest
     force_apt_get: true
     update_cache: yes
 
@@ -59,6 +59,6 @@
       - software-properties-common
       - python3-pip
       - apache2-utils
-    state: present
+    state: latest # noqa package-latest
     force_apt_get: true
     update_cache: yes

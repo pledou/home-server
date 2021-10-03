@@ -1,11 +1,13 @@
 ---
 - name: Install a Gluster nodes
+  become: true
   community.docker.docker_plugin:
-    plugin_name: glusterfs
+    plugin_name: "mochoa/glusterfs-volume-plugin{{'-aarch64' if (not ansible_architecture == 'x86_64')}}"
     plugin_options:
-      SERVERS: "{{ groups['gluster_nodes'][0] }},{{ groups['gluster_nodes'][1] }},{{ groups['gluster_nodes'][2] }}"
+      SERVERS: "{{ ','.join(groups['gluster_nodes']) }}"
 
 - name: Enable Gluster plugin
+  become: true
   community.docker.docker_plugin:
-    plugin_name: glusterfs
+    plugin_name: "mochoa/glusterfs-volume-plugin{{'-aarch64' if (not ansible_architecture == 'x86_64')}}"
     state: enable

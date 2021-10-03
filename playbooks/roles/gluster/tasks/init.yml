@@ -16,9 +16,10 @@
     state: present
     name: "{{ gluster_volume_name }}"
     brick: "{{ gluster_volume_path }}"
-    replicas: 2
+    replicas: "{{ groups.gluster_nodes | count() }}"
     cluster: "{{ groups.gluster_nodes | join(',') }}"
     host: "{{ inventory_hostname }}"
+    rebalance: yes
     force: yes
   run_once: true
 
