@@ -26,8 +26,9 @@
   become: true
   block:
   - name: disable cloud-init
-    command: touch /etc/cloud/cloud-init.disabled
-    creates: /etc/cloud/cloud-init.disabled
+    file: 
+      path: /etc/cloud/cloud-init.disabled
+      state: touch
   - name: Reboot
     reboot:
   - name: uninstall package
