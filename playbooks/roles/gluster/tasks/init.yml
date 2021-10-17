@@ -1,5 +1,6 @@
 ---
 - name: Check if Gluster volume is initialized
+  become: true
   stat:
     path: "{{ gluster_volume_path }}/{{ inventory_hostname }}/brick"
   register: glustervolume
@@ -12,18 +13,19 @@
     mode: 0644
 
 - name: Configure Gluster volume.
+  become: true
   gluster_volume:
     state: present
     name: "{{ gluster_volume_name }}"
     brick: "{{ gluster_volume_path }}"
     replicas: "{{ groups.gluster_nodes | count() }}"
     cluster: "{{ groups.gluster_nodes | join(',') }}"
-    host: "{{ inventory_hostname }}"
     rebalance: yes
     force: yes
   run_once: true
 
 - name: Ensure Gluster volume is mounted.
+  become: true
   mount:
     name: "{{ gluster_mount_dir }}"
     src: "{{ inventory_hostname }}:/{{ gluster_brick_name }}"

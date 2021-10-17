@@ -1,41 +1,108 @@
 ---
 - hosts: dnsmasq
-  pre_tasks:
-    - name: create resolv-file for dnsmasq
-      template:
-        src: resolvconf.dnsmasq.j2
-        dest: /etc/resolv.dnsmasq
-        mode: 0644
-  roles:
-    - oefenweb.dnsmasq
-    - adfinis-sygroup.isc_dhcp_server
-  vars:
-    dnsmasq_dnsmasq_conf:
-      - |
-        port=53
-        listen-address={{ ansible_lo['ipv4']['address'] }}
-        bind-interfaces
-    dnsmasq_dnsmasq_d_files_present:
-      cache:
-        - |
-          domain-needed
-          bogus-priv
-          no-hosts
-          dns-forward-max=150
-          cache-size=1000
-          neg-ttl=3600
-          resolv-file=/etc/resolv.dnsmasq
-          no-poll
+  tasks:
+  - name: "Use DnsMasq"
+    template:
+      src: 00-use-dnsmasq.conf
+      dest: /etc/NetworkManager/conf.d/00-use-dnsmasq.conf
+      mode: 0644
+  - name: "Redirect Domain"
+    template:
+      src: 00-domain.conf
+      dest: "{{ item }}/00-use-dnsmasq.conf"
+      mode: 0644
+    loop:
+    - "/etc/NetworkManager/dnsmasq.d"
+    - "/etc/NetworkManager/dnsmasq-shared.d"
+  - name: "Set fixed address"
+    community.general.nmcli:
+      conn_name: static-eth0
+      ifname: eth0
+      type: ethernet
+      ip4: 192.168.21.2/24
+      dns4: 192.168.21.2 192.168.21.1
+      gw4: 192.168.21.1
+      state: present
+  - name: "Install dhcpd"
+    apt:
+      pkg: isc-dhcp-server
+      state: present
 
-    # OMAPI synchronization port
-    isc_dhcp_server_omapi_port: 7911
+  - name: "Configure dhcpd"
+    template:
+      src: dhcpd.conf
+      dest: /etc/dhcp/dhcpd.conf
+      mode: 0644
+  - name: "Restart dhcpd"
+    service:
+      name: isc-dhcp-server
+      state: restarted
+  - name: "Restart Network Manager"
+    systemd: 
+      state: restarted
+      name: NetworkManager 
 
-    # DHCP server subnet configuration. Default is not to configure any subnets.
-    isc_dhcp_server_subnet:
-      - netaddress: 192.168.21.2
-        netmask: 255.255.255.0
-        routers: 192.168.21.1
-        domain: leducd.local
-        domain_search: leducd.local
-        dns: 192.168.121.2, 192.168.21.1
-        range: 192.168.21.20 192.168.21.100
+  # pre_tasks:
+  #   - name: create resolv-file for dnsmasq
+  #     template:
+  #       src: resolvconf.dnsmasq.j2
+  #       dest: /etc/resolv.dnsmasq
+  #       mode: 0644
+  #   - 
+    # - name: update the cloud-init file to fixed ip
+    #   file:
+    #     src: netplan.yml
+    #     dest: /etc/cloud/cloud.cfg.d/50-curtin-networking.cfg
+    #     mode: 0644
+    # - name: reset cloud-init
+    #   command: cloud-init clean -r
+    # - name: reboot to apply
+    #   reboot:
+      
+  # roles:
+  #   - oefenweb.dnsmasq
+  # vars:
+  #   ansible_become: true
+  #   dnsmasq_option_router: '192.168.21.1'
+  #   dnsmasq_domain_needed: true
+  #   dnsmasq_expand_hosts: true
+  #   dnsmasq_bogus_priv: true
+  #   dnsmasq_domain: 'local'
+  #   dnsmasq_interface: eth0
+    
+  #   dnsmasq_dhcp_ranges:
+  #     - start_addr: '192.168.21.100'
+  #       end_addr: '192.168.21.253'
+  #       lease_time: '8h'
+  #   dnsmasq_dhcp_hosts:
+  #     - name: '{{ ansible_host }}'
+  #       mac: '{{ ansible_default_ipv4.macaddress }}'
+  #       ip: '192.168.21.2'
+
+    #   # OMAPI synchronization port
+    # isc_dhcp_server_omapi_port: 7911
+
+    # # DHCP server subnet configuration. Default is not to configure any subnets.
+    # isc_dhcp_server_subnet:
+    #   - netaddress: 192.168.21.2
+    #     netmask: 255.255.255.0
+    #     routers: 192.168.21.1
+    #     domain: local
+    #     domain_search: local
+    #     dns: 192.168.121.2, 192.168.21.1
+    #     range: 192.168.21.20 192.168.21.100
+
+# - hosts: gluster_nodes:!&dnsmasq
+#   tasks:
+  # - name: "Set DHCP"
+  #   community.general.nmcli:
+  #     conn_name: eth0
+  #     method4: auto
+  #     state: present
+  # - name: "release dhcp lease" 
+  #   command: dhclient -r eth0
+  #   become: true
+  # - name: "renew dhcp lease"
+  #   command: dhclient eth0
+  #   become: true
+

@@ -21,29 +21,32 @@
     path: /var/run/reboot-required
   register: reboot_request
 
-- name: Remove cloud-init
-  removes: /etc/cloud
-  become: true
-  block:
-  - name: disable cloud-init
-    file: 
-      path: /etc/cloud/cloud-init.disabled
-      state: touch
-  - name: Reboot
-    reboot:
-  - name: uninstall package
-    apt:
-      name: cloud-init
-      state: absent
-      autoremove: yes
-      purge: yes
-  - name: remove folders
-    file:
-      state: absent
-      path: "{{ item }}"
-    loop:
-    - /var/lib/cloud/
-    - /etc/cloud
+# - name: Remove cloud-init
+#   removes: /etc/cloud
+#   become: true
+#   block:
+#   - name: disable cloud-init
+#     file: 
+#       path: /etc/cloud/cloud-init.disabled
+#       state: touch
+#       mode: 0644
+#   - name: Reboot
+#     reboot:
+#   - name: uninstall package
+#     apt:
+#       name: cloud-init
+#       state: absent
+#       autoremove: yes
+#       purge: yes
+#   - name: remove folders
+#     file:
+#       state: absent
+#       path: "{{ item }}"
+#     loop:
+#     - /var/lib/cloud/
+#     - /etc/cloud
+#   - name: Reboot
+#     reboot:
 
 - name: Reboot host(s) after package upgrade
   become: true
@@ -87,7 +90,7 @@
       - python3-pip
       - apache2-utils
       - avahi-daemon #required for local mDNS
-      - network-manager
+      # - network-manager
     state: latest # noqa package-latest
     force_apt_get: true
     update_cache: yes
