@@ -19,6 +19,7 @@
     - databases
 
 - name: generate restic secret if restic_backup_secret is empty
+  become: true
   set_fact:
     restic_backup_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/restic_backup_secret chars=ascii_letters,digits length=32') }}"
 

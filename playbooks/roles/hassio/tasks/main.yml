@@ -19,8 +19,10 @@
       - mosquitto-config
       - mosquitto-data
       - mosquitto-log
+      - secrets
 
   - name: generate passwords if not existant
+    become: true
     set_fact:
       esphome_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/esphome_password chars=ascii_letters,digits length=32') }}"
  

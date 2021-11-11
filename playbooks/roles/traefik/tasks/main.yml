@@ -17,8 +17,10 @@
     loop:
       - traefik-public-certificates
       - traefik-rules
+      - secrets
 
   - name: generate passwords if not existant
+    become: true
     set_fact:
       traefik_admin_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/traefik_admin_password chars=ascii_letters,digits length=32') }}"
  

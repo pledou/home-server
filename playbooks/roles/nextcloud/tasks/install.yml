@@ -28,6 +28,7 @@
       - secrets
 
   - name: generate passwords if not existant
+    become: true
     set_fact:
       nextcloud_admin_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/nextcloud_admin_secret chars=ascii_letters,digits length=32') }}"
       database_user_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/database_user_secret chars=ascii_letters,digits length=32') }}"
