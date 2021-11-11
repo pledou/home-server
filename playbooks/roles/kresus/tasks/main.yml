@@ -1,3 +1,48 @@
 ---
-- import_tasks: build.yml
-- import_tasks: install.yml
+- name: Install kresus
+  run_once: true
+  block:
+  - name: Verify stacks directory exists
+    file:
+      path: "/home/{{ ansible_user }}/stacks"
+      state: directory
+      mode: 0644
+
+  - name: Verify kresus volume path
+    become: true
+    file:
+      path: "{{ docker_volumes_path }}/{{ item }}"
+      state: directory
+      mode: 0644
+    loop:
+    - kresus-database
+    - kresus-database1
+    - kresus-woob
+
+  - name: generate passwords if not existant
+    set_fact:
+      k_db_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/k_db_password chars=ascii_letters,digits length=32') }}"
+      k_db1_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/k_db1_password chars=ascii_letters,digits length=32') }}"
+      k_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/k_password chars=ascii_letters,digits length=32') }}"
+      k1_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/k1_password chars=ascii_letters,digits length=32') }}"
+
+  - name: Generate k password hash
+    command: echo $(openssl passwd -apr1 {{ k_password }})| sed -e s/\\$/\\$\\$/g
+    register: k_hash
+
+  - name: Generate k password hash
+    command: echo $(openssl passwd -apr1 {{ k1_password }})| sed -e s/\\$/\\$\\$/g
+    register: k1_hash 
+
+  - name: Create docker-compose stack file
+    template:
+      src: docker-compose.yml
+      dest: /home/{{ ansible_user }}/stacks/kresus-stack.yml
+      mode: 0775
+
+  - name: Deploy stack from a compose file
+    docker_compose:
+      build: yes
+      state: present
+      files:
+        - /home/{{ ansible_user }}/stacks/kresus-stack.yml

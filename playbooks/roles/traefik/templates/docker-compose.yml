@@ -2,43 +2,37 @@ version: "3.4"
 services:
 
   traefik:
-    deploy:
-      mode: global
-      placement:
-        constraints: 
-          - node.role == manager
-      labels:
-        - traefik.enable=true
-        - traefik.docker.network=traefik_backend
-        - traefik.http.middlewares.admin-auth.basicauth.users=admin:{{ traefik_hash }}
-        - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
-        - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
-        - traefik.http.routers.traefik-public-https.rule=Host(`traefik.{{ duckdns_subdomain }}.duckdns.org`)
-        - traefik.http.routers.traefik-public-https.entrypoints=https
-        - traefik.http.routers.traefik-public-https.tls=true
-        # Use the special Traefik service api@internal with the web UI/Dashboard
-        - traefik.http.routers.traefik-public-https.service=api@internal
-        # Use the "le" (Let's Encrypt) resolver created below
-        - traefik.http.routers.traefik-public-https.tls.certresolver=le
-         # Enable HTTP Basic auth, using the middleware created above
-        - traefik.http.routers.traefik-public-https.middlewares=admin-auth
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.http.middlewares.admin-auth.basicauth.users=admin:{{ traefik_hash }}
+      - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
+      - traefik.http.routers.traefik-public-https.rule=Host(`traefik.{{ duckdns_subdomain }}.duckdns.org`)
+      - traefik.http.routers.traefik-public-https.entrypoints=https
+      - traefik.http.routers.traefik-public-https.tls=true
+      # Use the special Traefik service api@internal with the web UI/Dashboard
+      - traefik.http.routers.traefik-public-https.service=api@internal
+      # Use the "le" (Let's Encrypt) resolver created below
+      - traefik.http.routers.traefik-public-https.tls.certresolver=le
+       # Enable HTTP Basic auth, using the middleware created above
+      - traefik.http.routers.traefik-public-https.middlewares=admin-auth
 
-        # - traefik.http.middlewares.localip.ipwhitelist.sourcerange=192.168.21.0/24, 2a01:cb08:87f6:500::/56
-        # Define the port inside of the Docker service to use
-        - traefik.http.services.traefik-public.loadbalancer.server.port=8080
+      # - traefik.http.middlewares.localip.ipwhitelist.sourcerange=192.168.21.0/24, 2a01:cb08:87f6:500::/56
+      # Define the port inside of the Docker service to use
+      - traefik.http.services.traefik-public.loadbalancer.server.port=8080
 
-        - traefik.http.routers.traefik-public-https.tls.domains[0].main=$duckdns_subdomain.duckdns.org
-        - traefik.http.routers.traefik-public-https.tls.domains[0].sans=*.$duckdns_subdomain.duckdns.org
+      - traefik.http.routers.traefik-public-https.tls.domains[0].main=$duckdns_subdomain.duckdns.org
+      - traefik.http.routers.traefik-public-https.tls.domains[0].sans=*.$duckdns_subdomain.duckdns.org
 
     environment:
       - traefik_duckdns_token={{ traefik_duckdns_token }}
     hostname: traefik
     image: traefik:latest      
     command:
-      # - --providers.docker
+      - --providers.docker
       # - --providers.docker.exposedbydefault=false
       - --providers.docker.watch
-      - --providers.docker.swarmMode
       - --providers.file.filename=/rules/rules.yaml
       #- --providers.docker.endpoint=tcp://127.0.0.1:2377
       - --entrypoints.http.address=:80
@@ -75,27 +69,31 @@ services:
       - traefik-rules:/rules
 
   updateDuckDNSIP:
-    deploy:
-      replicas: 1
     # used to update duckdns
     # if you have a static IP, yu can comment this out
     # using busybox due to it having an image for almost every platform
     image: busybox
-    command: /bin/sh -c "while true; do wget -O - 'https://www.duckdns.org/update?domains={{ duckdns_subdomain }}&token={{ traefik_duckdns_token }}&ip='; sleep 600; done"
+    command: /bin/sh -c "while true; do wget -O - 'https://www.duckdns.org/update?domains={{ duckdns_subdomain }}&token={{ traefik_duckdns_token }}&ip='; sleep 1200; done"
     networks:
       - bridge
 
 
 networks:
   traefik_backend:
-    external: true
+    attacheable: true
   bridge:
     external: true
 
 volumes:
   traefik-public-certificates:
-    driver: glusterfs
-    name: "gfs/traefik-public-certificates"
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/traefik-public-certificates"
   traefik-rules:
-    driver: glusterfs
-    name: "gfs/traefik-rules"
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/traefik-rules"

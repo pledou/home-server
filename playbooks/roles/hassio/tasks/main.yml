@@ -10,7 +10,7 @@
   - name: Verify homeassistant volume path
     become: true
     file:
-      path: "{{ gluster_mount_path }}/{{ item }}"
+      path: "{{ docker_volumes_path }}/{{ item }}"
       state: directory
       mode: 0644
     loop:
@@ -22,7 +22,7 @@
 
   - name: generate passwords if not existant
     set_fact:
-      esphome_password: "{{ lookup('password', '{{ gluster_mount_path }}/secrets/esphome_password chars=ascii_letters,digits length=32') }}"
+      esphome_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/esphome_password chars=ascii_letters,digits length=32') }}"
  
   - name: Generate admin password hash
     command: echo $(openssl passwd -apr1 {{ esphome_password }})| sed -e s/\\$/\\$\\$/g
@@ -36,12 +36,8 @@
 
   - name: Deploy compose from a compose file
     docker_compose:
+      build: yes
       state: present
-      compose:
+      files:
         - /home/{{ ansible_user }}/stacks/hassio-stack.yml
   
-  - name: Put traefik rules
-    template:
-      src: rules.yaml
-      dest: "{{ gluster_mount_path }}/traefik-rules/rules.yaml"
-      mode: 0644

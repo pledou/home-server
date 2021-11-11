@@ -2,23 +2,18 @@ version: '3'
 
 services:
   registry:
-    deploy:
-      placement:
-        constraints: 
-          - node.role == manager
-      replicas: 1
-      labels:
-        - traefik.enable=true
-        - traefik.docker.network=traefik_backend
-        - traefik.constraint-label=traefik_backend
-        - traefik.http.routers.registry-http.rule=Host(`registry.{{ duckdns_subdomain }}.duckdns.org`)
-        - traefik.http.routers.registry-http.entrypoints=http
-        - traefik.http.routers.registry-http.middlewares=https-redirect
-        - traefik.http.routers.registry-https.rule=Host(`registry.{{ duckdns_subdomain }}.duckdns.org`)
-        - traefik.http.routers.registry-https.entrypoints=https
-        - traefik.http.routers.registry-https.tls=true
-        - traefik.http.routers.registry-https.tls.certresolver=le
-        - traefik.http.services.registry.loadbalancer.server.port=5000
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.constraint-label=traefik_backend
+      - traefik.http.routers.registry-http.rule=Host(`registry.{{ duckdns_subdomain }}.duckdns.org`)
+      - traefik.http.routers.registry-http.entrypoints=http
+      - traefik.http.routers.registry-http.middlewares=https-redirect
+      - traefik.http.routers.registry-https.rule=Host(`registry.{{ duckdns_subdomain }}.duckdns.org`)
+      - traefik.http.routers.registry-https.entrypoints=https
+      - traefik.http.routers.registry-https.tls=true
+      - traefik.http.routers.registry-https.tls.certresolver=le
+      - traefik.http.services.registry.loadbalancer.server.port=5000
     image: registry:2
     volumes:
     - registry:/var/lib/registry:Z
@@ -58,5 +53,8 @@ networks:
 
 volumes:
   registry: 
-    driver: glusterfs
-    name: "gfs/registry"
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/registry"

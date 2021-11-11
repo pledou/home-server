@@ -1,5 +1,5 @@
 ---
-- name: Install nextcloud on first swarm_manager
+- name: Install nextcloud
   run_once: true
   block:
   - name: Verify stacks directory exists
@@ -11,7 +11,7 @@
   - name: Verify nextcloud volume path
     become: true
     file:
-      path: "{{ gluster_mount_path }}/{{ item }}"
+      path: "{{ docker_volumes_path }}/{{ item }}"
       state: directory
       mode: 0644
     loop:
@@ -29,15 +29,15 @@
 
   - name: generate passwords if not existant
     set_fact:
-      nextcloud_admin_password: "{{ lookup('password', '{{ gluster_mount_path }}/secrets/nextcloud_admin_secret chars=ascii_letters,digits length=32') }}"
-      database_user_secret: "{{ lookup('password', '{{ gluster_mount_path }}/secrets/database_user_secret chars=ascii_letters,digits length=32') }}"
-      talk_secret: "{{ lookup('password', '{{ gluster_mount_path }}/secrets/talk_secret chars=ascii_letters,digits length=32') }}"
-      redis_secret: "{{ lookup('password', '{{ gluster_mount_path }}/secrets/redis_secret chars=ascii_letters,digits length=32') }}"
+      nextcloud_admin_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/nextcloud_admin_secret chars=ascii_letters,digits length=32') }}"
+      database_user_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/database_user_secret chars=ascii_letters,digits length=32') }}"
+      talk_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/talk_secret chars=ascii_letters,digits length=32') }}"
+      redis_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/redis_secret chars=ascii_letters,digits length=32') }}"
 
   - name: copy nginx configuration file
     copy:
       src: nginx.conf
-      dest: "{{ gluster_mount_path }}/nginx_config"
+      dest: "{{ docker_volumes_path }}/nginx_config"
       mode: '0644'
 
   - name: Create docker-compose stack file
@@ -47,9 +47,8 @@
       mode: 0775
 
   - name: Deploy stack from a compose file
-    docker_stack:
+    docker_compose:
+      build: yes
       state: present
-      prune: yes
-      name: nc
-      compose:
+      files:
         - /home/{{ ansible_user }}/stacks/nextcloud-stack.yml

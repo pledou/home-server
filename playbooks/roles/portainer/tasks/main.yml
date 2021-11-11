@@ -1,5 +1,5 @@
 ---
-- name: Install portainer on first swarm node
+- name: Install portainer
   run_once: true
   block:
   - name: Verify stacks directory exists
@@ -11,7 +11,7 @@
   - name: Verify Portainer volume path
     become: true
     file:
-      path: "{{ gluster_mount_path }}/portainer"
+      path: "{{ docker_volumes_path }}/portainer"
       state: directory
       mode: 0644
 
@@ -26,9 +26,8 @@
       mode: 0775
 
   - name: Deploy stack from a compose file
-    docker_stack:
+    docker_compose:
+      build: yes
       state: present
-      prune: yes
-      name: portainer
-      compose:
+      files:
         - /home/{{ ansible_user }}/stacks/portainer-agent-stack.yml

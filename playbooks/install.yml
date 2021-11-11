@@ -3,29 +3,12 @@
   roles: 
     - host-defaults
 
-- hosts: swarm_managers
-  roles: 
-    - docker
-    - swarm-managers
-
-- hosts: swarm_workers
-  roles: 
-    - docker
-    - swarm-workers
-
-- hosts: gluster_nodes
-  roles: 
-    - gluster
-
-- hosts: swarm_managers
+- hosts: docker_server
   roles:
+    - docker
     - traefik
     - portainer
     - registry
     - nextcloud
     - kresus
-    - swarmpit
-
-- hosts: hassio
-  roles:
     - hassio

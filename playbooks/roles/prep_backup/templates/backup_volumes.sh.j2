@@ -1,0 +1,48 @@
+#!/bin/bash
+
+export RESTIC_REPOSITORY="{{ restic_repo }}"
+export RESTIC_PASSWORD="{{ restic_backup_secret }}"
+
+# abort entire script if any command fails
+set -e
+
+# unlock restic to keep automatic backups going
+{{ restic_install_path }}/restic unlock --cleanup-cache
+
+# Make sure nextcloud is enabled when we are done
+trap "docker exec -u www-data nextcloud php occ maintenance:mode --off" EXIT
+
+# set nextcloud to maintenance mode
+docker exec -u www-data nextcloud php occ maintenance:mode --on
+
+sudo docker exec nc_ncdb pg_dump -c -U nextcloud default > {{ docker_volumes_path }}/databases/db_dump_pgsql_nextcloud.sql
+{{ restic_install_path }}/restic backup --tag min --verbose {{ docker_volumes_path }}/turnserver-data
+{{ restic_install_path }}/restic backup --tag min --verbose {{ docker_volumes_path }}/nextcloud-www
+{{ restic_install_path }}/restic backup --tag min --verbose {{ docker_volumes_path }}/nextcloud-config
+{{ restic_install_path }}/restic backup --tag max --verbose {{ docker_volumes_path }}/nextcloud-data
+
+# end maintenance mode
+docker exec -u www-data nextcloud php occ maintenance:mode --off
+
+# delete trap
+trap "" EXIT
+
+# backup the data dir
+# TODO use dictionary of dirs to backup
+{{ restic_install_path }}/restic backup --tag min --verbose {{ docker_volumes_path }}/secrets
+
+{{ restic_install_path }}/restic backup --tag min --verbose {{ docker_volumes_path }}/homeassistant
+{{ restic_install_path }}/restic backup --tag min --verbose {{ docker_volumes_path }}/esphome
+
+{{ restic_install_path }}/restic backup --tag min --verbose {{ docker_volumes_path }}/traefik-public-certificates
+
+# TODO use dictionary of pg_dump to backup
+sudo docker exec kresus_k-db pg_dump -c -U kresus default > {{ docker_volumes_path }}/databases/db_dump_pgsql_kresus.sql
+sudo docker exec kresus_k-db1 pg_dump -c -U kresus default > {{ docker_volumes_path }}/databases/db_dump_pgsql_kresus1.sql
+
+{{ restic_install_path }}/restic backup --tag min --verbose {{ docker_volumes_path }}/databases
+
+# clean up backup dir
+{{ restic_install_path }}/restic forget --tag max --keep-daily 7 --keep-weekly 5 --keep-monthly 12 --keep-yearly 75
+{{ restic_install_path }}/restic forget --tag min --keep-daily 7 --keep-weekly 5
+{{ restic_install_path }}/restic prune

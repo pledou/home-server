@@ -1,13 +1,9 @@
 ---
-- hosts: swarm_managers
+- hosts: docker_server
   roles: 
     - traefik
     - portainer
     - registry
     - nextcloud
     - kresus
-    - swarmpit
-
-- hosts: hassio
-  roles:
     - hassio

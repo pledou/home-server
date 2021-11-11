@@ -1,5 +1,5 @@
 ---
-- name: Install registry on first swarm_manager
+- name: Install registry
   run_once: true
   block:
   - name: Verify stacks directory exists
@@ -11,7 +11,7 @@
   - name: Verify registry volume path
     become: true
     file:
-      path: "{{ gluster_mount_path }}/registry"
+      path: "{{ docker_volumes_path }}/registry"
       state: directory
       mode: 0644
 
@@ -22,11 +22,10 @@
       mode: 0775
 
   - name: Deploy stack from a compose file
-    docker_stack:
+    docker_compose:
+      build: yes
       state: present
-      prune: yes
-      name: registry
-      compose:
+      files:
         - /home/{{ ansible_user }}/stacks/registry-stack.yml
 
   - name: Wait end of deployment

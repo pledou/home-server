@@ -1,4 +1,0 @@
----
-- import_tasks: xfs.yml
-- import_tasks: install.yml
-- import_tasks: init.yml

@@ -11,7 +11,7 @@
 - name: Verify registry volume path
   become: true
   file:
-    path: "{{ gluster_mount_path }}/{{ item }}"
+    path: "{{ docker_volumes_path }}/{{ item }}"
     state: directory
     mode: 0644
   loop:
@@ -20,7 +20,7 @@
 
 - name: generate restic secret if restic_backup_secret is empty
   set_fact:
-    restic_backup_secret: "{{ lookup('password', '{{ gluster_mount_path }}/secrets/restic_backup_secret chars=ascii_letters,digits length=32') }}"
+    restic_backup_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/restic_backup_secret chars=ascii_letters,digits length=32') }}"
 
 - name: create restic backup directory
   file:
@@ -43,28 +43,19 @@
     - restic_init.rc != 0
     - not ( 'config already initialized' in restic_init.stderr or 'config file already exists' in restic_init.stderr )
 
-- name: create restic gluster backup script
+- name: create restic backup script
   template:
-    src:   'backup_gluster.sh.j2'
-    dest:  '/usr/local/bin/backup_gluster.sh'
+    src:   'backup_volumes.sh.j2'
+    dest:  '/usr/local/bin/backup_volumes.sh'
     owner: 'root'
     group: 'root'
     mode:  '0750'
-    force: false
-    
-- name: create swarm execution script
-  copy:
-    src:   'swarm_exec'
-    dest:  '/usr/local/bin/swarm_exec'
-    owner: 'root'
-    group: 'root'
-    mode:  '0750'
-    force: false
+    force: false 
 
-- name: cron gluster backup
+- name: cron volume backup
   cron:
     name:   "backup selfhosted"
     day:    "{{ restic_backup_day }}"
     minute: "{{ restic_backup_minute }}"
     hour:   "{{ restic_backup_hour }}"
-    job:    "/usr/local/bin/backup_gluster.sh > /var/log/backup_gluster.log 2>&1"
+    job:    "/usr/local/bin/backup_volumes.sh > /var/log/backup_volumes.log 2>&1"

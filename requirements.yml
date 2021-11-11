@@ -1,9 +1,6 @@
 ---
 roles:
-- src: adfinis-sygroup.isc_dhcp_server
-- src: oefenweb.dnsmasq
 - src: geerlingguy.firewall
-- src: geerlingguy.glusterfs
 collections:
 - name: community.docker
 ...
