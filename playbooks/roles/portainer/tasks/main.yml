@@ -15,10 +15,6 @@
       state: directory
       mode: 0644
 
-  - name: Generate admin password hash
-    command: echo $(htpasswd -nBb admin {{ portainer_admin_password }}) | cut -d ":" -f 2 | sed -e s/\\$/\\$\\$/g
-    register: portainerpassword
-
   - name: Create docker-compose stack file
     template:
       src: docker-compose.yml
