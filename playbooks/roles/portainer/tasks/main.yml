@@ -15,10 +15,10 @@
       state: directory
       mode: 0644
 
-  - name: generate passwords if not existant
-    become: true
-    set_fact:
-      portainer_admin_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/portainer_admin_secret chars=ascii_letters,digits length=32') }}"
+  # - name: generate passwords if not existant
+  #   become: true
+  #   set_fact:
+  #     portainer_admin_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/portainer_admin_secret chars=ascii_letters,digits length=32') }}"
 
   - name: Create docker-compose stack file
     template:

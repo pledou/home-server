@@ -3,7 +3,6 @@ version: '3.3'
 services:
   portainer:
     image: portainer/portainer-ce
-    command: --admin-password {{ portainer_admin_secret }}
     volumes:
       - portainer-data:/data
     networks:
