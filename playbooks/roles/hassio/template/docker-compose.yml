@@ -71,7 +71,7 @@ services:
       traefik.http.routers.esphome-https.tls.certresolver: le
       traefik.http.services.esphome.loadbalancer.server.port: 6052
       traefik.http.routers.esphome-https.middlewares: esphome-auth
-      traefik.http.middlewares.esphome-auth.basicauth.users: {{ esphome_user }}:{{ esphome_hash }}
+      traefik.http.middlewares.esphome-auth.basicauth.usersfile: /rules/esphome_users
     restart: always
     image: esphome/esphome
     network_mode: host

@@ -27,13 +27,24 @@
       k_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/k_password chars=ascii_letters,digits length=32') }}"
       k1_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/k1_password chars=ascii_letters,digits length=32') }}"
 
-  - name: Generate k password hash
-    command: echo $(openssl passwd -apr1 {{ k_password }})| sed -e s/\\$/\\$\\$/g
-    register: k_hash
-
-  - name: Generate k password hash
-    command: echo $(openssl passwd -apr1 {{ k1_password }})| sed -e s/\\$/\\$\\$/g
-    register: k1_hash 
+  - name: Add a user to a password file and ensure permissions are set
+    become: true
+    community.general.htpasswd:
+      path: "{{ docker_volumes_path }}/traefik-rules/kresus_users"
+      name: "p.leduc"
+      password: "{{ k_password }}"
+      owner: root
+      group: root
+      mode: 0640
+  - name: Add a user to a password file and ensure permissions are set
+    become: true
+    community.general.htpasswd:
+      path: "{{ docker_volumes_path }}/traefik-rules/kresus1_users"
+      name: "v.leduc"
+      password: "{{ k1_password }}"
+      owner: root
+      group: root
+      mode: 0640
 
   - name: Create docker-compose stack file
     template:
