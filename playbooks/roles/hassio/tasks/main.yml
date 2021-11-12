@@ -3,9 +3,9 @@
   block:
   - name: Verify stacks directory exists
     file:
-      path: "/home/{{ ansible_user }}/stacks"
+      path: "/home/{{ ansible_user }}/home-server/stacks/hassio"
       state: directory
-      mode: 0644
+      mode: 0775
 
   - name: Verify homeassistant volume path
     become: true
@@ -32,13 +32,14 @@
   - name: Create docker-compose stack file
     template:
       src: docker-compose.yml
-      dest: /home/{{ ansible_user }}/stacks/hassio-stack.yml
+      dest: /home/{{ ansible_user }}/home-server/stacks/hassio/docker-compose.yml
       mode: 0775
 
   - name: Deploy compose from a compose file
     docker_compose:
       build: yes
       state: present
-      files:
-        - /home/{{ ansible_user }}/stacks/hassio-stack.yml
+      project_src: /home/{{ ansible_user }}/home-server/stacks/hassio
+      # files:
+      #   - /home/{{ ansible_user }}/home-server/stacks/hassio/docker-compose.yml
   

@@ -4,9 +4,9 @@
   block:
   - name: Verify stacks directory exists
     file:
-      path: "/home/{{ ansible_user }}/stacks"
+      path: "/home/{{ ansible_user }}/home-server/stacks/nextcloud"
       state: directory
-      mode: 0644
+      mode: 0775
 
   - name: Verify nextcloud volume path
     become: true
@@ -43,12 +43,13 @@
   - name: Create docker-compose stack file
     template:
       src: docker-compose.yml
-      dest: /home/{{ ansible_user }}/stacks/nextcloud-stack.yml
+      dest: /home/{{ ansible_user }}/home-server/stacks/nextcloud/docker-compose.yml
       mode: 0775
 
   - name: Deploy stack from a compose file
     docker_compose:
       build: yes
       state: present
-      files:
-        - /home/{{ ansible_user }}/stacks/nextcloud-stack.yml
+      project_src: /home/{{ ansible_user }}/home-server/stacks/nextcloud
+      # files:
+      #   - /home/{{ ansible_user }}/home-server/stacks/nextcloud/docker-compose.yml

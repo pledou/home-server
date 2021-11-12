@@ -4,9 +4,9 @@
   block:
   - name: Verify stacks directory exists
     file:
-      path: "/home/{{ ansible_user }}/stacks"
+      path: "/home/{{ ansible_user }}/home-server/stacks/portainer"
       state: directory
-      mode: 0644
+      mode: 0775
 
   - name: Verify Portainer volume path
     become: true
@@ -22,12 +22,13 @@
   - name: Create docker-compose stack file
     template:
       src: docker-compose.yml
-      dest: /home/{{ ansible_user }}/stacks/portainer-agent-stack.yml
+      dest: /home/{{ ansible_user }}/home-server/stacks/portainer/docker-compose.yml
       mode: 0775
 
   - name: Deploy stack from a compose file
     docker_compose:
       build: yes
       state: present
-      files:
-        - /home/{{ ansible_user }}/stacks/portainer-agent-stack.yml
+      project_src: /home/{{ ansible_user }}/home-server/stacks/portainer
+      # files:
+      #   - /home/{{ ansible_user }}/home-server/stacks/portainer/docker-compose.yml

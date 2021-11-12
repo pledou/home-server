@@ -2,18 +2,18 @@
 - name: Create nextcloud Dockerfile
   copy:
     src: nextcloud/Dockerfile
-    dest: /home/{{ ansible_user }}/stacks/nextcloud/Dockerfile
+    dest: /home/{{ ansible_user }}/home-server/stacks/nextcloud/Dockerfile
     mode: 0775
 - name: Create supervisord Dockerfile
   copy:
     src: nextcloud/supervisord.conf
-    dest: /home/{{ ansible_user }}/stacks/nextcloud/supervisord.conf
+    dest: /home/{{ ansible_user }}/home-server/stacks/nextcloud/supervisord.conf
     mode: 0775
 - name: Build nextcloud Image
   docker_image:
     build:
       pull: yes
-      path: /home/{{ ansible_user }}/stacks/nextcloud
+      path: /home/{{ ansible_user }}/home-server/stacks/nextcloud
     name: registry.leducd.duckdns.org/nextcloud
     tag: latest
     push: yes
@@ -21,13 +21,13 @@
 - name: Create elastic Dockerfile
   copy:
     src: elastic/Dockerfile
-    dest: /home/{{ ansible_user }}/stacks/elastic/Dockerfile
+    dest: /home/{{ ansible_user }}/home-server/stacks/elastic/Dockerfile
     mode: 0775
 - name: Build elastic Image
   docker_image:
     build:
       pull: yes
-      path: /home/{{ ansible_user }}/stacks/elastic
+      path: /home/{{ ansible_user }}/home-server/stacks/elastic
     name: registry.leducd.duckdns.org/elasticsearchfr
     tag: latest
     push: yes

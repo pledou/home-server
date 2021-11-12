@@ -4,9 +4,9 @@
   block:
   - name: Verify stacks directory exists
     file:
-      path: "/home/{{ ansible_user }}/stacks"
+      path: "/home/{{ ansible_user }}/home-server/stacks/traefik"
       state: directory
-      mode: 0644
+      mode: 0775
 
   - name: Verify traefik volume path
     become: true
@@ -30,15 +30,16 @@
   - name: Create docker-compose stack file
     template:
       src: docker-compose.yml
-      dest: /home/{{ ansible_user }}/stacks/traefik-stack.yml
+      dest: /home/{{ ansible_user }}/home-server/stacks/traefik/docker-compose.yml
       mode: 0775
 
   - name: Deploy stack from a compose file
     docker_compose:
       build: yes
       state: present
-      files:
-        - /home/{{ ansible_user }}/stacks/traefik-stack.yml
+      project_src: /home/{{ ansible_user }}/home-server/stacks/traefik
+      # files:
+      #   - /home/{{ ansible_user }}/home-server/stacks/traefik/docker-compose.yml
     
   - name: Wait end of deployment
     community.docker.docker_stack_task_info:

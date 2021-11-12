@@ -4,9 +4,9 @@
   block:
   - name: Verify stacks directory exists
     file:
-      path: "/home/{{ ansible_user }}/stacks"
+      path: "/home/{{ ansible_user }}/home-server/stacks/registry"
       state: directory
-      mode: 0644
+      mode: 0775
 
   - name: Verify registry volume path
     become: true
@@ -18,15 +18,16 @@
   - name: Create docker-compose stack file
     template:
       src: docker-compose.yml
-      dest: /home/{{ ansible_user }}/stacks/registry-stack.yml
+      dest: /home/{{ ansible_user }}/home-server/stacks/registry/docker-compose.yml
       mode: 0775
 
   - name: Deploy stack from a compose file
     docker_compose:
       build: yes
       state: present
-      files:
-        - /home/{{ ansible_user }}/stacks/registry-stack.yml
+      project_src: /home/{{ ansible_user }}/home-server/stacks/registry
+      # files:
+      #   - /home/{{ ansible_user }}/home-server/stacks/registry/docker-compose.yml
 
   - name: Wait end of deployment
     community.docker.docker_stack_task_info:
