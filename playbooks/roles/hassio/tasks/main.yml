@@ -19,7 +19,6 @@
       - mosquitto-config
       - mosquitto-data
       - mosquitto-log
-      - secrets
 
   - name: generate passwords if not existant
     become: true

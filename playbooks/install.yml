@@ -1,9 +1,16 @@
 ---
-- hosts: all
-  roles: 
-    - host-defaults
+# - hosts: docker_server
+#   roles: 
+#     - host-defaults
 
 - hosts: docker_server
+  pre_tasks:
+    - name: Verify secrets path
+      become: true
+      file:
+        path: "{{ docker_volumes_path }}/secrets"
+        state: directory
+        mode: 0777
   roles:
     - docker
     - traefik
@@ -12,3 +19,10 @@
     - nextcloud
     - kresus
     - hassio
+  post_tasks:
+    - name: Make secrets path unreadeable
+      become: true
+      file:
+        path: "{{ docker_volumes_path }}/secrets"
+        state: directory
+        mode: 0600

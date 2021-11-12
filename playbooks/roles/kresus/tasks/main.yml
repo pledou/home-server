@@ -18,7 +18,6 @@
     - kresus-database
     - kresus-database1
     - kresus-woob
-    - secrets
 
   - name: generate passwords if not existant
     become: true

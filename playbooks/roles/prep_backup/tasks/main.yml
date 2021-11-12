@@ -15,7 +15,6 @@
     state: directory
     mode: 0644
   loop:
-    - secrets
     - databases
 
 - name: generate restic secret if restic_backup_secret is empty

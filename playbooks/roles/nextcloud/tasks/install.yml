@@ -25,7 +25,6 @@
       - nextcloud-db
       - nginx_config
       - elastic_data
-      - secrets
 
   - name: generate passwords if not existant
     become: true
