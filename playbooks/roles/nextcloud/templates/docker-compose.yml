@@ -157,14 +157,13 @@ services:
     command:
       - '-n --log-file=stdout --external-ip=$$(detect-external-ip) --listening-port=3478
         --no-cli --fingerprint --use-auth-secret --static-auth-secret=jzstsfmh41l4wdhcyrqdjmiegc0b8i48
-        --realm=leducd.duckdns.org --total-quota=100 --bps-capacity=0 --stale-nonce
+        --realm={{ app_domain_name }} --total-quota=100 --bps-capacity=0 --stale-nonce
         --no-multicast-peers'
     entrypoint:
       - docker-entrypoint.sh
     image: instrumentisto/coturn:latest
     networks:
       - nc_backend
-      - bridge
     ports:
       - 0.0.0.0:3478:3478/tcp
       - 0.0.0.0:3478:3478/udp
@@ -174,8 +173,6 @@ services:
 
 networks:
   traefik_backend:
-    external: true
-  bridge:
     external: true
   nc_backend:
 
@@ -241,10 +238,10 @@ volumes:
 
 secrets:
   nextcloud_admin_password:
-    file: /opt/nextcloud/secrets/nextcloud_admin_secret
+    file: "{{ docker_volumes_path }}/secrets/nextcloud_admin_secret"
   postgres_password:
-    file: /opt/nextcloud/secrets/database_user_secret
+    file: "{{ docker_volumes_path }}/secrets/database_user_secret"
   talk_password:
-    file: /opt/nextcloud/secrets/talk_secret
+    file: "{{ docker_volumes_path }}/secrets/talk_secret"
   redis_password:
-    file: /opt/nextcloud/secrets/redis_secret 
+    file: "{{ docker_volumes_path }}/secrets/redis_secret" 

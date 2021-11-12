@@ -35,13 +35,13 @@
     become: true
     community.general.htpasswd:
       path: "{{ docker_volumes_path }}/traefik-rules/esphome_users"
-      name: "{{ esphome_user }}"
+      name: admin
       password: "{{ esphome_password }}"
       owner: root
       group: root
       mode: 0640
 
-  - name: Create docker-compose stack file
+  - name: Create docker-compose file
     template:
       src: docker-compose.yml
       dest: /home/{{ ansible_user }}/home-server/stacks/hassio/docker-compose.yml
@@ -52,6 +52,4 @@
       build: yes
       state: present
       project_src: /home/{{ ansible_user }}/home-server/stacks/hassio
-      # files:
-      #   - /home/{{ ansible_user }}/home-server/stacks/hassio/docker-compose.yml
   

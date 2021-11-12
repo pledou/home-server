@@ -22,8 +22,8 @@ services:
       # Define the port inside of the Docker service to use
       - traefik.http.services.traefik-public.loadbalancer.server.port=8080
 
-      - traefik.http.routers.traefik-public-https.tls.domains[0].main=$duckdns_subdomain.duckdns.org
-      - traefik.http.routers.traefik-public-https.tls.domains[0].sans=*.$duckdns_subdomain.duckdns.org
+      - traefik.http.routers.traefik-public-https.tls.domains[0].main={{ duckdns_subdomain }}.duckdns.org
+      - traefik.http.routers.traefik-public-https.tls.domains[0].sans=*.{{ duckdns_subdomain }}.duckdns.org
 
     environment:
       - DUCKDNS_TOKEN={{ traefik_duckdns_token }}
@@ -45,11 +45,11 @@ services:
       # - --certificatesresolvers.le.acme.tlschallenge=true
       - --certificatesresolvers.le.acme.dnschallenge=true
       - --certificatesresolvers.le.acme.dnschallenge.provider=duckdns
-      - --entrypoints.websecure.http.tls.domains[0].main=$duckdns_subdomain.duckdns.org
-      - --entrypoints.websecure.http.tls.domains[0].sans=*.$duckdns_subdomain.duckdns.org
+      - --entrypoints.websecure.http.tls.domains[0].main={{ duckdns_subdomain }}.duckdns.org
+      - --entrypoints.websecure.http.tls.domains[0].sans=*.{{ duckdns_subdomain }}.duckdns.org
       
       # a tester uniquement les sous-certificats seronts valides
-      #- --entrypoints.websecure.http.tls.domains[0].main="*.$duckdns_subdomain.duckdns.org > $duckdns_subdomain.duckdns.org"
+      #- --entrypoints.websecure.http.tls.domains[0].main="*.{{ duckdns_subdomain }}.duckdns.org > {{ duckdns_subdomain }}.duckdns.org"
 
       #- "--certificatesresolvers.le.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
       - --accesslog
