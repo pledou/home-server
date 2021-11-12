@@ -74,7 +74,7 @@ services:
       traefik.http.middlewares.esphome-auth.basicauth.usersfile: /rules/esphome_users
     restart: always
     image: esphome/esphome
-    network_mode: host
+    # network_mode: host
     ports:
       - 0.0.0.0:6052:6052
       - 0.0.0.0:6123:6123

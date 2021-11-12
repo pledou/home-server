@@ -228,7 +228,7 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: "{{ docker_volumes_path }}/nginx_config"
+      device: "{{ docker_volumes_path }}/nextcoud_nginx_config"
   elastic_data:
     driver: local
     driver_opts:
