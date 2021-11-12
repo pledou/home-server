@@ -50,7 +50,7 @@
   #TODO  
   # - name: Wait end of deployment
   #   community.docker.docker_stack_task_info:
-  #     name: registry
+  #     name: traefik
   #   register: docker_services
   #   until: docker_services[name=].CurrentState == "Running"
   #   retries: 15

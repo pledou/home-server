@@ -26,7 +26,7 @@ services:
       - traefik.http.routers.traefik-public-https.tls.domains[0].sans=*.$duckdns_subdomain.duckdns.org
 
     environment:
-      - traefik_duckdns_token={{ traefik_duckdns_token }}
+      - DUCKDNS_TOKEN={{ traefik_duckdns_token }}
     hostname: traefik
     image: traefik:latest      
     command:

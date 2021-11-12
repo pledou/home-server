@@ -3,7 +3,6 @@
   roles: 
     - traefik
     - portainer
-    - registry
     - nextcloud
     - kresus
     - hassio

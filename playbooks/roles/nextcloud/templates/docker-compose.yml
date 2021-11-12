@@ -57,7 +57,10 @@ services:
       - POSTGRES_DB=default
       - POSTGRES_USER=nextcloud
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
-    image: registry.leducd.duckdns.org/nextcloud
+    image: nextcloud-custom
+    build:
+      context: .
+      dockerfile: nextcloud.Dockerfile
     networks:
       - nc_backend
       - traefik_backend
@@ -88,7 +91,10 @@ services:
   elasticsearch_tesseract:
     labels:
       traefik.enable: 'false'
-    image: registry.leducd.duckdns.org/elasticsearchfr:latest
+    image: elasticsearchfr-custom
+    build:
+      context: .
+      dockerfile: elastic.Dockerfile
     volumes:
       - elastic_data:/usr/share/elasticsearch/data:rw
     networks:

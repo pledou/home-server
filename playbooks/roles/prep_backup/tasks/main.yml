@@ -8,7 +8,7 @@
   include_tasks: install_rclone.yml
   when: ( 'rclone' in restic_repo )
 
-- name: Verify registry volume path
+- name: Verify databases volume path
   become: true
   file:
     path: "{{ docker_volumes_path }}/{{ item }}"
