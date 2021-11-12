@@ -3,7 +3,7 @@ version: '3.3'
 services:
   portainer:
     image: portainer/portainer
-    command: --host unix:///var/run/docker.sock --admin-password {{ portainerpassword }}
+    command: --host unix:///var/run/docker.sock --admin-password {{ portainer_admin_secret }}
     volumes:
       - portainer-data:/data
     networks:

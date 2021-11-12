@@ -29,10 +29,11 @@
       # files:
       #   - /home/{{ ansible_user }}/home-server/stacks/registry/docker-compose.yml
 
-  - name: Wait end of deployment
-    community.docker.docker_stack_task_info:
-      name: registry
-    register: docker_services
-    until: docker_services[].CurrentState == "Running"
-    retries: 15
-    delay: 60
+#TODO
+  # - name: Wait end of deployment
+  #   community.docker.docker_stack_task_info:
+  #     name: registry
+  #   register: docker_services
+  #   until: docker_services[].CurrentState == "Running"
+  #   retries: 15
+  #   delay: 60

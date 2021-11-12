@@ -46,11 +46,12 @@
       project_src: /home/{{ ansible_user }}/home-server/stacks/traefik
       # files:
       #   - /home/{{ ansible_user }}/home-server/stacks/traefik/docker-compose.yml
-    
-  - name: Wait end of deployment
-    community.docker.docker_stack_task_info:
-      name: registry
-    register: docker_services
-    until: docker_services[name=].CurrentState == "Running"
-    retries: 15
-    delay: 60
+
+  #TODO  
+  # - name: Wait end of deployment
+  #   community.docker.docker_stack_task_info:
+  #     name: registry
+  #   register: docker_services
+  #   until: docker_services[name=].CurrentState == "Running"
+  #   retries: 15
+  #   delay: 60
