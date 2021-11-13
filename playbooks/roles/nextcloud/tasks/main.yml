@@ -19,21 +19,21 @@
     loop:
       - name: nextcloud-redis-data
         group: 999
-        user: 999
+        owner: 999
       - name: nextcloud-turnserver-data
       - name: nextcloud-www
-        user: 33
+        owner: 33
         group: 33
       - name: nextcloud-config
-        user: 33
+        owner: 33
         group: 33
       - name: nextcloud-data
-        user: 33
+        owner: 33
         group: 33
       - name: nextcloud-collabora-conf
       - name: nextcloud-db
         group: 999
-        user: 999
+        owner: 999
       - name: nextcloud-nginx-config
       - name: nextcloud-elastic-data
 
