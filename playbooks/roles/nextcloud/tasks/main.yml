@@ -4,27 +4,36 @@
   block:
   - name: Verify stacks directory exists
     file:
-      path: "/home/{{ ansible_user }}/home-server/stacks/nextcloud"
+      path: "/home/{{ ansible_user }}/home-server/stacks/nc"
       state: directory
       mode: 0775
 
   - name: Verify nextcloud volume path
     become: true
     file:
-      path: "{{ docker_volumes_path }}/{{ item }}"
+      path: "{{ docker_volumes_path }}/{{ item.name }}"
       state: directory
-      mode: 0644
+      owner: "{{ item.owner | default('root')}}"
+      group: "{{ item.group | default('root')}}"
+      mode: "{{ item.mode | default('0750') }}"
     loop:
-      - redis-data
-      - turnserver-data
-      - nextcloud-www
-      - nextcloud-config
-      - nextcloud-data
-      - collabora-conf
-      - redis-data
-      - nextcloud-db
-      - nextcoud_nginx_config
-      - elastic_data
+      - name: nextcloud-redis-data
+      - name: nextcloud-turnserver-data
+      - name: nextcloud-www
+        user: 33
+        group: 33
+      - name: nextcloud-config
+        user: 33
+        group: 33
+      - name: nextcloud-data
+        user: 33
+        group: 33
+      - name: nextcloud-collabora-conf
+      - name: nextcloud-db
+        group: 999
+        user: 999
+      - name: nextcloud-nginx-config
+      - name: nextcloud-elastic-data
 
   - name: generate passwords if not existant
     become: true
@@ -38,7 +47,7 @@
     become: true
     copy:
       src: "{{ item }}"
-      dest: "{{ docker_volumes_path }}/nextcoud_nginx_config"
+      dest: "{{ docker_volumes_path }}/nextcloud-nginx-config"
       mode: '0644'
     loop:
       - nginx.conf
@@ -48,31 +57,29 @@
   - name: Create nextcloud Dockerfile
     copy:
       src: nextcloud/Dockerfile
-      dest: /home/{{ ansible_user }}/home-server/stacks/nextcloud/nextcloud.Dockerfile
+      dest: /home/{{ ansible_user }}/home-server/stacks/nc/nextcloud.Dockerfile
       mode: 0775
 
   - name: Create supervisord Dockerfile
     copy:
       src: nextcloud/supervisord.conf
-      dest: /home/{{ ansible_user }}/home-server/stacks/nextcloud/supervisord.conf
+      dest: /home/{{ ansible_user }}/home-server/stacks/nc/supervisord.conf
       mode: 0775
 
   - name: Create elastic Dockerfile
     copy:
       src: elastic/Dockerfile
-      dest: /home/{{ ansible_user }}/home-server/stacks/nextcloud/elastic.Dockerfile
+      dest: /home/{{ ansible_user }}/home-server/stacks/nc/elastic.Dockerfile
       mode: 0775
 
   - name: Create docker-compose stack file
     template:
       src: docker-compose.yml
-      dest: /home/{{ ansible_user }}/home-server/stacks/nextcloud/docker-compose.yml
+      dest: /home/{{ ansible_user }}/home-server/stacks/nc/docker-compose.yml
       mode: 0775
 
   - name: Deploy stack from a compose file
     docker_compose:
       build: yes
       state: present
-      project_src: /home/{{ ansible_user }}/home-server/stacks/nextcloud
-      # files:
-      #   - /home/{{ ansible_user }}/home-server/stacks/nextcloud/docker-compose.yml
+      project_src: /home/{{ ansible_user }}/home-server/stacks/nc

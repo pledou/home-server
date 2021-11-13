@@ -9,11 +9,9 @@ services:
       - POSTGRES_USER=nextcloud
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
       - PGDATA=/var/lib/postgresql/data
-    image: postgres
+    image: postgres:13
     networks:
       - nc_backend
-    tty: true
-    user: postgres:postgres
     volumes:
       #- nexcloud-database-vol:/var/lib/postgresql/data:rw
       - nextcloud-database:/var/lib/postgresql/data:rw
@@ -58,6 +56,7 @@ services:
       - POSTGRES_USER=nextcloud
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
     image: nextcloud-custom
+    hostname: nc_nextcloud
     build:
       context: .
       dockerfile: nextcloud.Dockerfile
@@ -65,10 +64,10 @@ services:
       - nc_backend
       - traefik_backend
     volumes:
-      - nextcloud-www:/var/www/html:rw
-      - nextcloud-config:/var/www/html/config:rw
-      - nextcloud-data:/var/nc-data:rw
-      - nginx_config:/etc/nginx:rw
+      - nextcloud-www:/var/www/html:Z
+      - nextcloud-config:/var/www/html/config:Z
+      - nextcloud-data:/var/nc-data:Z
+      - nginx_config:/etc/nginx:Z
     working_dir: /var/www/html
     depends_on:
       - ncdb
@@ -84,7 +83,6 @@ services:
     networks:
       - nc_backend
     volumes:
-      #- redis-data:/data:rw
       - redis-data:/data:rw
     working_dir: /data
 
@@ -204,13 +202,13 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: "{{ docker_volumes_path }}/collabora-conf"
+      device: "{{ docker_volumes_path }}/nextcloud-collabora-conf"
   redis-data: 
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: "{{ docker_volumes_path }}/redis-data"
+      device: "{{ docker_volumes_path }}/nextcloud-redis-data"
   nextcloud-database: 
     driver: local
     driver_opts:
@@ -222,19 +220,19 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: "{{ docker_volumes_path }}/turnserver-data"
+      device: "{{ docker_volumes_path }}/nextcloud-turnserver-data"
   nginx_config: 
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: "{{ docker_volumes_path }}/nextcoud_nginx_config"
+      device: "{{ docker_volumes_path }}/nextcloud-nginx-config"
   elastic_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: "{{ docker_volumes_path }}/elastic_data"
+      device: "{{ docker_volumes_path }}/nextcloud-elastic-data"
 
 secrets:
   nextcloud_admin_password:
