@@ -18,6 +18,8 @@
       mode: "{{ item.mode | default('0750') }}"
     loop:
       - name: nextcloud-redis-data
+        group: 999
+        user: 999
       - name: nextcloud-turnserver-data
       - name: nextcloud-www
         user: 33

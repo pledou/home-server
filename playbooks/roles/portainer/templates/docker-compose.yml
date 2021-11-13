@@ -5,6 +5,7 @@ services:
     image: portainer/portainer-ce
     volumes:
       - portainer-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - traefik_backend
     labels:

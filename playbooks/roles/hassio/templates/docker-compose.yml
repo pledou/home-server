@@ -27,9 +27,11 @@ services:
       - /init
     hostname: homeassistant
     image: homeassistant/home-assistant:stable
-    network_mode: host
+    # network_mode: host
     # ports:
     #   - 8123:8123/tcp
+    networks:
+      - traefik_backend
     privileged: true
     restart: always
     security_opt:
@@ -75,6 +77,8 @@ services:
     restart: always
     image: esphome/esphome
     # network_mode: host
+    networks:
+      - traefik_backend
     ports:
       - 0.0.0.0:6052:6052
       - 0.0.0.0:6123:6123
@@ -114,6 +118,8 @@ volumes:
       o: bind
       device: "{{ docker_volumes_path }}/mosquitto-log"
   
-
+networks:
+  traefik_backend:
+    external: true
 
 
