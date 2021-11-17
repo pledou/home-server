@@ -15,7 +15,7 @@
       state: directory
       owner: "{{ item.owner | default('root')}}"
       group: "{{ item.group | default('root')}}"
-      mode: "{{ item.mode | default('0750') }}"
+      mode: "{{ item.mode | default('0700') }}"
     loop:
       - name: nextcloud-redis-data
         group: 999
@@ -31,11 +31,14 @@
         owner: 33
         group: 33
       - name: nextcloud-collabora-conf
+        owner: 104
+        group: 106
       - name: nextcloud-db
         group: 999
         owner: 999
       - name: nextcloud-nginx-config
       - name: nextcloud-elastic-data
+        owner: 1000
 
   - name: generate passwords if not existant
     become: true

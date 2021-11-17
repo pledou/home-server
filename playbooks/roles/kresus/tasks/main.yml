@@ -11,13 +11,21 @@
   - name: Verify kresus volume path
     become: true
     file:
-      path: "{{ docker_volumes_path }}/{{ item }}"
+      path: "{{ docker_volumes_path }}/{{ item.name }}"
       state: directory
-      mode: 0644
+      owner: "{{ item.owner | default('root')}}"
+      group: "{{ item.group | default('root')}}"
+      mode: "{{ item.mode | default('0700') }}"
     loop:
-    - kresus-database
-    - kresus-database1
-    - kresus-woob
+    - name: kresus-database
+      group: 999
+      owner: 999
+    - name: kresus-database1
+      group: 999
+      owner: 999
+    - name: kresus-woob
+      group: 1001
+      owner: 1000
 
   - name: generate passwords if not existant
     become: true
