@@ -12,13 +12,13 @@ services:
       
       traefik.http.routers.home-https.rule: Host(`home.{{ duckdns_subdomain }}.duckdns.org`)
       traefik.http.routers.home-https.entrypoints: https
-      traefik.http.routers.home-https.middlewares: home@docker
+      traefik.http.routers.home-https.service: home@docker
       traefik.http.routers.home-https.tls: 'true'
       traefik.http.routers.home-https.tls.certresolver: le
 
       traefik.http.routers.home-websecure.rule: Host(`home.{{ duckdns_subdomain }}.duckdns.org`)
       traefik.http.routers.home-websecure.entrypoints: websecure
-      traefik.http.routers.home-websecure.middlewares: home@docker
+      traefik.http.routers.home-websecure.service: home@docker
       traefik.http.routers.home-websecure.tls: 'true'
       traefik.http.routers.home-websecure.tls.certresolver: le
 
