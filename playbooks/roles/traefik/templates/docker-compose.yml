@@ -57,7 +57,10 @@ services:
       - --log.level=INFO
       - --api
     networks:
-      - backend
+      backend:
+        ipv4_address: 172.19.0.2
+    extra_hosts:
+      host.docker.internal: 172.19.0.1
 
     ports:
       - 0.0.0.0:8443:8443/tcp

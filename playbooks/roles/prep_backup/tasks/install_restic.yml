@@ -12,24 +12,11 @@
     restic_version: "{{ restic_tags.json.0.name | replace('v','') }}"
   when: restic_version == 'latest'
 
-- name: download restic binary
-  get_url:
-    url: '{{ restic_download_url }}'
-    dest: '{{ restic_install_path }}/restic.bz2'
-    force: true
-    checksum: 'sha256:https://github.com/restic/restic/releases/download/v{{ restic_version }}/SHA256SUMS'
-
-- name: decompress the binary
-  unzip: 
-    src: "{{ restic_install_path }}/restic.bz2"
-    dest: "{{ restic_install_path }}"
-    remote_src: yes
-    extra_opts:
-    - --force
-
-- name: ensure permissions are correct
-  file:
-    path: '{{ restic_install_path }}/restic'
-    mode: '0755'
-    owner: 'root'
-    group: 'root'
+- name: install restic binary
+  become: true
+  apt:
+    pkg:
+      - restic
+    state: latest # noqa package-latest
+    force_apt_get: true
+    update_cache: yes

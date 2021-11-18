@@ -13,7 +13,7 @@
   file:
     path: "{{ docker_volumes_path }}/{{ item }}"
     state: directory
-    mode: 0644
+    mode: 0700
   loop:
     - databases
 
@@ -23,6 +23,7 @@
     restic_backup_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/restic_backup_secret chars=ascii_letters,digits length=32') }}"
 
 - name: create restic backup directory
+  become: true
   file:
     name:  '{{ restic_repo }}'
     owner: 'root'
@@ -32,11 +33,11 @@
   when: ( 'rclone' not in restic_repo )
   
 - name: initialize repository
-  command: '{{ restic_install_path }}/restic init'
+  become: true
+  command: 'restic init'
   environment:
     RESTIC_REPOSITORY: "{{ restic_repo }}"
     RESTIC_PASSWORD:   "{{ restic_backup_secret }}"
-  no_log: true
   register: restic_init
   changed_when: "'created restic backend' in restic_init.stdout"
   failed_when:
@@ -44,6 +45,7 @@
     - not ( 'config already initialized' in restic_init.stderr or 'config file already exists' in restic_init.stderr )
 
 - name: create restic backup script
+  become: true
   template:
     src:   'backup_volumes.sh.j2'
     dest:  '/usr/local/bin/backup_volumes.sh'
@@ -53,6 +55,7 @@
     force: false 
 
 - name: cron volume backup
+  become: true
   cron:
     name:   "backup selfhosted"
     day:    "{{ restic_backup_day }}"

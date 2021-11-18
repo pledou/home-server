@@ -10,15 +10,23 @@
   - name: Verify homeassistant volume path
     become: true
     file:
-      path: "{{ docker_volumes_path }}/{{ item }}"
+      path: "{{ docker_volumes_path }}/{{ item.name }}"
       state: directory
-      mode: 0644
+      owner: "{{ item.owner | default('root')}}"
+      group: "{{ item.group | default('root')}}"
+      mode: "{{ item.mode | default('0700') }}"
     loop:
-      - homeassistant
-      - esphome
-      - mosquitto-config
-      - mosquitto-data
-      - mosquitto-log
+      - name: homeassistant
+      - name: esphome
+      - name: mosquitto-config
+        owner: 1000
+        group: 1000
+      - name: mosquitto-data
+        owner: 1000
+        group: 1000
+      - name: mosquitto-log
+        owner: 1000
+        group: 1000
 
   - name: generate passwords if not existant
     become: true

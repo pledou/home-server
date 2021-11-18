@@ -18,6 +18,7 @@
     - nextcloud
     - kresus
     - hassio
+    - prep_backup
   post_tasks:
     - name: Make secrets path unreadeable
       become: true
