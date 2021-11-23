@@ -28,7 +28,8 @@ services:
     environment:
       - DUCKDNS_TOKEN={{ traefik_duckdns_token }}
     hostname: traefik
-    image: traefik:latest      
+    image: traefik:latest  
+    restart: always    
     command:
       - --providers.docker
       # - --providers.docker.exposedbydefault=false

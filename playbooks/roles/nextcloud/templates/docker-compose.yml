@@ -10,6 +10,7 @@ services:
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
       - PGDATA=/var/lib/postgresql/data
     image: postgres:13
+    restart: always
     networks:
       - nc_backend
     volumes:
@@ -56,6 +57,7 @@ services:
       - POSTGRES_USER=nextcloud
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
     image: nextcloud-custom
+    restart: always
     hostname: nc_nextcloud
     build:
       context: .
@@ -80,6 +82,7 @@ services:
       - traefik.enable=false
     command: redis-server --requirepass ***REMOVED_REDIS_PASSWORD***
     image: redis:alpine
+    restart: always
     networks:
       - nc_backend
     volumes:
@@ -90,6 +93,7 @@ services:
     labels:
       traefik.enable: 'false'
     image: elasticsearchfr-custom
+    restart: always
     hostname: elasticsearch_tesseract
     build:
       context: .
@@ -140,6 +144,7 @@ services:
     cap_add:
       - MKNOD
     image: collabora/code:latest
+    restart: always
     environment:
           - domain=collabora.{{ duckdns_subdomain }}.duckdns.org
     networks:
@@ -161,6 +166,7 @@ services:
     entrypoint:
       - docker-entrypoint.sh
     image: instrumentisto/coturn:latest
+    restart: always
     networks:
       - nc_backend
     ports:
