@@ -1,0 +1,47 @@
+---
+- name: Install gitlab
+  block:
+  - name: Verify stacks directory exists
+    file:
+      path: "/home/{{ ansible_user }}/home-server/stacks/gitlab"
+      state: directory
+      mode: 0775
+
+  - name: Verify gitlab volume path
+    become: true
+    file:
+      path: "{{ docker_volumes_path }}/{{ item.name }}"
+      state: directory
+      owner: "{{ item.owner | default('root')}}"
+      group: "{{ item.group | default('root')}}"
+      mode: "{{ item.mode | default('0700') }}"
+    loop:
+      - name: gitlab-logs
+      - name: gitlab-config
+      - name: gitlab-data
+#     - name: runner-config
+
+  - name: copy gitlab config
+    become: true
+    template:
+      src: gitlab.rb
+      dest: "{{ docker_volumes_path }}/gitlab-config/gitlab.rb"
+
+  - name: generate passwords if not existant
+    become: true
+    set_fact:
+      gitlab_root_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/gitlab_root_password chars=ascii_letters,digits length=32') }}"
+ 
+
+  - name: Create docker-compose file
+    template:
+      src: docker-compose.yml
+      dest: /home/{{ ansible_user }}/home-server/stacks/gitlab/docker-compose.yml
+      mode: 0775
+
+  - name: Deploy compose from a compose file
+    docker_compose:
+      build: yes
+      state: present
+      project_src: /home/{{ ansible_user }}/home-server/stacks/gitlab
+  

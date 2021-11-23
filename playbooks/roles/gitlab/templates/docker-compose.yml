@@ -1,0 +1,74 @@
+version: "3.6"
+services:
+  gitlab:
+    labels: 
+          - traefik.enable=true
+          - traefik.docker.network=traefik_backend
+          - traefik.constraint-label=traefik_backend
+          - traefik.http.routers.gitlab-http.rule=Host(`gitlab.${DUCKDNS_SUBDOMAIN}.duckdns.org`)
+          - traefik.http.routers.gitlab-http.entrypoints=http
+          - traefik.http.routers.gitlab-http.service=gitlab
+          - traefik.http.routers.gitlab-http.middlewares=https-redirect
+          - traefik.http.routers.gitlab-https.rule=Host(`gitlab.${DUCKDNS_SUBDOMAIN}.duckdns.org`)
+          - traefik.http.routers.gitlab-https.entrypoints=https
+          - traefik.http.routers.gitlab-https.tls=true
+          - traefik.http.routers.gitlab-https.tls.certresolver=le
+          - traefik.http.routers.gitlab-https.service=gitlab
+          - traefik.http.services.gitlab.loadbalancer.server.port=80
+
+          # Host settings for the registry
+          - traefik.http.routers.registry-g-http.rule=Host(`registry.gitlab.${DUCKDNS_SUBDOMAIN}.duckdns.org`)
+          - traefik.http.routers.registry-g-http.entrypoints=http
+          - traefik.http.routers.registry-g-http.service=registry-g
+          - traefik.http.routers.registry-g-http.middlewares=https-redirect
+          - traefik.http.routers.registry-g-https.rule=Host(`registry.gitlab.${DUCKDNS_SUBDOMAIN}.duckdns.org`)
+          - traefik.http.routers.registry-g-https.entrypoints=https
+          - traefik.http.routers.registry-g-https.tls=true
+          - traefik.http.routers.registry-g-https.tls.certresolver=le
+          - traefik.http.routers.registry-g-https.service=registry-g
+          - traefik.http.services.registry-g.loadbalancer.server.port=5100
+          # Host settings for GitLab pages. Since I don't have a wildcard certificate, I list every domain on it's own here
+          - traefik.http.routers.pages-g-http.rule=Host(`pages.gitlab.${DUCKDNS_SUBDOMAIN}.duckdns.org`)
+          - traefik.http.routers.pages-g-http.entrypoints=http
+          - traefik.http.routers.pages-g-http.service=pages-g
+          - traefik.http.routers.pages-g-http.middlewares=https-redirect
+          - traefik.http.routers.pages-g-https.rule=Host(`pages.gitlab.${DUCKDNS_SUBDOMAIN}.duckdns.org`)
+          - traefik.http.routers.pages-g-https.entrypoints=https
+          - traefik.http.routers.pages-g-https.tls=true
+          - traefik.http.routers.pages-g-https.tls.certresolver=le
+          - traefik.http.routers.pages-g-https.service=pages-g
+          - traefik.http.services.pages-g.loadbalancer.server.port=5201
+    image: gitlab/gitlab-ce:latest
+    hostname: gitlab.{{app_domain_name}}
+    # I had problems with the health check. Sometimes it reported unhealthyness and therefore Traefik removed
+    # the container, so I turned it off. Maybe it works by now.
+    healthcheck:
+      disable: true
+    networks:
+      gitlab_backend:
+        aliases:
+          - gitlab.{{app_domain_name}}
+          - gitlab
+      traefik_backend:
+    volumes:
+      - "{{ docker_volumes_path }}/gitlab-data:/var/opt/gitlab"
+      - "{{ docker_volumes_path }}/gitlab-logs:/var/log/gitlab"
+      - "{{ docker_volumes_path }}/gitlab-config:/etc/gitlab"
+    secrets:
+      - gitlab_root_password
+  # gitlab-runner:
+  #   image: gitlab/gitlab-runner:alpine
+  #   networks:
+  #     - gitlab_backend
+  #   labels: 
+  #     - traefik.enable=false
+
+
+secrets:
+  gitlab_root_password:
+    file: "{{ docker_volumes_path }}/secrets/gitlab_root_password"
+
+networks:
+  gitlab_backend:
+  traefik_backend:
+    external: true
