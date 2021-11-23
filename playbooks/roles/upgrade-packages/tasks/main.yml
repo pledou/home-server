@@ -17,3 +17,7 @@
   reboot:
     reboot_timeout: 60
   when: reboot_request.stat.exists
+
+- name: restic self update
+  become: true
+  shell: restic self-update

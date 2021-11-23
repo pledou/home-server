@@ -4,10 +4,6 @@
 - name: install restic
   include_tasks: install_restic.yml
 
-- name: install restic
-  include_tasks: install_rclone.yml
-  when: ( 'rclone' in restic_repo )
-
 - name: Verify databases volume path
   become: true
   file:
@@ -21,16 +17,6 @@
   become: true
   set_fact:
     restic_backup_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/restic_backup_secret chars=ascii_letters,digits length=32') }}"
-
-- name: create restic backup directory
-  become: true
-  file:
-    name:  '{{ restic_repo }}'
-    owner: 'root'
-    group: 'root'
-    mode:  '0700'
-    state: directory
-  when: ( 'rclone' not in restic_repo )
   
 - name: initialize repository
   become: true
