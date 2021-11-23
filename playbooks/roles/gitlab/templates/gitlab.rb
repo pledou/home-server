@@ -42,3 +42,11 @@ pages_nginx['proxy_set_headers'] = {
 
 gitlab_pages['inplace_chroot'] = true
 gitlab_pages['external_http'] = ['gitlab:5201']
+
+gitlab_rails['smtp_enable'] = true
+gitlab_rails['smtp_address'] = "{{ kresus_email_host }}"
+gitlab_rails['smtp_port'] = {{ kresus_email_port }}
+gitlab_rails['smtp_user_name'] = "{{ kresus_email_user }}"
+gitlab_rails['smtp_password'] = "{{ kresus_email_password }}"
+gitlab_rails['smtp_authentication'] = "login"
+gitlab_rails['smtp_enable_starttls_auto'] = true
