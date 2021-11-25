@@ -18,6 +18,7 @@
     loop:
       - name: homeassistant
       - name: esphome
+        mode: 0750 #usefull for editing config
       - name: mosquitto-config
         owner: 1000
         group: 1000
@@ -32,12 +33,6 @@
     become: true
     set_fact:
       esphome_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/esphome_password chars=ascii_letters,digits length=32') }}"
- 
-  - name: Generate admin password hash
-    command: openssl passwd -apr1 {{ esphome_password }}| sed -e s/\\$/\\$\\$/g
-    register: esphome_hash
-  - set_fact: 
-      esphome_hash: "{{ esphome_hash.stdout }}"
 
   - name: Add a user to a password file and ensure permissions are set
     become: true

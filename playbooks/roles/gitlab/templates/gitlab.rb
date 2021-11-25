@@ -3,7 +3,7 @@ gitlab_rails['initial_root_password'] = File.read('/run/secrets/gitlab_root_pass
 
 letsencrypt['enable'] = false
 
-nginx['listen_port'] = 80
+nginx['listen_port'] = 8080
 nginx['listen_https'] = false
 nginx['http2_enabled'] = false
 
