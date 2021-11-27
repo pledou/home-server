@@ -10,7 +10,10 @@
       file:
         path: "{{ docker_volumes_path }}/secrets"
         state: directory
-        mode: 0777
+        owner: root 
+        group: leduc 
+        mode: u=rwX,g=rwX,o=rwX 
+        recurse: yes
   roles:
     - docker
     - traefik
@@ -26,4 +29,7 @@
       file:
         path: "{{ docker_volumes_path }}/secrets"
         state: directory
-        mode: 0600
+        owner: root 
+        group: leduc 
+        mode: u=rw,g=rw,o=
+        recurse: yes

@@ -26,10 +26,8 @@ services:
     hostname: homeassistant
     image: homeassistant/home-assistant:stable
     network_mode: host
-    # ports:
-    #   - 8123:8123/tcp
-    # networks:
-    #   - traefik_backend
+    cap_add:
+      - NET_ADMIN
     privileged: true
     restart: always
     security_opt:

@@ -5,7 +5,7 @@ services:
           - traefik.enable=true
           - traefik.docker.network=traefik_backend
           - traefik.constraint-label=traefik_backend
-          - traefik.http.routers.gitlab-http.rule=Host(`gitlab.{{app_domain_name}})
+          - traefik.http.routers.gitlab-http.rule=Host(`gitlab.{{app_domain_name}}`)
           - traefik.http.routers.gitlab-http.entrypoints=http
           - traefik.http.routers.gitlab-http.service=gitlab
           - traefik.http.routers.gitlab-http.middlewares=https-redirect
@@ -14,7 +14,7 @@ services:
           - traefik.http.routers.gitlab-https.tls=true
           - traefik.http.routers.gitlab-https.tls.certresolver=le
           - traefik.http.routers.gitlab-https.service=gitlab
-          - traefik.http.services.gitlab.loadbalancer.server.port=8080
+          - traefik.http.services.gitlab.loadbalancer.server.port=8181
 
           # Host settings for the registry
           - traefik.http.routers.registry-g-http.rule=Host(`registry.gitlab.{{app_domain_name}}`)

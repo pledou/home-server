@@ -17,8 +17,11 @@
       mode: "{{ item.mode | default('0700') }}"
     loop:
       - name: homeassistant
+        mode: '0750'
+        group: 0998
       - name: esphome
-        mode: 0750 #usefull for editing config
+        mode: '0750'
+        group: 0998
       - name: mosquitto-config
         owner: 1000
         group: 1000
@@ -51,8 +54,16 @@
       mode: 0775
 
   - name: Deploy compose from a compose file
+    become: true
     docker_compose:
       build: yes
       state: present
       project_src: /home/{{ ansible_user }}/home-server/stacks/hassio
   
+  - name: Fix bluepy dependency
+    community.docker.docker_container_exec:
+      container: hassio_homeassistant_1
+      argv:
+        - /bin/bash
+        - "-c"
+        - "pip install --find-links $WHEELS_LINKS bluepy==1.3.0"

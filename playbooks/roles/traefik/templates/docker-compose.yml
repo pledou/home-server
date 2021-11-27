@@ -73,6 +73,8 @@ services:
       - traefik-rules:/rules
 
   updateDuckDNSIP:
+    labels:
+      - traefik.enable=false
     # used to update duckdns
     # if you have a static IP, yu can comment this out
     # using busybox due to it having an image for almost every platform
