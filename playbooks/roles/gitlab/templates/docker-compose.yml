@@ -18,6 +18,7 @@ services:
           - traefik.http.routers.gitlab-websecure.entrypoints= websecure
           - traefik.http.routers.gitlab-websecure.tls= 'true'
           - traefik.http.routers.gitlab-websecure.tls.certresolver= le
+          - traefik.http.routers.gitlab-websecure.service=gitlab
           - traefik.http.services.gitlab.loadbalancer.server.port=8181
 
           # Host settings for the registry
