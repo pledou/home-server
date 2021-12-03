@@ -14,7 +14,7 @@ services:
           - traefik.http.routers.gitlab-https.tls=true
           - traefik.http.routers.gitlab-https.tls.certresolver=le
           - traefik.http.routers.gitlab-https.service=gitlab
-          - traefik.http.routers.gitlab-websecure.rule= Host(`home.{{ duckdns_subdomain }}.duckdns.org`)
+          - traefik.http.routers.gitlab-websecure.rule= Host(`gitlab.{{app_domain_name}}`)
           - traefik.http.routers.gitlab-websecure.entrypoints= websecure
           - traefik.http.routers.gitlab-websecure.tls= 'true'
           - traefik.http.routers.gitlab-websecure.tls.certresolver= le

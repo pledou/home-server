@@ -6,16 +6,16 @@ services:
       # traefik.docker.network: traefik_backend
       # traefik.constraint-label: traefik_backend
       
-      traefik.http.routers.home-http.rule: Host(`home.{{ duckdns_subdomain }}.duckdns.org`)
+      traefik.http.routers.home-http.rule: Host(`home.{{app_domain_name}}`)
       traefik.http.routers.home-http.entrypoints: http
       traefik.http.routers.home-http.middlewares: https-redirect
       
-      traefik.http.routers.home-https.rule: Host(`home.{{ duckdns_subdomain }}.duckdns.org`)
+      traefik.http.routers.home-https.rule: Host(`home.{{app_domain_name}}`)
       traefik.http.routers.home-https.entrypoints: https
       traefik.http.routers.home-https.tls: 'true'
       traefik.http.routers.home-https.tls.certresolver: le
 
-      traefik.http.routers.home-websecure.rule: Host(`home.{{ duckdns_subdomain }}.duckdns.org`)
+      traefik.http.routers.home-websecure.rule: Host(`home.{{app_domain_name}}`)
       traefik.http.routers.home-websecure.entrypoints: websecure
       traefik.http.routers.home-websecure.tls: 'true'
       traefik.http.routers.home-websecure.tls.certresolver: le
@@ -37,18 +37,16 @@ services:
       - homeassistant:/config:rw
       - /etc/machine-id:/etc/machine-id:ro
     working_dir: /config
-    depends_on:
-      - mosquitto
 
   esphome:
     labels:
       traefik.enable: 'true'
       # traefik.docker.network: traefik_backend
       # traefik.constraint-label: traefik_backend
-      traefik.http.routers.esphome-http.rule: Host(`esphome.{{ duckdns_subdomain }}.duckdns.org`)
+      traefik.http.routers.esphome-http.rule: Host(`esphome.{{app_domain_name}}`)
       traefik.http.routers.esphome-http.entrypoints: http
       traefik.http.routers.esphome-http.middlewares: https-redirect
-      traefik.http.routers.esphome-https.rule: Host(`esphome.{{ duckdns_subdomain }}.duckdns.org`)
+      traefik.http.routers.esphome-https.rule: Host(`esphome.{{app_domain_name}}`)
       traefik.http.routers.esphome-https.entrypoints: https
       traefik.http.routers.esphome-https.tls: true
       traefik.http.routers.esphome-https.tls.certresolver: le
