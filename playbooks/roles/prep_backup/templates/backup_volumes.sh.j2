@@ -10,19 +10,19 @@ set -e
 restic unlock --cleanup-cache
 
 # Make sure nextcloud is enabled when we are done
-trap "docker exec -u www-data nextcloud php occ maintenance:mode --off" EXIT
+trap "docker exec -u www-data nc_nextcloud_1 php occ maintenance:mode --off" EXIT
 
 # set nextcloud to maintenance mode
-docker exec -u www-data nextcloud php occ maintenance:mode --on
+docker exec -u www-data nc_nextcloud_1 php occ maintenance:mode --on
 
-sudo docker exec nc_ncdb pg_dump -c -U nextcloud default > {{ docker_volumes_path }}/databases/db_dump_pgsql_nextcloud.sql
-restic backup --tag min --verbose {{ docker_volumes_path }}/turnserver-data
+sudo docker exec nc_ncdb_1 pg_dump -c -U nextcloud default > {{ docker_volumes_path }}/databases/db_dump_pgsql_nextcloud.sql
+restic backup --tag min --verbose {{ docker_volumes_path }}/nextcloud-turnserver-data
 restic backup --tag min --verbose {{ docker_volumes_path }}/nextcloud-www
 restic backup --tag min --verbose {{ docker_volumes_path }}/nextcloud-config
 restic backup --tag max --verbose {{ docker_volumes_path }}/nextcloud-data
 
 # end maintenance mode
-docker exec -u www-data nextcloud php occ maintenance:mode --off
+docker exec -u www-data nc_nextcloud_1 php occ maintenance:mode --off
 
 # delete trap
 trap "" EXIT
@@ -37,8 +37,8 @@ restic backup --tag min --verbose {{ docker_volumes_path }}/esphome
 restic backup --tag min --verbose {{ docker_volumes_path }}/traefik-public-certificates
 
 # TODO use dictionary of pg_dump to backup
-sudo docker exec kresus_k-db pg_dump -c -U kresus default > {{ docker_volumes_path }}/databases/db_dump_pgsql_kresus.sql
-sudo docker exec kresus_k-db1 pg_dump -c -U kresus default > {{ docker_volumes_path }}/databases/db_dump_pgsql_kresus1.sql
+sudo docker exec kresus_k-db_1 pg_dump -c -U kresus default > {{ docker_volumes_path }}/databases/db_dump_pgsql_kresus.sql
+sudo docker exec kresus_k-db1_1 pg_dump -c -U kresus default > {{ docker_volumes_path }}/databases/db_dump_pgsql_kresus1.sql
 
 restic backup --tag min --verbose {{ docker_volumes_path }}/databases
 
