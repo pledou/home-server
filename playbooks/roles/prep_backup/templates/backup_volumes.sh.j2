@@ -37,8 +37,8 @@ restic backup --tag min --verbose {{ docker_volumes_path }}/esphome
 restic backup --tag min --verbose {{ docker_volumes_path }}/traefik-public-certificates
 
 # TODO use dictionary of pg_dump to backup
-sudo docker exec kresus_k-db_1 pg_dump -c -U kresus default > {{ docker_volumes_path }}/databases/db_dump_pgsql_kresus.sql
-sudo docker exec kresus_k-db1_1 pg_dump -c -U kresus default > {{ docker_volumes_path }}/databases/db_dump_pgsql_kresus1.sql
+sudo docker exec kresus_k-db_1 pg_dump -c -U kresus kresus > {{ docker_volumes_path }}/databases/db_dump_pgsql_kresus.sql
+sudo docker exec kresus_k-db1_1 pg_dump -c -U kresus kresus > {{ docker_volumes_path }}/databases/db_dump_pgsql_kresus1.sql
 
 restic backup --tag min --verbose {{ docker_volumes_path }}/databases
 
