@@ -38,7 +38,7 @@
     owner: 'root'
     group: 'root'
     mode:  '0750'
-    force: false 
+    force: true 
 
 - name: cron volume backup
   become: true
