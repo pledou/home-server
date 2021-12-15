@@ -70,20 +70,20 @@ services:
       traefik.enable: 'true'
       traefik.docker.network: traefik_backend
       traefik.constraint-label: traefik_backend
-      traefik.http.routers.esphome-http.rule: Host(`esp.{{app_domain_name}}`)
-      traefik.http.routers.esphome-http.entrypoints: http
-      traefik.http.routers.esphome-http.middlewares: https-redirect
-      traefik.http.routers.esphome-https.rule: Host(`esp.{{app_domain_name}}`)
-      traefik.http.routers.esphome-https.entrypoints: https
-      traefik.http.routers.esphome-https.tls: true
-      traefik.http.routers.esphome-https.tls.certresolver: le
-      traefik.http.routers.esphome-websecure.rule: Host(`esp.{{app_domain_name}}`)
-      traefik.http.routers.esphome-websecure.entrypoints: websecure
-      traefik.http.routers.esphome-websecure.tls: true
-      traefik.http.routers.esphome-websecure.tls.certresolver: le
-      traefik.http.services.esphome.loadbalancer.server.port: 6052
-      traefik.http.routers.esphome-websecure.middlewares: esphome-ext-auth
-      traefik.http.routers.esphome-https.middlewares: esphome-ext-auth
+      traefik.http.routers.esp-http.rule: Host(`esp.{{app_domain_name}}`)
+      traefik.http.routers.esp-http.entrypoints: http
+      traefik.http.routers.esp-http.middlewares: https-redirect
+      traefik.http.routers.esp-https.rule: Host(`esp.{{app_domain_name}}`)
+      traefik.http.routers.esp-https.entrypoints: https
+      traefik.http.routers.esp-https.tls: true
+      traefik.http.routers.esp-https.tls.certresolver: le
+      traefik.http.routers.esp-websecure.rule: Host(`esp.{{app_domain_name}}`)
+      traefik.http.routers.esp-websecure.entrypoints: websecure
+      traefik.http.routers.esp-websecure.tls: true
+      traefik.http.routers.esp-websecure.tls.certresolver: le
+      traefik.http.services.esp.loadbalancer.server.port: 6052
+      traefik.http.routers.esp-websecure.middlewares: esphome-ext-auth
+      traefik.http.routers.esp-https.middlewares: esphome-ext-auth
       traefik.http.middlewares.esphome-ext-auth.basicauth.usersfile: /rules/esphome_ext_users
     restart: always
     image: esphome/esphome
