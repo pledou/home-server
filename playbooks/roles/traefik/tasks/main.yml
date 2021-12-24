@@ -41,6 +41,7 @@
 
   - name: Deploy stack from a compose file
     docker_compose:
+      pull: yes
       build: yes
       state: present
       project_src: /home/{{ ansible_user }}/home-server/stacks/traefik
