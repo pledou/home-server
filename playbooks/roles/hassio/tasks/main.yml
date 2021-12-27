@@ -47,6 +47,7 @@
   - name: Deploy compose from a compose file
     become: true
     docker_compose:
+      pull: yes
       build: yes
       state: present
       project_src: /home/{{ ansible_user }}/home-server/stacks/hassio
