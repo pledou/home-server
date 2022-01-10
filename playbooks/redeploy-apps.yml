@@ -2,7 +2,7 @@
 - hosts: docker_server
   roles: 
     - traefik
-    # - portainer
+    - portainer
     - nextcloud
     - kresus
     - hassio

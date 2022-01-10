@@ -56,7 +56,6 @@ services:
       - POSTGRES_DB=default
       - POSTGRES_USER=nextcloud
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
-    image: nextcloud-custom
     restart: always
     hostname: nc_nextcloud
     build:
@@ -92,7 +91,6 @@ services:
   elasticsearch_tesseract:
     labels:
       traefik.enable: 'false'
-    image: elasticsearchfr-custom
     restart: always
     hostname: elasticsearch_tesseract
     build:
