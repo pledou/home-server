@@ -13,10 +13,10 @@ services:
       - traefik.enable=true
       - traefik.docker.network=traefik_backend
       - traefik.constraint-label=traefik_backend
-      - traefik.http.routers.portainer-http.rule=Host(`portainer.{{ duckdns_subdomain }}.duckdns.org`)
+      - traefik.http.routers.portainer-http.rule=Host(`portainer.{{ app_domain_name }}`)
       - traefik.http.routers.portainer-http.entrypoints=http
       - traefik.http.routers.portainer-http.middlewares=https-redirect
-      - traefik.http.routers.portainer-https.rule=Host(`portainer.{{ duckdns_subdomain }}.duckdns.org`)
+      - traefik.http.routers.portainer-https.rule=Host(`portainer.{{ app_domain_name }}`)
       - traefik.http.routers.portainer-https.entrypoints=https
       - traefik.http.routers.portainer-https.tls=true
       - traefik.http.routers.portainer-https.tls.certresolver=le

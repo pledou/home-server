@@ -8,7 +8,7 @@ services:
       - traefik.http.middlewares.admin-auth.basicauth.usersfile=/rules/traefik_users
       - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
       - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
-      - traefik.http.routers.traefik-public-https.rule=Host(`traefik.{{ duckdns_subdomain }}.duckdns.org`)
+      - traefik.http.routers.traefik-public-https.rule=Host(`traefik.{{ app_domain_name }}`)
       - traefik.http.routers.traefik-public-https.entrypoints=https
       - traefik.http.routers.traefik-public-https.tls=true
       # Use the special Traefik service api@internal with the web UI/Dashboard
@@ -22,8 +22,8 @@ services:
       # Define the port inside of the Docker service to use
       - traefik.http.services.traefik-public.loadbalancer.server.port=8080
 
-      - traefik.http.routers.traefik-public-https.tls.domains[0].main={{ duckdns_subdomain }}.duckdns.org
-      - traefik.http.routers.traefik-public-https.tls.domains[0].sans=*.{{ duckdns_subdomain }}.duckdns.org
+      - traefik.http.routers.traefik-public-https.tls.domains[0].main={{ app_domain_name }}
+      - traefik.http.routers.traefik-public-https.tls.domains[0].sans=*.{{ app_domain_name }}
 
     environment:
       - DUCKDNS_TOKEN={{ traefik_duckdns_token }}
@@ -46,11 +46,11 @@ services:
       # - --certificatesresolvers.le.acme.tlschallenge=true
       - --certificatesresolvers.le.acme.dnschallenge=true
       - --certificatesresolvers.le.acme.dnschallenge.provider=duckdns
-      - --entrypoints.websecure.http.tls.domains[0].main={{ duckdns_subdomain }}.duckdns.org
-      - --entrypoints.websecure.http.tls.domains[0].sans=*.{{ duckdns_subdomain }}.duckdns.org
+      - --entrypoints.websecure.http.tls.domains[0].main={{ app_domain_name }}
+      - --entrypoints.websecure.http.tls.domains[0].sans=*.{{ app_domain_name }}
       
       # a tester uniquement les sous-certificats seronts valides
-      #- --entrypoints.websecure.http.tls.domains[0].main="*.{{ duckdns_subdomain }}.duckdns.org > {{ duckdns_subdomain }}.duckdns.org"
+      #- --entrypoints.websecure.http.tls.domains[0].main="*.{{ app_domain_name }} > {{ app_domain_name }}"
 
       #- "--certificatesresolvers.le.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
       - --accesslog
