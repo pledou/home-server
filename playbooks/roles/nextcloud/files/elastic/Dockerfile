@@ -8,5 +8,4 @@ RUN yum-config-manager --add-repo https://download.opensuse.org/repositories/hom
     yum install tesseract tesseract-langpack-fra tesseract-langpack-eng  -y && \
     yum clean all
 
-#TODO build RPM for AM64
 #TODO upgrade to elastic 7.12.0 and Centos 8
