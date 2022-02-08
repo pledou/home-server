@@ -58,21 +58,21 @@
 - name: Reboot host(s) after package upgrade
   become: true
   block:
-    - name: Drain node
-      docker_node:
-        hostname: "{{ ansible_hostname }}"
-        availability: drain
-      ignore_errors: true
-      register: drained
-    - name: Wait end of drain process
-      wait_for:
-        timeout: 60
+    # - name: Drain node
+    #   docker_node:
+    #     hostname: "{{ ansible_hostname }}"
+    #     availability: drain
+    #   ignore_errors: true
+    #   register: drained
+    # - name: Wait end of drain process
+    #   wait_for:
+    #     timeout: 60
     - name: Reboot
       reboot:
         reboot_timeout: 60
-    - name: Active node
-      docker_node:
-        hostname: "{{ ansible_hostname }}"
-        availability: active
-      when: drained is defined
+    # - name: Active node
+    #   docker_node:
+    #     hostname: "{{ ansible_hostname }}"
+    #     availability: active
+    #   when: drained is defined
   when: reboot_request.stat.exists
