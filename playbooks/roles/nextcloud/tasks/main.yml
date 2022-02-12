@@ -30,9 +30,6 @@
       - name: nextcloud-data
         owner: 33
         group: 33
-      - name: nextcloud-collabora-conf
-        owner: 104
-        group: 106
       - name: nextcloud-db
         group: 999
         owner: 999

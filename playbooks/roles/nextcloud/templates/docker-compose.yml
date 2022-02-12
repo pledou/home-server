@@ -144,14 +144,17 @@ services:
     image: collabora/code:latest
     restart: always
     environment:
-          - domain=collabora.{{ app_domain_name }}
+          - domain=collabora\\.{{ app_domain_name| replace('.','\\.') }}
+          - "DONT_GEN_SSL_CERT=true"
+          - "extra_params=--o:ssl.enable=false"
+          - ALLOWED_HOSTS=*
+          - DICTIONARIES="en_GB fr_FR"
     networks:
       - traefik_backend
       - nc_backend
     volumes:
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
-      - collabora-conf:/etc/loolwsd:rw
 
   turn_server:
     labels:
@@ -198,12 +201,6 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/nextcloud-data"
-  collabora-conf: 
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: "{{ docker_volumes_path }}/nextcloud-collabora-conf"
   redis-data: 
     driver: local
     driver_opts:
