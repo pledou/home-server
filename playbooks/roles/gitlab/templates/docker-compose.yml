@@ -45,6 +45,7 @@ services:
           - traefik.http.services.pages-g.loadbalancer.server.port=5201
     image: gitlab/gitlab-ce:latest
     hostname: gitlab.{{app_domain_name}}
+    restart: always
     # I had problems with the health check. Sometimes it reported unhealthyness and therefore Traefik removed
     # the container, so I turned it off. Maybe it works by now.
     healthcheck:
