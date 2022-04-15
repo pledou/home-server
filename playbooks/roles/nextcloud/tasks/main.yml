@@ -13,8 +13,8 @@
     file:
       path: "{{ docker_volumes_path }}/{{ item.name }}"
       state: directory
-      owner: "{{ item.owner | default('root')}}"
-      group: "{{ item.group | default('root')}}"
+      owner: "{{ item.owner | default('root') }}"
+      group: "{{ item.group | default('root') }}"
       mode: "{{ item.mode | default('0700') }}"
     loop:
       - name: nextcloud-redis-data
