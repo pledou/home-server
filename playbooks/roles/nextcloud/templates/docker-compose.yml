@@ -144,7 +144,6 @@ services:
     image: collabora/code:latest
     restart: always
     environment:
-          - domain=collabora\\.{{ app_domain_name| replace('.','\\.') }}
           - "DONT_GEN_SSL_CERT=true"
           - "extra_params=--o:ssl.enable=false"
           - ALLOWED_HOSTS=*
