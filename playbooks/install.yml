@@ -17,7 +17,7 @@
   roles:
     - docker
     - traefik
-    - portainer
+    #- portainer
     - nextcloud
     - kresus
     - hassio
