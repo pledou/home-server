@@ -1,0 +1,19 @@
+---
+- name: Pull an image
+  stat:
+    path: "{{ docker_volumes_path }}/{{ db_data_path }}"
+  register: db_exists
+
+
+- when: db_exists.stat.exists and db_exists.stat.mtime > (ansible_date_time.epoch - 3600 * 6)
+  block:
+    - name: Import data
+      #Note: need -T for TTY
+      command: |
+        docker exec -T -i --user postgres {{ db_container_name }} bash -c "psql -U {{ db_container_user }}" < dump.sql
+
+    - name: Set your new password
+      community.docker.docker_container_exec: 
+        container: "{{ db_container_name }}"
+        command: psql -U {{ db_container_user }} < "ALTER USER user_name WITH PASSWORD '{{ db_password }}';"
+...
