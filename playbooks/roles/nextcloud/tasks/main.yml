@@ -20,8 +20,8 @@
     include_tasks: tasks/upgrade_postgres.yml
     vars:
       db_data_path: nextcloud-db
-      db_container_name:
-      db_container_user:
+      db_container_name: nc_ncdb_1
+      db_container_user: nextcloud
       db_password: "{{ database_user_secret }}"
       db_dump_filename: db_dump_pgsql_nextcloud
 
