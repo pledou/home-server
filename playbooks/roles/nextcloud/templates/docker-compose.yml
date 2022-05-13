@@ -5,11 +5,11 @@ services:
     labels:
       - traefik.enable=false
     environment:
-      - POSTGRES_DB=default
+      - POSTGRES_DB=nextcloud
       - POSTGRES_USER=nextcloud
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
       - PGDATA=/var/lib/postgresql/data
-    image: postgres:13
+    image: postgres
     restart: always
     networks:
       - nc_backend
@@ -18,7 +18,11 @@ services:
       - nextcloud-database:/var/lib/postgresql/data:rw
     secrets:
       - postgres_password
-
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   nextcloud:
     labels:
       traefik.enable: 'true'

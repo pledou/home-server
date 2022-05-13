@@ -19,11 +19,18 @@
     query: "[].Config.Env[] | [?contains(@,'PG_MAJOR')]"
   block:
     - name: Export your data
+      become: true
       command: |
-        docker exec -i --user postgres {{ db_container_name }} bash -c "export PGPASSWORD={{ db_password }};
-        pg_dumpall -U {{ db_container_user }} -w" > {{ docker_volumes_path }}/databases/{{ db_dump_filename }}.sql
+        docker exec {{ db_container_name }} bash -c "export PGPASSWORD={{ db_password }};
+        pg_dumpall -c -U {{ db_container_user }} -w" > {{ docker_volumes_path }}/databases/{{ db_dump_filename }}.sql 
+      
+    - name: Remove postgres container
+      community.docker.docker_container:
+        name: "{{ db_container_name }}"
+        state: absent
 
     - name: Remove your Postgres data folder
+      become: true
       file:
         path: "{{ docker_volumes_path }}/{{ db_data_path }}"
         state: absent
