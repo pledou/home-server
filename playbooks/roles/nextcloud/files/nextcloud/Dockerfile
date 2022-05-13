@@ -11,6 +11,8 @@ RUN set -ex; \
         supervisor \
 #       libreoffice \
         nginx \
+        imagemagick\
+        ghostscript\
     ; \
     rm -rf /var/lib/apt/lists/*
 
