@@ -33,3 +33,9 @@
         group: leduc 
         mode: u=rw,g=rw,o=
         recurse: yes
+    - name: docker prune
+      community.docker.docker_prune:
+        images: yes 
+        containers: yes
+        containers_filters:
+          until: 24h

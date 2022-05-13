@@ -1,0 +1,5 @@
+{
+    "yaml.schemas": {
+        "https://raw.githubusercontent.com/ansible-community/schemas/main/f/ansible.json#/definitions/tasks": "file:///home/leduc/home-server/home-server/playbooks/tasks/upgrade_postgres_end.yml"
+    }
+}

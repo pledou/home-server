@@ -8,6 +8,7 @@
     - jsondiff
     - pyyaml
     - docker-compose
+    - jmespath
 
 - name: Install Docker GPG key
   become: true

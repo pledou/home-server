@@ -8,6 +8,23 @@
       state: directory
       mode: 0775
 
+  - name: generate passwords if not existant
+    become: true
+    set_fact:
+      nextcloud_admin_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/nextcloud_admin_secret chars=ascii_letters,digits length=32') }}"
+      database_user_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/database_user_secret chars=ascii_letters,digits length=32') }}"
+      talk_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/talk_secret chars=ascii_letters,digits length=32') }}"
+      redis_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/redis_secret chars=ascii_letters,digits length=32') }}"
+
+  - name: upgrade db
+    include_tasks: tasks/upgrade_postgres.yml
+    vars:
+      db_data_path: nextcloud-db
+      db_container_name: nc_ncdb_1
+      db_container_user: nextcloud
+      db_password: "{{ database_user_secret }}"
+      db_dump_filename: db_dump_pgsql_nextcloud
+
   - name: Verify nextcloud volume path
     become: true
     file:
@@ -36,14 +53,6 @@
       - name: nextcloud-nginx-config
       - name: nextcloud-elastic-data
         owner: 1000
-
-  - name: generate passwords if not existant
-    become: true
-    set_fact:
-      nextcloud_admin_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/nextcloud_admin_secret chars=ascii_letters,digits length=32') }}"
-      database_user_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/database_user_secret chars=ascii_letters,digits length=32') }}"
-      talk_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/talk_secret chars=ascii_letters,digits length=32') }}"
-      redis_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/redis_secret chars=ascii_letters,digits length=32') }}"
 
   - name: copy nginx configuration file
     become: true
@@ -86,3 +95,50 @@
       build: yes
       state: present
       project_src: /home/{{ ansible_user }}/home-server/stacks/nc
+
+ 
+  - name: end upgrade db
+    include_tasks: tasks/upgrade_postgres_end.yml
+    vars:
+      db_data_path: nextcloud-db
+      db_container_name: nc_ncdb_1
+      db_container_user: nextcloud
+      db_password: "{{ database_user_secret }}"
+      db_dump_filename: db_dump_pgsql_nextcloud     
+
+  - name: wait for nextcloud container to come up
+    become: true
+    wait_for:
+      path: "{{ docker_volumes_path }}/nextcloud-www/lib/versioncheck.php"
+
+  - name: Check if init is necessary
+    become: true
+    stat:
+      path: "{{ docker_volumes_path }}/nextcloud-config/config.php"
+    register: config_php
+
+  - name: first setup nextcloud
+    command: >
+      docker exec --user www-data nextcloud php occ  maintenance:install 
+      --database psql --database-host nc-db --database-name nextcloud # TODO ou défaut? 
+      --database-user nextcloud --database-pass {{ database_user_secret }} 
+      --admin-user admin --admin-pass {{ nextcloud_admin_password }} --data-dir {{ docker_volumes_path }}/nextcloud-data
+    when: ( not config_php.stat.exists )
+    register: first_setup_nextcloud
+
+  - name: add missing indexes
+    community.docker.docker_container_exec: 
+      container: nc_nextcloud_1
+      user: www-data
+      command: php occ db:add-missing-indices
+  - name: add missing indexes
+    community.docker.docker_container_exec: 
+      container: nc_nextcloud_1
+      user: www-data
+      command: php occ db:add-missing-columns
+
+  - name: add missing indexes
+    community.docker.docker_container_exec: 
+      container: nc_nextcloud_1
+      user: www-data
+      command: php occ db:add-missing-primary-keys

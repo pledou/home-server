@@ -1,0 +1,38 @@
+---
+- name: Pull an image
+  community.docker.docker_image:
+    name: postgres
+    source: pull
+
+- name: Get distinct versions
+  community.docker.docker_image_info:
+    # name: postgres
+  register: pg_versions
+
+- name: Check db already exists
+  stat:
+    path: "{{ docker_volumes_path }}/{{ db_data_path }}"
+  register: db_exists
+
+- when: pg_versions.images | json_query(query) | length > 1 and db_exists.stat.exists
+  vars:
+    query: "[].Config.Env[] | [?contains(@,'PG_MAJOR')]"
+  block:
+    - name: Export your data
+      become: true
+      ansible.builtin.shell: |
+        docker exec {{ db_container_name }} bash -c "export PGPASSWORD={{ db_password }};
+        pg_dumpall -c -U {{ db_container_user }} -w" > {{ docker_volumes_path }}/databases/{{ db_dump_filename }}.sql
+      register: dump_done
+
+    - name: Remove postgres container #required to force pg to init new database before restore
+      community.docker.docker_container:
+        name: "{{ db_container_name }}"
+        state: absent
+
+    - name: Remove your Postgres data folder
+      become: true
+      file:
+        path: "{{ docker_volumes_path }}/{{ db_data_path }}"
+        state: absent
+...

@@ -1,0 +1,24 @@
+---
+- name: Verification sauvegarde récente
+  stat:
+    path: "{{ docker_volumes_path }}/{{ db_data_path }}"
+  register: db_exists
+
+
+- when: db_exists.stat.exists and db_exists.stat.mtime > (ansible_date_time.epoch|int - 3600 * 6) and dump_done
+  block:
+    - name: wait pgsql to be up 
+      wait_for:
+        timeout: 10
+    - name: Import data
+      become: true
+      #Note: need -T for TTY
+      ansible.builtin.shell: |
+        docker exec {{ db_container_name }} bash -c "psql -U {{ db_container_user }}" < {{ docker_volumes_path }}/databases/{{ db_dump_filename }}.sql
+    
+    # Necessary?
+    # - name: Set your new password
+    #   community.docker.docker_container_exec: 
+    #     container: "{{ db_container_name }}"
+    #     command: psql -U {{ db_container_user }} < "ALTER USER user_name WITH PASSWORD '{{ db_password }}';"
+...
