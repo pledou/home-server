@@ -106,6 +106,26 @@
       db_password: "{{ database_user_secret }}"
       db_dump_filename: db_dump_pgsql_nextcloud     
 
+  - name: wait for nextcloud container to come up
+    become: true
+    wait_for:
+      path: "{{ docker_volumes_path }}/nextcloud-www/lib/versioncheck.php"
+
+  - name: Check if init is necessary
+    become: true
+    stat:
+      path: "{{ docker_volumes_path }}/nextcloud-config/config.php"
+    register: config_php
+
+  - name: first setup nextcloud
+    command: >
+      docker exec --user www-data nextcloud php occ  maintenance:install 
+      --database psql --database-host nc-db --database-name nextcloud # TODO ou défaut? 
+      --database-user nextcloud --database-pass {{ database_user_secret }} 
+      --admin-user admin --admin-pass {{ nextcloud_admin_password }} --data-dir {{ docker_volumes_path }}/nextcloud-data
+    when: ( not config_php.stat.exists )
+    register: first_setup_nextcloud
+
   - name: add missing indexes
     community.docker.docker_container_exec: 
       container: nc_nextcloud_1

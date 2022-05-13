@@ -20,11 +20,12 @@
   block:
     - name: Export your data
       become: true
-      command: |
+      ansible.builtin.shell: |
         docker exec {{ db_container_name }} bash -c "export PGPASSWORD={{ db_password }};
-        pg_dumpall -c -U {{ db_container_user }} -w" > {{ docker_volumes_path }}/databases/{{ db_dump_filename }}.sql 
-      
-    - name: Remove postgres container
+        pg_dumpall -c -U {{ db_container_user }} -w" > {{ docker_volumes_path }}/databases/{{ db_dump_filename }}.sql
+      register: dump_done
+
+    - name: Remove postgres container #required to force pg to init new database before restore
       community.docker.docker_container:
         name: "{{ db_container_name }}"
         state: absent
