@@ -149,7 +149,7 @@ services:
     restart: always
     environment:
           - "DONT_GEN_SSL_CERT=true"
-          - "extra_params=--o:ssl.enable=false"
+          - "extra_params=--o:ssl.enable=false --o:ssl.termination=true"
           - ALLOWED_HOSTS=*
           - DICTIONARIES="en_GB fr_FR"
     networks:
