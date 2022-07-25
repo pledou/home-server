@@ -16,23 +16,23 @@
       k_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/k_password chars=ascii_letters,digits length=32') }}"
       k1_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/k1_password chars=ascii_letters,digits length=32') }}"
 
-  - name: upgrade db
-    include_tasks: tasks/upgrade_postgres.yml
-    vars:
-      db_data_path: "{{ item.path }}"
-      db_container_name: "{{ item.container }}"
-      db_container_user: kresus
-      db_password: "{{ item.password }}"
-      db_dump_filename: "{{ item.file }}"
-    loop:
-    - path: kresus-database
-      password: k_db_password
-      container: kresus_k-db_1
-      file: db_dump_pgsql_kresus
-    - path: kresus-database1
-      password: k_db1_password
-      container: kresus_k-db1_1
-      file: db_dump_pgsql_kresus1
+  # - name: upgrade db
+  #   include_tasks: tasks/upgrade_postgres.yml
+  #   vars:
+  #     db_data_path: "{{ item.path }}"
+  #     db_container_name: "{{ item.container }}"
+  #     db_container_user: kresus
+  #     db_password: "{{ item.password }}"
+  #     db_dump_filename: "{{ item.file }}"
+  #   loop:
+  #   - path: kresus-database
+  #     password: k_db_password
+  #     container: kresus_k-db_1
+  #     file: db_dump_pgsql_kresus
+  #   - path: kresus-database1
+  #     password: k_db1_password
+  #     container: kresus_k-db1_1
+  #     file: db_dump_pgsql_kresus1
 
   - name: Verify kresus volume path
     become: true
@@ -85,20 +85,20 @@
       state: present
       project_src: /home/{{ ansible_user }}/home-server/stacks/kresus
   
-  - name: end upgrade db
-    include_tasks: tasks/upgrade_postgres_end.yml
-    vars:
-      db_data_path: "{{ item.path }}"
-      db_container_name: "{{ item.container }}"
-      db_container_user: kresus
-      db_password: "{{ item.password }}"
-      db_dump_filename: "{{ item.file }}"
-    loop:
-    - path: kresus-database
-      password: k_db_password
-      container: kresus_k-db_1
-      file: db_dump_pgsql_kresus
-    - path: kresus-database1
-      password: k_db1_password
-      container: kresus_k-db1_1
-      file: db_dump_pgsql_kresus1
+  # - name: end upgrade db
+  #   include_tasks: tasks/upgrade_postgres_end.yml
+  #   vars:
+  #     db_data_path: "{{ item.path }}"
+  #     db_container_name: "{{ item.container }}"
+  #     db_container_user: kresus
+  #     db_password: "{{ item.password }}"
+  #     db_dump_filename: "{{ item.file }}"
+  #   loop:
+  #   - path: kresus-database
+  #     password: k_db_password
+  #     container: kresus_k-db_1
+  #     file: db_dump_pgsql_kresus
+  #   - path: kresus-database1
+  #     password: k_db1_password
+  #     container: kresus_k-db1_1
+  #     file: db_dump_pgsql_kresus1
