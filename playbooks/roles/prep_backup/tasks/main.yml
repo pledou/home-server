@@ -6,45 +6,45 @@
 
 - name: Verify databases volume path
   become: true
-  file:
+  ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item }}"
     state: directory
     mode: 0700
   loop:
     - databases
 
-- name: generate restic secret if restic_backup_secret is empty
+- name: Generate restic secret if restic_backup_secret is empty
   become: true
-  set_fact:
+  ansible.builtin.set_fact:
     restic_backup_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/restic_backup_secret chars=ascii_letters,digits length=32') }}"
-  
-- name: initialize repository
+
+- name: Initialize repository
   become: true
-  command: 'restic init'
+  ansible.builtin.command: 'restic init'
   environment:
     RESTIC_REPOSITORY: "{{ restic_repo }}"
-    RESTIC_PASSWORD:   "{{ restic_backup_secret }}"
+    RESTIC_PASSWORD: "{{ restic_backup_secret }}"
   register: restic_init
   changed_when: "'created restic backend' in restic_init.stdout"
   failed_when:
     - restic_init.rc != 0
     - not ( 'config already initialized' in restic_init.stderr or 'config file already exists' in restic_init.stderr )
 
-- name: create restic backup script
+- name: Create restic backup script
   become: true
-  template:
-    src:   'backup_volumes.sh.j2'
-    dest:  '/usr/local/bin/backup_volumes.sh'
+  ansible.builtin.template:
+    src: 'backup_volumes.sh.j2'
+    dest: '/usr/local/bin/backup_volumes.sh'
     owner: 'root'
     group: 'root'
-    mode:  '0750'
-    force: true 
+    mode: '0750'
+    force: true
 
-- name: cron volume backup
+- name: Cron volume backup
   become: true
-  cron:
-    name:   "backup selfhosted"
-    day:    "{{ restic_backup_day }}"
+  ansible.builtin.cron:
+    name: "backup selfhosted"
+    day: "{{ restic_backup_day }}"
     minute: "{{ restic_backup_minute }}"
-    hour:   "{{ restic_backup_hour }}"
-    job:    "/usr/local/bin/backup_volumes.sh > /var/log/backup_volumes.log 2>&1"
+    hour: "{{ restic_backup_hour }}"
+    job: "/usr/local/bin/backup_volumes.sh > /var/log/backup_volumes.log 2>&1"

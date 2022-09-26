@@ -1,22 +1,22 @@
 ---
 # tasks file to install restic
 
-- name: get latest restic version from github
-  uri:
+- name: Get latest restic version from github
+  ansible.builtin.uri:
     url: https://api.github.com/repos/restic/restic/tags
   register: restic_tags
   when: restic_version == 'latest'
 
-- name: set restic version
-  set_fact:
-    restic_version: "{{ restic_tags.json.0.name | replace('v','') }}"
+- name: Set restic version
+  ansible.builtin.set_fact:
+    restic_version: "{{ restic_tags.json.0.name | replace('v', '') }}"
   when: restic_version == 'latest'
 
-- name: install restic binary
+- name: Install restic binary
   become: true
-  apt:
+  ansible.builtin.apt:
     pkg:
       - restic
     state: latest # noqa package-latest
     force_apt_get: true
-    update_cache: yes
+    update_cache: true
