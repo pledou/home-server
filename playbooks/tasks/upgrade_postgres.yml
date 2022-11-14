@@ -10,7 +10,7 @@
   register: pg_versions
 
 - name: Check db already exists
-  stat:
+  ansible.builtin.stat:
     path: "{{ docker_volumes_path }}/{{ db_data_path }}"
   register: db_exists
 
@@ -32,7 +32,7 @@
 
     - name: Remove your Postgres data folder
       become: true
-      file:
+      ansible.builtin.file:
         path: "{{ docker_volumes_path }}/{{ db_data_path }}"
         state: absent
 ...
