@@ -3,55 +3,53 @@
   run_once: true
   block:
   - name: Verify stacks directory exists
-    file:
+    ansible.builtin.file:
       path: "/home/{{ ansible_user }}/home-server/stacks/kresus"
       state: directory
       mode: 0775
 
-  - name: generate passwords if not existant
+  - name: Generate passwords if not existant
     become: true
-    set_fact:
+    ansible.builtin.set_fact:
       k_db_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/k_db_password chars=ascii_letters,digits length=32') }}"
       k_db1_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/k_db1_password chars=ascii_letters,digits length=32') }}"
       k_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/k_password chars=ascii_letters,digits length=32') }}"
       k1_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/k1_password chars=ascii_letters,digits length=32') }}"
 
-  # - name: upgrade db
-  #   include_tasks: tasks/upgrade_postgres.yml
-  #   vars:
-  #     db_data_path: "{{ item.path }}"
-  #     db_container_name: "{{ item.container }}"
-  #     db_container_user: kresus
-  #     db_password: "{{ item.password }}"
-  #     db_dump_filename: "{{ item.file }}"
-  #   loop:
-  #   - path: kresus-database
-  #     password: k_db_password
-  #     container: kresus_k-db_1
-  #     file: db_dump_pgsql_kresus
-  #   - path: kresus-database1
-  #     password: k_db1_password
-  #     container: kresus_k-db1_1
-  #     file: db_dump_pgsql_kresus1
+#  - name: upgrade db
+#    include_tasks: tasks/upgrade_postgres.yml
+#    vars:
+#      postgres_data_dir: "{{ docker_volumes_path }}/{{ item.path }}"
+#      postgres_password: "{{ item.password }}"
+#      postgres_container_name: "{{ item.container }}"
+#      postgres_db: "kresus"
+#      postgres_user: "kresus"
+#    loop:
+#      - path: kresus-database
+#        password: k_db_password
+#        container: kresus_k-db_1
+#      - path: kresus-database1
+#        password: k_db1_password
+#        container: kresus_k-db1_1
 
   - name: Verify kresus volume path
     become: true
-    file:
+    ansible.builtin.file:
       path: "{{ docker_volumes_path }}/{{ item.name }}"
       state: directory
       owner: "{{ item.owner | default('root') }}"
       group: "{{ item.group | default('root') }}"
       mode: "{{ item.mode | default('0700') }}"
     loop:
-    - name: kresus-database
-      group: 999
-      owner: 999
-    - name: kresus-database1
-      group: 999
-      owner: 999
-    - name: kresus-woob
-      group: 1001
-      owner: 1000
+      - name: kresus-database
+        group: 999
+        owner: 999
+      - name: kresus-database1
+        group: 999
+        owner: 999
+      - name: kresus-woob
+        group: 1001
+        owner: 1000
 
   - name: Add a user to a password file and ensure permissions are set
     become: true
@@ -73,32 +71,14 @@
       mode: 0640
 
   - name: Create docker-compose stack file
-    template:
+    ansible.builtin.template:
       src: docker-compose.yml
       dest: /home/{{ ansible_user }}/home-server/stacks/kresus/docker-compose.yml
       mode: 0775
 
   - name: Deploy stack from a compose file
-    docker_compose:
-      pull: yes
-      build: yes
+    community.docker.docker_compose:
+      pull: true
+      build: true
       state: present
       project_src: /home/{{ ansible_user }}/home-server/stacks/kresus
-  
-  # - name: end upgrade db
-  #   include_tasks: tasks/upgrade_postgres_end.yml
-  #   vars:
-  #     db_data_path: "{{ item.path }}"
-  #     db_container_name: "{{ item.container }}"
-  #     db_container_user: kresus
-  #     db_password: "{{ item.password }}"
-  #     db_dump_filename: "{{ item.file }}"
-  #   loop:
-  #   - path: kresus-database
-  #     password: k_db_password
-  #     container: kresus_k-db_1
-  #     file: db_dump_pgsql_kresus
-  #   - path: kresus-database1
-  #     password: k_db1_password
-  #     container: kresus_k-db1_1
-  #     file: db_dump_pgsql_kresus1

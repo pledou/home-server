@@ -9,30 +9,145 @@
     # name: postgres
   register: pg_versions
 
+- name: Stop existing container
+  community.docker.docker_container:
+    name: "{{ postgres_container_name }}"
+    state: stopped
+  when: postgres_container_name is defined and postgres_container_name != None
+
 - name: Check db already exists
   ansible.builtin.stat:
-    path: "{{ docker_volumes_path }}/{{ db_data_path }}"
+    path: "{{ postgres_data_dir }}"
   register: db_exists
 
-- when: pg_versions.images | json_query(query) | length > 1 and db_exists.stat.exists
+- name: Start upgrade process
+  become: true
+  when: pg_versions.images | json_query(query) | unique | length > 1 and db_exists.stat.exists
   vars:
     query: "[].Config.Env[] | [?contains(@,'PG_MAJOR')]"
+    versions: "{{ pg_versions.images | json_query(query) | replace('PG_MAJOR=', '') }}"
   block:
-    - name: Export your data
-      become: true
-      ansible.builtin.shell: |
-        docker exec {{ db_container_name }} bash -c "export PGPASSWORD={{ db_password }};
-        pg_dumpall -c -U {{ db_container_user }} -w" > {{ docker_volumes_path }}/databases/{{ db_dump_filename }}.sql
-      register: dump_done
+  # from https://github.com/janLo/postgres-docker-upgrade/blob/master/playbook.yml
+    - name: COnfigure old and new version variables
+      ansible.builtin.set_fact:
+        postgres_old_version: "{{ versions | min }}"
+        postgres_new_version: "{{ versions | max }}"
 
-    - name: Remove postgres container #required to force pg to init new database before restore
+    - name: Backup data
+      ansible.builtin.command: cp -a {{ postgres_data_dir }} {{ postgres_data_dir }}.backup
+      changed_when: false
+
+    - name: Create new data dir
+      ansible.builtin.file:
+        path: "{{ postgres_data_dir }}.new"
+        state: directory
+        mode: 0700
+
+    - name: Initielize new cluster
       community.docker.docker_container:
-        name: "{{ db_container_name }}"
+        pull: true
+        name: pg_new_init
+        image: "postgres:{{ postgres_new_version }}"
+        env:
+          POSTGRES_PASSWORD: '{{ postgres_password }}'
+          POSTGRES_DB: '{{ postgres_db }}'
+          POSTGRES_USER: '{{ postgres_user }}'
+          PGDATA: /var/lib/postgresql/data
+        volumes:
+          - "{{ postgres_data_dir }}.new:/var/lib/postgresql/data"
+        command: "postgres --single"
+        detach: true
+        state: started
+        ports:
+          - 127.0.0.1:5432:5432
+
+    - name: Wait for data container init finish
+      ansible.builtin.wait_for: port=5432 state=stopped
+
+    - name: Remove init container
+      docker_container:
+        name: pg_new_init
         state: absent
 
-    - name: Remove your Postgres data folder
-      become: true
+    - name: Start the old version
+      community.docker.docker_container:
+        pull: true
+        name: pg_old_cnt
+        image: "postgres:{{ postgres_old_version }}"
+        volumes:
+          - "/usr/lib/postgresql/{{ postgres_old_version }}"
+          - "/usr/share/postgresql/{{ postgres_old_version }}"
+        command: "/bin/bash"
+        detach: true
+        state: started
+
+    - name: Start upgrade
+      community.docker.docker_container:
+        pull: true
+        name: pg_new_cnt
+        image: "postgres:{{ postgres_new_version }}"
+        env:
+          POSTGRES_PASSWORD: '{{ postgres_password }}'
+          POSTGRES_DB: '{{ postgres_db }}'
+          POSTGRES_USER: '{{ postgres_user }}'
+        volumes:
+          - "{{ postgres_data_dir }}:/tmp/old"
+          - "{{ postgres_data_dir }}.new:/tmp/new"
+        volumes_from:
+          - pg_old_cnt
+        user: postgres
+        command: |
+          "/bin/bash -c 'cd /tmp && /usr/lib/postgresql/{{ postgres_new_version }}/bin/pg_upgrade \
+          -b /usr/lib/postgresql/{{ postgres_old_version }}/bin/ \
+          -B /usr/lib/postgresql/{{ postgres_new_version }}/bin/ \
+          -d /tmp/old/ -D /tmp/new/'"
+        state: started
+
+    - name: Cleanup migrate containers
+      community.docker.docker_container:
+        name: '{{ containers }}'
+        state: absent
+      loop:
+        - pg_new_cnt
+        - pg_old_cnt
+      loop_control:
+        loop_var: containers
+
+    - name: Remove old data
       ansible.builtin.file:
-        path: "{{ docker_volumes_path }}/{{ db_data_path }}"
+        path: "{{ postgres_data_dir }}"
+        state: absent
+
+    - name: Move converted data
+      ansible.builtin.command: mv {{ postgres_data_dir }}.new {{ postgres_data_dir }}
+      changed_when: false
+
+    - name: Run db for vacuum
+      community.docker.docker_container:
+        pull: true
+        name: pg_new_vacuum
+        image: "postgres:{{ postgres_new_version }}"
+        env:
+          POSTGRES_PASSWORD: '{{ postgres_password }}'
+          POSTGRES_DB: '{{ postgres_db }}'
+          POSTGRES_USER: '{{ postgres_user }}'
+        volumes:
+          - "{{ postgres_data_dir }}:/var/lib/postgresql/data"
+        detach: true
+        state: started
+        ports:
+          - 127.0.0.1:5432:5432
+
+    - name: Wait for database start
+      ansible.builtin.wait_for: port=5432 state=started
+
+    - name: Exec vacuum
+      ansible.builtin.command: |
+        docker exec -u {{ postgres_user }} pg_new_vacuum /usr/lib/postgresql/{{ postgres_new_version }}/bin/vacuumdb --all --analyze-in-stages
+      changed_when: false
+
+    - name: Remove vacuum container
+      community.docker.docker_container:
+        name: pg_new_vacuum
         state: absent
 ...

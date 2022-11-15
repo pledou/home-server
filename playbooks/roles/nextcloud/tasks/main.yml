@@ -16,14 +16,14 @@
       talk_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/talk_secret chars=ascii_letters,digits length=32') }}"
       redis_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/redis_secret chars=ascii_letters,digits length=32') }}"
 
-  # - name: upgrade db
-  #   include_tasks: tasks/upgrade_postgres.yml
-  #   vars:
-  #     db_data_path: nextcloud-db
-  #     db_container_name: nc_ncdb_1
-  #     db_container_user: nextcloud
-  #     db_password: "{{ database_user_secret }}"
-  #     db_dump_filename: db_dump_pgsql_nextcloud
+#  - name: upgrade db
+#    include_tasks: tasks/upgrade_postgres.yml
+#    vars:
+#      postgres_data_dir: "{{ docker_volumes_path }}/nextcloud-db"
+#      db_container_name: nc_ncdb_1
+#      postgres_password: "{{ database_user_secret }}"
+#      postgres_db: "nextcloud"
+#      postgres_user: "nextcloud"
 
   - name: Verify nextcloud volume path
     become: true
@@ -95,15 +95,6 @@
       build: true
       state: present
       project_src: /home/{{ ansible_user }}/home-server/stacks/nc
-
-  # - name: end upgrade db
-  #   include_tasks: tasks/upgrade_postgres_end.yml
-  #   vars:
-  #     db_data_path: nextcloud-db
-  #     db_container_name: nc_ncdb_1
-  #     db_container_user: nextcloud
-  #     db_password: "{{ database_user_secret }}"
-  #     db_dump_filename: db_dump_pgsql_nextcloud
 
   - name: Wait for nextcloud container to come up
     become: true

@@ -7,13 +7,13 @@
   pre_tasks:
     - name: Verify secrets path
       become: true
-      file:
+      ansible.builtin.file:
         path: "{{ docker_volumes_path }}/secrets"
         state: directory
-        owner: root 
-        group: leduc 
-        mode: u=rwX,g=rwX,o=rwX 
-        recurse: yes
+        owner: root
+        group: leduc
+        mode: u=rwX,g=rwX,o=rwX
+        recurse: true
   roles:
     - docker
     - traefik
@@ -26,16 +26,16 @@
   post_tasks:
     - name: Make secrets path unreadeable
       become: true
-      file:
+      ansible.builtin.file:
         path: "{{ docker_volumes_path }}/secrets"
         state: directory
-        owner: root 
-        group: leduc 
+        owner: root
+        group: leduc
         mode: u=rw,g=rw,o=
-        recurse: yes
-    - name: docker prune
+        recurse: true
+    - name: Docker prune
       community.docker.docker_prune:
-        images: yes 
-        containers: yes
+        images: true
+        containers: true
         containers_filters:
           until: 24h
