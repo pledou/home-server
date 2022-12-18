@@ -57,7 +57,7 @@ services:
       traefik.http.middlewares.nginx.headers.forceSTSHeader: 'true'
       traefik.http.middlewares.nginx.headers.referrerPolicy: no-referrer
     environment:
-      - POSTGRES_DB=default
+      - POSTGRES_DB=nextcloud
       - POSTGRES_USER=nextcloud
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
     restart: always
