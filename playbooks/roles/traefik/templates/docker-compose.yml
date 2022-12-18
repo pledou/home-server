@@ -20,7 +20,7 @@ services:
 
       # - traefik.http.middlewares.localip.ipwhitelist.sourcerange=192.168.21.0/24, 2a01:cb08:87f6:500::/56
       # Define the port inside of the Docker service to use
-      - traefik.http.services.traefik-public.loadbalancer.server.port=8080
+      - traefik.http.services.traefik-public.loadbalancer.server.port=8585
 
       - traefik.http.routers.traefik-public-https.tls.domains[0].main={{ app_domain_name }}
       - traefik.http.routers.traefik-public-https.tls.domains[0].sans=*.{{ app_domain_name }}
