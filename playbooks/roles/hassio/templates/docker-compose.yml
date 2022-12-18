@@ -65,37 +65,6 @@ services:
       - esphome:/config:rw
     command: config/ dashboard
 
-  esphome_ext:
-    labels:
-      traefik.enable: 'true'
-      traefik.docker.network: traefik_backend
-      traefik.constraint-label: traefik_backend
-      traefik.http.routers.esp-http.rule: Host(`esp.{{app_domain_name}}`)
-      traefik.http.routers.esp-http.entrypoints: http
-      traefik.http.routers.esp-http.middlewares: https-redirect
-      traefik.http.routers.esp-https.rule: Host(`esp.{{app_domain_name}}`)
-      traefik.http.routers.esp-https.entrypoints: https
-      traefik.http.routers.esp-https.tls: true
-      traefik.http.routers.esp-https.tls.certresolver: le
-      traefik.http.routers.esp-websecure.rule: Host(`esp.{{app_domain_name}}`)
-      traefik.http.routers.esp-websecure.entrypoints: websecure
-      traefik.http.routers.esp-websecure.tls: true
-      traefik.http.routers.esp-websecure.tls.certresolver: le
-      traefik.http.services.esp.loadbalancer.server.port: 6052
-      traefik.http.routers.esp-websecure.middlewares: esphome-ext-auth
-      traefik.http.routers.esp-https.middlewares: esphome-ext-auth
-      traefik.http.middlewares.esphome-ext-auth.basicauth.usersfile: /rules/esphome_ext_users
-    restart: always
-    image: esphome/esphome
-    networks:
-      - traefik_backend
-    # ports:
-    #   - 0.0.0.0:6052:6052
-    #   - 0.0.0.0:6123:6123
-    volumes:
-      - esphome-ext:/config:rw
-    command: config/ dashboard
-
 volumes:
   homeassistant:
     driver: local
@@ -110,13 +79,6 @@ volumes:
       o: bind
       device: "{{ docker_volumes_path }}/esphome"
 
-  esphome-ext:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: "{{ docker_volumes_path }}/esphome-ext"
-  
 networks:
   traefik_backend:
     external: true

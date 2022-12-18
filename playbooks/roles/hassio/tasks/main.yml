@@ -22,15 +22,11 @@
       - name: esphome
         mode: '0750'
         group: 0998
-      - name: esphome-ext
-        mode: '0750'
-        group: 0998
 
   - name: generate passwords if not existant
     become: true
     set_fact:
       esphome_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/esphome_password chars=ascii_letters,digits length=32') }}"
-      esphome_ext_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/esphome_ext_password chars=ascii_letters,digits length=32') }}"
 
   - name: Add a user to a password file and ensure permissions are set
     become: true
