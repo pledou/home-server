@@ -3,7 +3,7 @@ FROM nextcloud:stable-fpm
 RUN set -ex; \
     \
     apt-get update; \
-    apt-get install -y --no-install-recommends \
+    apt-get install -y --no-install-recommends --fix-missing \
         ffmpeg \
         libmagickcore-6.q16-6-extra \
         procps \
