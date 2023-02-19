@@ -1,6 +1,6 @@
 ---
 # - hosts: docker_server
-#   roles: 
+#   roles:
 #     - host-defaults
 
 - hosts: docker_server
@@ -17,11 +17,12 @@
   roles:
     - docker
     - traefik
-    #- portainer
+    # - portainer
     - nextcloud
     - kresus
     - hassio
     - gitlab
+    - public_calendar
     - prep_backup
   post_tasks:
     - name: Make secrets path unreadeable

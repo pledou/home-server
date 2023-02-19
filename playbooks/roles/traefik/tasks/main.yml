@@ -3,14 +3,14 @@
   run_once: true
   block:
   - name: Verify stacks directory exists
-    file:
+    ansible.builtin.file:
       path: "/home/{{ ansible_user }}/home-server/stacks/traefik"
       state: directory
       mode: 0775
 
   - name: Verify traefik volume path
     become: true
-    file:
+    ansible.builtin.file:
       path: "{{ docker_volumes_path }}/{{ item }}"
       state: directory
       mode: 0644
@@ -18,9 +18,9 @@
       - traefik-public-certificates
       - traefik-rules
 
-  - name: generate passwords if not existant
+  - name: Generate passwords if not existant
     become: true
-    set_fact:
+    ansible.builtin.set_fact:
       traefik_admin_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/traefik_admin_password chars=ascii_letters,digits length=32') }}"
 
   - name: Add a user to a password file and ensure permissions are set
@@ -34,15 +34,15 @@
       mode: 0640
 
   - name: Create docker-compose stack file
-    template:
+    ansible.builtin.template:
       src: docker-compose.yml
       dest: /home/{{ ansible_user }}/home-server/stacks/traefik/docker-compose.yml
       mode: 0775
 
   - name: Deploy stack from a compose file
     docker_compose:
-      pull: yes
-      build: yes
+      pull: true
+      build: true
       state: present
       project_src: /home/{{ ansible_user }}/home-server/stacks/traefik
       # files:
