@@ -1,0 +1,121 @@
+# code: language=dockercompose
+version: '3.3'
+
+services:
+  agendav:
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.constraint-label=traefik_backend
+      - traefik.http.routers.agendav-http.rule=Host(`agenda.{{ app_domain_name }}`)
+      - traefik.http.routers.agendav-http.entrypoints=http
+      - traefik.http.routers.agendav-http.middlewares=https-redirect
+      - traefik.http.routers.agendav-https.rule=Host(`agenda.{{ app_domain_name }}`)
+      - traefik.http.routers.agendav-https.entrypoints=https
+      - traefik.http.routers.agendav-https.tls=true
+      - traefik.http.routers.agendav-https.tls.certresolver=le
+      - traefik.http.routers.agendav-websecure.rule=Host(`agenda.{{ app_domain_name }}`)
+      - traefik.http.routers.agendav-websecure.entrypoints=websecure
+      # - traefik.http.routers.agendav-websecure.middlewares=agendav-auth
+      - traefik.http.routers.agendav-websecure.tls=true
+      - traefik.http.routers.agendav-websecure.tls.certresolver=le
+      - traefik.http.services.agendav.loadbalancer.server.port=80
+      # - traefik.http.routers.agendav-https.middlewares=agendav-auth
+      # - traefik.http.middlewares.agendav-auth.basicauth.usersfile=/rules/agendav_users
+    image: ghcr.io/nagimov/agendav-docker:latest
+    container_name: agendav
+    environment:
+      - AGENDAV_SERVER_NAME=agenda.{{ app_domain_name }}
+      - AGENDAV_TITLE=Bienvenue sur l\'agenda partagé du Kafé
+      - AGENDAV_FOOTER=Hosted by Pierre Leduc
+      - AGENDAV_ENC_KEY=my_encrypt10n_k3y
+      - AGENDAV_CALDAV_SERVER=http://radicale:5232/%u
+      - AGENDAV_CALDAV_PUBLIC_URL=https://caldav.{{ app_domain_name }}
+      - AGENDAV_TIMEZONE=UTC
+      - AGENDAV_LANG=fr_FR
+      - AGENDAV_LOG_DIR=/tmp/
+    ports:
+      - "80"
+    networks:
+      - traefik_backend
+  radicale:
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.constraint-label=traefik_backend
+      - traefik.http.routers.radicale-http.rule=Host(`caldav.{{ app_domain_name }}`)
+      - traefik.http.routers.radicale-http.entrypoints=http
+      - traefik.http.routers.radicale-http.middlewares=https-redirect
+      - traefik.http.routers.radicale-https.rule=Host(`caldav.{{ app_domain_name }}`)
+      - traefik.http.routers.radicale-https.entrypoints=https
+      - traefik.http.routers.radicale-https.tls=true
+      - traefik.http.routers.radicale-https.tls.certresolver=le
+      - traefik.http.routers.radicale-https.middlewares=radicale@docker
+      - traefik.http.routers.radicale-websecure.rule=Host(`caldav.{{ app_domain_name }}`)
+      - traefik.http.routers.radicale-websecure.entrypoints=websecure
+      - traefik.http.routers.radicale-websecure.tls=true
+      - traefik.http.routers.radicale-websecure.tls.certresolver=le
+      - traefik.http.routers.radicale-websecure.middlewares=radicale@docker
+      - traefik.http.services.radicale.loadbalancer.server.port=5232
+
+
+      - traefik.http.middlewares.radicale.headers.SSLRedirect=true
+      - traefik.http.middlewares.radicale.headers.STSIncludeSubdomains=true
+      - traefik.http.middlewares.radicale.headers.STSPreload=true
+      - traefik.http.middlewares.radicale.headers.STSSeconds=315360000
+      - traefik.http.middlewares.radicale.headers.browserXSSFilter=true
+      - traefik.http.middlewares.radicale.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.radicale.headers.customFrameOptionsValue=SAMEORIGIN
+      - traefik.http.middlewares.radicale.headers.forceSTSHeader=true
+      - traefik.http.middlewares.radicale.headers.referrerPolicy=no-referrer
+
+      # - traefik.http.routers.radicalew-http.rule=Host(`radicale.{{ app_domain_name }}`)
+      # - traefik.http.routers.radicalew-http.entrypoints=http
+      # - traefik.http.routers.radicalew-http.middlewares=https-redirect
+      # - traefik.http.routers.radicalew-https.rule=Host(`radicale.{{ app_domain_name }}`)
+      # - traefik.http.routers.radicalew-https.entrypoints=https
+      # - traefik.http.routers.radicalew-https.tls=true
+      # - traefik.http.routers.radicalew-https.tls.certresolver=le
+      # - traefik.http.routers.radicalew-https.service=radicalew
+      # - traefik.http.routers.radicalew-websecure.rule=Host(`radicale.{{ app_domain_name }}`)
+      # - traefik.http.routers.radicalew-websecure.entrypoints=websecure
+      # - traefik.http.routers.radicalew-websecure.tls=true
+      # - traefik.http.routers.radicalew-websecure.tls.certresolver=le
+      # - traefik.http.routers.radicalew-websecure.service=radicalew
+      # - traefik.http.services.radicalew.loadbalancer.server.port=80
+
+    image: tomsquest/docker-radicale
+    container_name: radicale
+    environment: 
+      # - TAKE_FILE_OWNERSHIP=false
+      - UID=1000
+      - GID=1000
+    volumes: 
+      - radicale:/data
+      - radicale-config:/config:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:5232 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5232"
+    networks:
+      - traefik_backend
+networks:
+  traefik_backend:
+    external: true
+
+volumes:
+  radicale:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/public_calendar"
+  radicale-config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/public_calendar_conf"
