@@ -18,45 +18,8 @@
       group: 1000
       mode: 0700
     loop:
-      - public_calendar_conf
-      - public_calendar
-
-  - name: Add git files to volume path
-    become: true
-    ansible.builtin.copy:
-      dest: "{{ docker_volumes_path }}/public_calendar_conf/"
-      src: "{{ item }}"
-      mode: 0744
-      owner: root
-      group: root
-    loop:
-      - .gitignore
-      - config
-
-  - name: Generate passwords if not existant
-    become: true
-    ansible.builtin.set_fact:
-      agendav_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/agendav chars=ascii_letters,digits length=32') }}"
-
-  # - name: Add a user to a password file and ensure permissions are set
-  #   become: true
-  #   community.general.htpasswd:
-  #     path: "{{ docker_volumes_path }}/traefik-rules/agendav_users"
-  #     name: "lekafe"
-  #     password: "{{ agendav_password }}"
-  #     owner: root
-  #     group: root
-  #     mode: 0640
-
-  - name: Add a user to a password file and ensure permissions are set
-    become: true
-    community.general.htpasswd:
-      path: "{{ docker_volumes_path }}/public_calendar_conf/users"
-      name: "lekafe"
-      password: "{{ agendav_password }}"
-      owner: 1000
-      group: 1000
-      mode: 0644
+      - public_baikal
+      - public_baikal_conf
 
   - name: Create docker-compose stack file
     ansible.builtin.template:

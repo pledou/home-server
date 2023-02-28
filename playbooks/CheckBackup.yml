@@ -1,0 +1,50 @@
+# code: language=ansible
+---
+# - hosts: docker_server
+#   roles:
+#     - host-defaults
+
+- hosts: docker_server
+  pre_tasks:
+    - name: Verify secrets path
+      become: true
+      ansible.builtin.file:
+        path: "{{ docker_volumes_path }}/secrets"
+        state: directory
+        owner: root
+        group: leduc
+        mode: u=rwX,g=rwX,o=rwX
+        recurse: true
+  tasks:
+    - name: Generate restic secret if restic_backup_secret is empty
+      become: true
+      ansible.builtin.set_fact:
+        restic_backup_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/restic_backup_secret chars=ascii_letters,digits length=32') }}"
+    - name: Read repository
+      become: true
+      ansible.builtin.command: 'restic snapshots --group-by path'
+      environment:
+        RESTIC_REPOSITORY: "{{ restic_repo }}"
+        RESTIC_PASSWORD: "{{ restic_backup_secret }}"
+      register: restic_repos
+      changed_when: false
+    - name: Display it
+      ansible.builtin.debug:
+        var: restic_repos
+
+  post_tasks:
+    - name: Make secrets path unreadeable
+      become: true
+      ansible.builtin.file:
+        path: "{{ docker_volumes_path }}/secrets"
+        state: directory
+        owner: root
+        group: leduc
+        mode: u=rw,g=rw,o=
+        recurse: true
+    - name: Docker prune
+      community.docker.docker_prune:
+        images: true
+        containers: true
+        containers_filters:
+          until: 24h

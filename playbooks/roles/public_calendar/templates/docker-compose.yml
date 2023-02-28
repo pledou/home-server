@@ -29,93 +29,73 @@ services:
       - AGENDAV_TITLE=Bienvenue sur l\'agenda partagé du Kafé
       - AGENDAV_FOOTER=Hosted by Pierre Leduc
       - AGENDAV_ENC_KEY=my_encrypt10n_k3y
-      - AGENDAV_CALDAV_SERVER=http://radicale:5232/%u
+      - AGENDAV_CALDAV_SERVER=http://baikal:80/cal.php
       - AGENDAV_CALDAV_PUBLIC_URL=https://caldav.{{ app_domain_name }}
-      - AGENDAV_TIMEZONE=UTC
+      - AGENDAV_TIMEZONE=Europe/Paris
       - AGENDAV_LANG=fr_FR
       - AGENDAV_LOG_DIR=/tmp/
     ports:
       - "80"
     networks:
       - traefik_backend
-  radicale:
+
+  baikal:
+    image: ckulka/baikal:nginx
+    restart: always
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik_backend
       - traefik.constraint-label=traefik_backend
-      - traefik.http.routers.radicale-http.rule=Host(`caldav.{{ app_domain_name }}`)
-      - traefik.http.routers.radicale-http.entrypoints=http
-      - traefik.http.routers.radicale-http.middlewares=https-redirect
-      - traefik.http.routers.radicale-https.rule=Host(`caldav.{{ app_domain_name }}`)
-      - traefik.http.routers.radicale-https.entrypoints=https
-      - traefik.http.routers.radicale-https.tls=true
-      - traefik.http.routers.radicale-https.tls.certresolver=le
-      - traefik.http.routers.radicale-https.middlewares=radicale@docker
-      - traefik.http.routers.radicale-websecure.rule=Host(`caldav.{{ app_domain_name }}`)
-      - traefik.http.routers.radicale-websecure.entrypoints=websecure
-      - traefik.http.routers.radicale-websecure.tls=true
-      - traefik.http.routers.radicale-websecure.tls.certresolver=le
-      - traefik.http.routers.radicale-websecure.middlewares=radicale@docker
-      - traefik.http.services.radicale.loadbalancer.server.port=5232
+      - traefik.http.routers.baikal-http.rule=Host(`caldav.{{ app_domain_name }}`)
+      - traefik.http.routers.baikal-http.entrypoints=http
+      - traefik.http.routers.baikal-http.middlewares=https-redirect
+      - traefik.http.routers.baikal-https.rule=Host(`caldav.{{ app_domain_name }}`)
+      - traefik.http.routers.baikal-https.entrypoints=https
+      - traefik.http.routers.baikal-https.tls=true
+      - traefik.http.routers.baikal-https.tls.certresolver=le
+      - traefik.http.routers.baikal-https.middlewares=baikal@docker
+      - traefik.http.routers.baikal-websecure.rule=Host(`caldav.{{ app_domain_name }}`)
+      - traefik.http.routers.baikal-websecure.entrypoints=websecure
+      - traefik.http.routers.baikal-websecure.tls=true
+      - traefik.http.routers.baikal-websecure.tls.certresolver=le
+      - traefik.http.routers.baikal-websecure.middlewares=baikal@docker
+      - traefik.http.services.baikal.loadbalancer.server.port=80
 
+      - traefik.http.middlewares.baikal.headers.SSLRedirect=true
+      - traefik.http.middlewares.baikal.headers.STSIncludeSubdomains=true
+      - traefik.http.middlewares.baikal.headers.STSPreload=true
+      - traefik.http.middlewares.baikal.headers.STSSeconds=315360000
+      - traefik.http.middlewares.baikal.headers.browserXSSFilter=true
+      - traefik.http.middlewares.baikal.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.baikal.headers.customFrameOptionsValue=SAMEORIGIN
+      - traefik.http.middlewares.baikal.headers.forceSTSHeader=true
+      - traefik.http.middlewares.baikal.headers.referrerPolicy=no-referrer
 
-      - traefik.http.middlewares.radicale.headers.SSLRedirect=true
-      - traefik.http.middlewares.radicale.headers.STSIncludeSubdomains=true
-      - traefik.http.middlewares.radicale.headers.STSPreload=true
-      - traefik.http.middlewares.radicale.headers.STSSeconds=315360000
-      - traefik.http.middlewares.radicale.headers.browserXSSFilter=true
-      - traefik.http.middlewares.radicale.headers.contentTypeNosniff=true
-      - traefik.http.middlewares.radicale.headers.customFrameOptionsValue=SAMEORIGIN
-      - traefik.http.middlewares.radicale.headers.forceSTSHeader=true
-      - traefik.http.middlewares.radicale.headers.referrerPolicy=no-referrer
-
-      # - traefik.http.routers.radicalew-http.rule=Host(`radicale.{{ app_domain_name }}`)
-      # - traefik.http.routers.radicalew-http.entrypoints=http
-      # - traefik.http.routers.radicalew-http.middlewares=https-redirect
-      # - traefik.http.routers.radicalew-https.rule=Host(`radicale.{{ app_domain_name }}`)
-      # - traefik.http.routers.radicalew-https.entrypoints=https
-      # - traefik.http.routers.radicalew-https.tls=true
-      # - traefik.http.routers.radicalew-https.tls.certresolver=le
-      # - traefik.http.routers.radicalew-https.service=radicalew
-      # - traefik.http.routers.radicalew-websecure.rule=Host(`radicale.{{ app_domain_name }}`)
-      # - traefik.http.routers.radicalew-websecure.entrypoints=websecure
-      # - traefik.http.routers.radicalew-websecure.tls=true
-      # - traefik.http.routers.radicalew-websecure.tls.certresolver=le
-      # - traefik.http.routers.radicalew-websecure.service=radicalew
-      # - traefik.http.services.radicalew.loadbalancer.server.port=80
-
-    image: tomsquest/docker-radicale
-    container_name: radicale
     environment: 
-      # - TAKE_FILE_OWNERSHIP=false
       - UID=1000
       - GID=1000
-    volumes: 
-      - radicale:/data
-      - radicale-config:/config:ro
-    healthcheck:
-      test: ["CMD-SHELL", "curl --fail http://localhost:5232 || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
     ports:
-      - "5232"
+      - "80"
+    volumes:
+      - baikal-config:/var/www/baikal/config
+      - baikal:/var/www/baikal/Specific
     networks:
       - traefik_backend
+
 networks:
   traefik_backend:
     external: true
 
 volumes:
-  radicale:
+  baikal:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: "{{ docker_volumes_path }}/public_calendar"
-  radicale-config:
+      device: "{{ docker_volumes_path }}/public_baikal"
+  baikal-config:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: "{{ docker_volumes_path }}/public_calendar_conf"
+      device: "{{ docker_volumes_path }}/public_baikal_conf"
