@@ -1,4 +1,5 @@
-version: "3.4"
+# code: language=dockercompose
+version: "3.6"
 services:
   watchtower:
     image: containrrr/watchtower
@@ -57,10 +58,6 @@ services:
       - --entrypoints.websecure.http.tls.domains[0].main={{ app_domain_name }}
       - --entrypoints.websecure.http.tls.domains[0].sans=*.{{ app_domain_name }}
       
-      # a tester uniquement les sous-certificats seronts valides
-      #- --entrypoints.websecure.http.tls.domains[0].main="*.{{ app_domain_name }} > {{ app_domain_name }}"
-
-      #- "--certificatesresolvers.le.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
       - --accesslog
       - --log
       - --log.level=INFO
@@ -84,7 +81,7 @@ services:
     labels:
       - traefik.enable=false
     # used to update duckdns
-    # if you have a static IP, yu can comment this out
+    # if you have a static IP, you can comment this out
     # using busybox due to it having an image for almost every platform
     image: busybox
     command: /bin/sh -c "while true; do wget -O - 'https://www.duckdns.org/update?domains={{ duckdns_subdomain }}&token={{ traefik_duckdns_token }}&ip='; sleep 1200; done"

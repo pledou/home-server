@@ -38,6 +38,7 @@ services:
       - "80"
     networks:
       - traefik_backend
+    restart: always
 
   baikal:
     image: ckulka/baikal:nginx
