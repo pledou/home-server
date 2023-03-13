@@ -13,24 +13,21 @@ RUN set -ex; \
         nginx \
         imagemagick\
         ghostscript\
-    ; \
-    rm -rf /var/lib/apt/lists/*
+        git\
+    ;
+    #rm -rf /var/lib/apt/lists/*
 
-RUN # cp /usr/include/lua5.3/lua.h /usr/include; \
-    # ln -s /usr/include/lua5.3/ /usr/include/lua; \
-    # cp /usr/lib/x86_64-linux-gnu/liblua5.3.a /usr/lib/liblua.a; \
-    # cp /usr/lib/x86_64-linux-gnu/liblua5.3.so /usr/lib/liblua.so; \
-    # pecl install lua-2.0.7 \
-    cd ~ \
-    git clone https://github.com/singlecomm/php-lua.git \
-    cd php-lua \
-    git checkout php8 \
-    phpize && ./configure --with-lua-version=5.3 \
-    make \
+RUN cd ~; \
+    git clone https://github.com/singlecomm/php-lua.git; \
+    cd ./php-lua; \
+    git checkout php8; \
+    phpize && ./configure --with-lua-version=5.3; \
+    make; \
     # The destination path may change depending on your PHP version \
     # You can find your extension directory by using: \
     # php -i | grep extension_dir \
-    sudo cp ./.libs/lua.so /usr/local/lib/php/extensions/no-debug-non-zts-20210902
+    cp ./.libs/lua.so /usr/local/lib/php/extensions/no-debug-non-zts-20210902/; \
+    docker-php-ext-enable lua;
 
 RUN set -ex; \
     \
