@@ -1,7 +1,7 @@
 # code: language=dockercompose
 version: "3.6"
 services:
-  watchtower:
+  watchtower: # auto update images
     image: containrrr/watchtower
     environment:
       DOCKER_CONFIG: /config
@@ -10,6 +10,18 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     command: --schedule "15 2 * * * *"
 
+  autoheal: # restart container when healthcheck is ko
+    image: willfarrell/autoheal
+    restart: always
+    environment:
+      AUTOHEAL_CONTAINER_LABEL: all
+      AUTOHEAL_INTERVAL: 30   # check every 5 seconds
+      AUTOHEAL_START_PERIOD: 120   # wait 0 seconds before first health check
+      AUTOHEAL_DEFAULT_STOP_TIMEOUT: 60   # Docker waits max 10 seconds (the Docker default) for a container to stop before killing during restarts (container overridable via label, see below)
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    
   traefik:
     labels:
       - traefik.enable=true
