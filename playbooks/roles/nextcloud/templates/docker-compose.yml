@@ -1,4 +1,5 @@
-version: "3.4"
+# code: language=dockercompose
+version: "3.6"
 services:
 
   ncdb:
@@ -26,6 +27,8 @@ services:
       retries: 5
   nextcloud:
     labels:
+      com.centurylinklabs.watchtower.local-image: 'true'
+
       traefik.enable: 'true'
       traefik.docker.network: traefik_backend
       traefik.constraint-label: traefik_backend
@@ -64,8 +67,9 @@ services:
     restart: always
     hostname: nc_nextcloud
     build:
-      context: .
+      context: ./
       dockerfile: nextcloud.Dockerfile
+      target: nc_nextcloud
     networks:
       - nc_backend
       - traefik_backend
