@@ -11,6 +11,8 @@ services:
     command: --schedule "15 2 * * * *"
 
   autoheal: # restart container when healthcheck is ko
+    labels:
+      - traefik.enable=false
     image: willfarrell/autoheal
     restart: always
     environment:
