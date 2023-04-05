@@ -61,9 +61,15 @@
       dest: "{{ docker_volumes_path }}/nextcloud-nginx-config"
       mode: '0644'
     loop:
-      - nginx.conf
       - mime.types
       - fastcgi_params
+
+  - name: Copy nginx configuration file
+    become: true
+    ansible.builtin.template:
+      src: "nginx.conf"
+      dest: "{{ docker_volumes_path }}/nextcloud-nginx-config"
+      mode: '0644'
 
   - name: Create nextcloud Dockerfile
     ansible.builtin.copy:
