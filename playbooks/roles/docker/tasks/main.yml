@@ -9,6 +9,7 @@
     - pyyaml
     - docker-compose
     - jmespath
+    - passlib
 
 - name: Install Docker GPG key
   become: true

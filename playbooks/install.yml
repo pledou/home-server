@@ -11,7 +11,7 @@
         path: "{{ docker_volumes_path }}/secrets"
         state: directory
         owner: root
-        group: leduc
+        group: "{{user_group}}"
         mode: u=rwX,g=rwX,o=rwX
         recurse: true
   roles:
@@ -21,9 +21,9 @@
     - nextcloud
     - kresus
     - hassio
-    - gitlab
-    - public_calendar
-    - prep_backup
+    # - gitlab
+    # - public_calendar
+    # - prep_backup
   post_tasks:
     - name: Make secrets path unreadeable
       become: true
@@ -31,7 +31,7 @@
         path: "{{ docker_volumes_path }}/secrets"
         state: directory
         owner: root
-        group: leduc
+        group: "{{user_group}}"
         mode: u=rw,g=rw,o=
         recurse: true
     - name: Docker prune
