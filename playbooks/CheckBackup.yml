@@ -12,7 +12,7 @@
         path: "{{ docker_volumes_path }}/secrets"
         state: directory
         owner: root
-        group: "{{user_group}}"
+        group: "{{ ansible_user }}"
         mode: u=rwX,g=rwX,o=rwX
         recurse: true
   tasks:
@@ -39,7 +39,7 @@
         path: "{{ docker_volumes_path }}/secrets"
         state: directory
         owner: root
-        group: "{{user_group}}"
+        group: "{{ ansible_user }}"
         mode: u=rw,g=rw,o=
         recurse: true
     - name: Docker prune
