@@ -3,6 +3,7 @@
         "redhat.ansible",
         "esphome.esphome-vscode",
         "ms-azuretools.vscode-docker",
-        "chrislajoie.vscode-modelines"
+        "chrislajoie.vscode-modelines",
+        "wolfmah.ansible-vault-inline"
     ]
 }
