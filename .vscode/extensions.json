@@ -1,0 +1,8 @@
+{
+    "recommendations": [
+        "redhat.ansible",
+        "esphome.esphome-vscode",
+        "ms-azuretools.vscode-docker",
+        "chrislajoie.vscode-modelines"
+    ]
+}
