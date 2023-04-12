@@ -31,5 +31,6 @@
     community.docker.docker_compose:
       pull: true
       build: true
+      restarted: true
       state: present
       project_src: /home/{{ ansible_user }}/home-server/stacks/public_calendar
