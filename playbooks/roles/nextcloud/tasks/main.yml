@@ -1,3 +1,4 @@
+# code: language=ansible
 ---
 - name: Install nextcloud
   run_once: true
@@ -63,6 +64,7 @@
     loop:
       - mime.types
       - fastcgi_params
+    register: nginx1
 
   - name: Copy nginx configuration file
     become: true
@@ -70,6 +72,7 @@
       src: "nginx.conf"
       dest: "{{ docker_volumes_path }}/nextcloud-nginx-config"
       mode: '0644'
+    register: nginx2
 
   - name: Create nextcloud Dockerfile
     ansible.builtin.copy:
@@ -99,6 +102,7 @@
     community.docker.docker_compose:
       pull: true
       build: true
+      restarted: "{{ nginx1 is changed or nginx2 is changed }}"
       state: present
       project_src: /home/{{ ansible_user }}/home-server/stacks/nc
 
