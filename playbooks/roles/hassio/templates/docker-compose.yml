@@ -1,4 +1,5 @@
-version: "3.4"
+# code: language=dockercompose
+version: "3.7"
 services:
   homeassistant:
     labels:
@@ -65,6 +66,22 @@ services:
       - esphome:/config:rw
     command: config/ dashboard
 
+  mosquitto:
+    image: eclipse-mosquitto
+    volumes:
+      - mosquitto:/mosquitto/config:ro
+      - mosquitto-data:/mosquitto/data:rw
+
+    ports:
+      - target: 1883
+        published: 1883
+        protocol: tcp
+        mode: host
+      - target: 9001
+        published: 9001
+        protocol: tcp
+        mode: host  
+
 volumes:
   homeassistant:
     driver: local
@@ -78,6 +95,15 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/esphome"
+
+  mosquitto:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/mosquitto"
+  mosquitto-data:
+    name: "mqtt-broker-data"
 
 networks:
   traefik_backend:
