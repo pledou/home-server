@@ -4,36 +4,17 @@
     - upgrade-packages
 
 - hosts: docker_server
-  pre_tasks:
-    - name: Verify secrets path
-      become: true
-      ansible.builtin.file:
-        path: "{{ docker_volumes_path }}/secrets"
-        state: directory
-        owner: root
-        group: "{{ ansible_user }}"
-        mode: u=rwX,g=rwX,o=rwX
-        recurse: true
   roles:
     - docker
     - traefik
     # - portainer
     - nextcloud
-    - kresus
+    # - kresus
     - hassio
     # - gitlab
     # - public_calendar
     # - prep_backup
   post_tasks:
-    - name: Make secrets path unreadeable
-      become: true
-      ansible.builtin.file:
-        path: "{{ docker_volumes_path }}/secrets"
-        state: directory
-        owner: root
-        group: "{{ ansible_user }}"
-        mode: u=rw,g=rw,o=
-        recurse: true
     - name: Docker prune
       community.docker.docker_prune:
         images: true
