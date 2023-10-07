@@ -22,15 +22,22 @@ services:
       traefik.http.routers.home-websecure.tls.certresolver: le
 
       traefik.http.services.home.loadbalancer.server.port: 8123
+      traefik.http.services.home.loadbalancer.passHostHeader: 'true'
     entrypoint:
       - /init
     hostname: homeassistant
     image: homeassistant/home-assistant:stable
     network_mode: host
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8123"]
+      interval: 30s
+      timeout: 10s
+      retries: 6
     cap_add:
       - NET_ADMIN
+      - NET_BIND_SERVICE
     privileged: true
-    restart: always
+    restart: unless-stopped
     security_opt:
       - label=disable
     volumes:
