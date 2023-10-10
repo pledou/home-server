@@ -76,6 +76,17 @@
       dest: /home/{{ ansible_user }}/home-server/stacks/hassio/docker-compose.yml
       mode: 0775
 
+  - name: Configure homeassistant for proxy
+    become: true
+    ansible.builtin.blockinfile:
+      path: "{{ docker_volumes_path }}/homeassistant/configuration.yaml"
+      block: |
+        http:
+          use_x_forwarded_for: true
+          trusted_proxies:
+            - 127.0.0.1
+            - 172.0.0.0/8
+
   - name: Deploy compose from a compose file
     become: true
     docker_compose:
