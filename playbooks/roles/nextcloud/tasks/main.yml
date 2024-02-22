@@ -9,13 +9,49 @@
       state: directory
       mode: 0775
 
+  - name: Load existing secret
+    become: true
+    ansible.builtin.fetch:
+      src: "{{ docker_volumes_path }}/secrets/{{ item }}"
+      dest: "files/secrets/{{ item }}"
+      flat: true
+    loop:
+      - nextcloud_admin_secret
+      - database_user_secret
+      - talk_secret
+      - redis_secret
+
   - name: Generate passwords if not existant
     become: true
     ansible.builtin.set_fact:
-      nextcloud_admin_password: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/nextcloud_admin_secret chars=ascii_letters,digits length=32') }}"
-      database_user_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/database_user_secret chars=ascii_letters,digits length=32') }}"
-      talk_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/talk_secret chars=ascii_letters,digits length=32') }}"
-      redis_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/redis_secret chars=ascii_letters,digits length=32') }}"
+      nextcloud_admin_password: "{{ lookup('password', 'files/secrets/nextcloud_admin_secret chars=ascii_letters,digits length=32') }}"
+      database_user_secret: "{{ lookup('password', 'files/secrets/database_user_secret chars=ascii_letters,digits length=32') }}"
+      talk_secret: "{{ lookup('password', 'files/secrets/talk_secret chars=ascii_letters,digits length=32') }}"
+      redis_secret: "{{ lookup('password', 'files/secrets/redis_secret chars=ascii_letters,digits length=32') }}"
+
+  - name: Push new secrets
+    become: true
+    ansible.builtin.copy:
+      src: "files/secrets/{{ item }}"
+      dest: "{{ docker_volumes_path }}/secrets/{{ item }}"
+      force: false
+      mode: 0640
+    loop:
+      - nextcloud_admin_secret
+      - database_user_secret
+      - talk_secret
+      - redis_secret
+
+  - name: remove local secret
+    ansible.builtin.file:
+      path: "files/secrets/{{ item }}"
+      state: "absent"
+    delegate_to: localhost
+    loop:
+      - nextcloud_admin_secret
+      - database_user_secret
+      - talk_secret
+      - redis_secret
 
 #  - name: upgrade db
 #    include_tasks: tasks/upgrade_postgres.yml
@@ -126,22 +162,16 @@
     when: ( not config_php.stat.exists )
     register: first_setup_nextcloud
 
-# - name: Add missing indices
-#   community.docker.docker_container_exec:
-#     container: nc_nextcloud_1
-#     user: www-data
-#     command: php occ db:add-missing-indices
-# - name: Add missing columns
-#   community.docker.docker_container_exec:
-#     container: nc_nextcloud_1
-#     user: www-data
-#     command: php occ db:add-missing-columns
-#
-# - name: Add missing pk
-#   community.docker.docker_container_exec:
-#     container: nc_nextcloud_1
-#     user: www-data
-#     command: php occ db:add-missing-primary-keys
-
-# command: php occ db:convert-filecache-bigint
+  - name: Add missing db objects
+    community.docker.docker_container_exec:
+      container: nc_nextcloud_1
+      user: www-data
+      argv:
+        - /bin/bash
+        - "-c"
+        - "php occ db:add-missing-indices ; \ " 
+        - "php occ db:add-missing-columns ; \ " 
+        - "php occ db:add-missing-primary-keys; \ "  
+        - "php occ db:convert-filecache-bigint"
+    ignore_errors: True
 ...

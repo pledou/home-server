@@ -78,9 +78,8 @@ services:
       - --api
     networks:
       backend:
-        ipv4_address: 172.19.0.2
     extra_hosts:
-      host.docker.internal: 172.19.0.1
+      host.docker.internal: host-gateway
 
     ports:
       - 0.0.0.0:8443:8443/tcp
