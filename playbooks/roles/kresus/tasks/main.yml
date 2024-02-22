@@ -10,12 +10,12 @@
       mode: 0775
 
   - name: Load existing secret
-    ignore_errors: true
     become: true
     ansible.builtin.fetch:
       src: "{{ docker_volumes_path }}/secrets/{{ item }}"
       dest: "files/secrets/{{ item }}"
       flat: true
+      fail_on_missing: false
     loop:
       - k_db_password
       - k_db1_password

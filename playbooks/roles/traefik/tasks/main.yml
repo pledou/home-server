@@ -20,12 +20,12 @@
       - traefik-rules
 
   - name: Load existing secret
-    ignore_errors: true
     become: true
     ansible.builtin.fetch:
       src: "{{ docker_volumes_path }}/secrets/traefik_admin_password"
       dest: "files/secrets/traefik_admin_password"
       flat: true
+      fail_on_missing: false
 
   - name: Generate passwords if not existant
     ansible.builtin.set_fact:
