@@ -110,8 +110,8 @@ services:
       - myelectricaldata:/data:rw
     environment:
       TZ: Europe/Paris
-    # ports:
-    #   - 5000:5000
+    ports:
+      - 5000:5000
 
 volumes:
   homeassistant:

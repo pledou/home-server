@@ -10,6 +10,7 @@
       mode: 0775
 
   - name: Load existing secret
+    ignore_errors: true
     become: true
     ansible.builtin.fetch:
       src: "{{ docker_volumes_path }}/secrets/{{ item }}"
