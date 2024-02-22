@@ -23,25 +23,25 @@
     become: true
     ansible.builtin.fetch:
       src: "{{ docker_volumes_path }}/secrets/traefik_admin_password"
-      dest: "files/secrets/traefik_admin_password"
+      dest: "{{ role_path }}/files/secrets/traefik_admin_password"
       flat: true
       fail_on_missing: false
 
   - name: Generate passwords if not existant
     ansible.builtin.set_fact:
-      traefik_admin_password: "{{ lookup('password', 'files/secrets/traefik_admin_password chars=ascii_letters,digits length=32') }}"
+      traefik_admin_password: "{{ lookup('password', '{{ role_path }}/files/secrets/traefik_admin_password chars=ascii_letters,digits length=32') }}"
 
   - name: Push new secrets
     become: true
     ansible.builtin.copy:
-      src: "files/secrets/traefik_admin_password"
+      src: "{{ role_path }}/files/secrets/traefik_admin_password"
       dest: "{{ docker_volumes_path }}/secrets/traefik_admin_password"
       force: false
       mode: 0640
 
   - name: remove local secret
     ansible.builtin.file:
-      path: "files/secrets/traefik_admin_password"
+      path: "{{ role_path }}/files/secrets/traefik_admin_password"
       state: "absent"
     delegate_to: localhost
 

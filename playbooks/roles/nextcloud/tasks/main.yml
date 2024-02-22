@@ -13,7 +13,7 @@
     become: true
     ansible.builtin.fetch:
       src: "{{ docker_volumes_path }}/secrets/{{ item }}"
-      dest: "files/secrets/{{ item }}"
+      dest: "{{ role_path }}/files/secrets/{{ item }}"
       flat: true
       fail_on_missing: false
     loop:
@@ -25,15 +25,15 @@
   - name: Generate passwords if not existant
     become: true
     ansible.builtin.set_fact:
-      nextcloud_admin_password: "{{ lookup('password', 'files/secrets/nextcloud_admin_secret chars=ascii_letters,digits length=32') }}"
-      database_user_secret: "{{ lookup('password', 'files/secrets/database_user_secret chars=ascii_letters,digits length=32') }}"
-      talk_secret: "{{ lookup('password', 'files/secrets/talk_secret chars=ascii_letters,digits length=32') }}"
-      redis_secret: "{{ lookup('password', 'files/secrets/redis_secret chars=ascii_letters,digits length=32') }}"
+      nextcloud_admin_password: "{{ lookup('password', '{{ role_path }}/files/secrets/nextcloud_admin_secret chars=ascii_letters,digits length=32') }}"
+      database_user_secret: "{{ lookup('password', '{{ role_path }}/files/secrets/database_user_secret chars=ascii_letters,digits length=32') }}"
+      talk_secret: "{{ lookup('password', '{{ role_path }}/files/secrets/talk_secret chars=ascii_letters,digits length=32') }}"
+      redis_secret: "{{ lookup('password', '{{ role_path }}/files/secrets/redis_secret chars=ascii_letters,digits length=32') }}"
 
   - name: Push new secrets
     become: true
     ansible.builtin.copy:
-      src: "files/secrets/{{ item }}"
+      src: "{{ role_path }}/files/secrets/{{ item }}"
       dest: "{{ docker_volumes_path }}/secrets/{{ item }}"
       force: false
       mode: 0640
@@ -45,7 +45,7 @@
 
   - name: remove local secret
     ansible.builtin.file:
-      path: "files/secrets/{{ item }}"
+      path: "{{ role_path }}/files/secrets/{{ item }}"
       state: "absent"
     delegate_to: localhost
     loop:

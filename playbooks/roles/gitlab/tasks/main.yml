@@ -33,26 +33,26 @@
     become: true
     ansible.builtin.fetch:
       src: "{{ docker_volumes_path }}/secrets/gitlab_root_password"
-      dest: "files/secrets/gitlab_root_password"
+      dest: "{{ role_path }}/files/secrets/gitlab_root_password"
       flat: true
       fail_on_missing: false
 
   - name: Generate passwords if not existant
     become: true
     ansible.builtin.set_fact:
-      gitlab_root_password: "{{ lookup('password', 'files/secrets/gitlab_root_password chars=ascii_letters,digits length=32') }}"
+      gitlab_root_password: "{{ lookup('password', '{{ role_path }}/files/secrets/gitlab_root_password chars=ascii_letters,digits length=32') }}"
 
   - name: Push new secrets
     become: true
     ansible.builtin.copy:
-      src: "files/secrets/gitlab_root_password"
+      src: "{{ role_path }}/files/secrets/gitlab_root_password"
       dest: "{{ docker_volumes_path }}/secrets/gitlab_root_password"
       force: false
       mode: 0640
 
   - name: remove local secret
     ansible.builtin.file:
-      path: "files/secrets/gitlab_root_password"
+      path: "{{ role_path }}/files/secrets/gitlab_root_password"
       state: "absent"
     delegate_to: localhost
 

@@ -11,7 +11,7 @@ services:
       - POSTGRES_USER=nextcloud
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
       - PGDATA=/var/lib/postgresql/data
-    image: postgres
+    image: postgres:15
     restart: always
     networks:
       - nc_backend
@@ -97,28 +97,28 @@ services:
       - redis-data:/data:rw
     working_dir: /data
 
-  elasticsearch_tesseract:
-    labels:
-      traefik.enable: 'false'
-    restart: always
-    hostname: elasticsearch_tesseract
-    build:
-      context: .
-      dockerfile: elastic.Dockerfile
-    volumes:
-      - elastic_data:/usr/share/elasticsearch/data:rw
-    networks:
-      - nc_backend
-    working_dir: /usr/share/elasticsearch
-    environment:
-      - node.name=esearch
-      - discovery.type=single-node
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
+  # elasticsearch_tesseract:
+  #   labels:
+  #     traefik.enable: 'false'
+  #   restart: always
+  #   hostname: elasticsearch_tesseract
+  #   build:
+  #     context: .
+  #     dockerfile: elastic.Dockerfile
+  #   volumes:
+  #     - elastic_data:/usr/share/elasticsearch/data:rw
+  #   networks:
+  #     - nc_backend
+  #   working_dir: /usr/share/elasticsearch
+  #   environment:
+  #     - node.name=esearch
+  #     - discovery.type=single-node
+  #     - bootstrap.memory_lock=true
+  #     - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
 
   collabora_online:
     labels:

@@ -20,11 +20,11 @@
       become: true
       ansible.builtin.fetch:
         src: "{{ docker_volumes_path }}/secrets/restic_backup_secret"
-        dest: "files/secrets/restic_backup_secret"
+        dest: "{{ role_path }}/files/secrets/restic_backup_secret"
         flat: true
     - name: Generate restic secret if restic_backup_secret is empty
       ansible.builtin.set_fact:
-        restic_backup_secret: "{{ lookup('password', 'files/secrets/restic_backup_secret chars=ascii_letters,digits length=32') }}"
+        restic_backup_secret: "{{ lookup('password', '{{ role_path }}/files/secrets/restic_backup_secret chars=ascii_letters,digits length=32') }}"
     - name: Read repository
       become: true
       ansible.builtin.command: 'restic snapshots --group-by path'
@@ -40,7 +40,7 @@
   post_tasks:
     - name: remove local secret
       ansible.builtin.file:
-        path: "files/secrets/restic_backup_secret"
+        path: "{{ role_path }}/files/secrets/restic_backup_secret"
         state: "absent"
       delegate_to: localhost
 
