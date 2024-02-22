@@ -82,6 +82,30 @@ services:
         protocol: tcp
         mode: host  
 
+  myelectricaldata:
+    labels:
+      traefik.enable: 'true'
+      # traefik.docker.network: traefik_backend
+      # traefik.constraint-label: traefik_backend
+      traefik.http.routers.myelectricaldata-http.rule: Host(`myelectricaldata.{{app_domain_name}}`)
+      traefik.http.routers.myelectricaldata-http.entrypoints: http
+      traefik.http.routers.myelectricaldata-http.middlewares: https-redirect
+      traefik.http.routers.myelectricaldata-https.rule: Host(`myelectricaldata.{{app_domain_name}}`)
+      traefik.http.routers.myelectricaldata-https.entrypoints: https
+      traefik.http.routers.myelectricaldata-https.tls: true
+      traefik.http.routers.myelectricaldata-https.tls.certresolver: le
+      traefik.http.services.myelectricaldata.loadbalancer.server.port: 5000
+      traefik.http.routers.myelectricaldata-https.middlewares: myelectricaldata-auth
+      traefik.http.middlewares.myelectricaldata-auth.basicauth.usersfile: /rules/myelectricaldata_users
+    image: m4dm4rtig4n/myelectricaldata:latest
+    restart: unless-stopped
+    volumes:
+      - myelectricaldata:/data:rw
+    environment:
+      TZ: Europe/Paris
+    # ports:
+    #   - 5000:5000
+
 volumes:
   homeassistant:
     driver: local
@@ -95,6 +119,12 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/esphome"
+  myelectricaldata:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/myelectricaldata"
 
   mosquitto:
     driver: local
