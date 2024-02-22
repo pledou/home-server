@@ -7,12 +7,11 @@
   roles:
     - docker
     - traefik
-    - portainer
+    # - portainer
     - nextcloud
     - kresus
     - hassio
     - gitlab
-    # - public_calendar
     - prep_backup
   post_tasks:
     - name: Docker prune
