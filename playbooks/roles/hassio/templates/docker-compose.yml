@@ -78,7 +78,7 @@ services:
     volumes:
       - mosquitto:/mosquitto/config:ro
       - mosquitto-data:/mosquitto/data:rw
-
+    restart: always
     ports:
       - target: 1883
         published: 1883
@@ -105,7 +105,7 @@ services:
       traefik.http.routers.myelectricaldata-https.middlewares: myelectricaldata-auth
       traefik.http.middlewares.myelectricaldata-auth.basicauth.usersfile: /rules/myelectricaldata_users
     image: m4dm4rtig4n/myelectricaldata:latest
-    restart: unless-stopped
+    restart: always
     volumes:
       - myelectricaldata:/data:rw
     environment:
