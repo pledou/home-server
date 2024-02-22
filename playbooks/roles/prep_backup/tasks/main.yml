@@ -29,7 +29,7 @@
 
 - name: Push new secrets
   become: true
-  ansible.builtin.file:
+  ansible.builtin.copy:
     src: "{{ role_path }}/files/secrets/restic_backup_secret"
     dest: "{{ docker_volumes_path }}/secrets/restic_backup_secret"
     force: false
