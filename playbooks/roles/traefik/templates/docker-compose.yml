@@ -55,18 +55,16 @@ services:
     restart: always    
     command:
       - --providers.docker
-      # - --providers.docker.exposedbydefault=false
       - --providers.docker.watch
       - --providers.file.filename=/rules/rules.yaml
-      #- --providers.docker.endpoint=tcp://127.0.0.1:2377
       - --entrypoints.http.address=:80
-      #- --entrypoints.http.http.redirections.entryPoint.to=https
       - --entrypoints.https.address=:443
       - --entrypoints.websecure.address=:8443
+      - --experimental.http3=true
+      - --entrypoints.https.http3
+      - --entrypoints.websecure.http3
       - --certificatesresolvers.le.acme.email={{ traefik_email }}
       - --certificatesresolvers.le.acme.storage=/certificates/acme.json
-      # - --certificatesresolvers.le.acme.httpchallenge.entrypoint=http
-      # - --certificatesresolvers.le.acme.tlschallenge=true
       - --certificatesresolvers.le.acme.dnschallenge=true
       - --certificatesresolvers.le.acme.dnschallenge.provider=duckdns
       - --entrypoints.websecure.http.tls.domains[0].main={{ app_domain_name }}
