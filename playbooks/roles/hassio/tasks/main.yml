@@ -12,7 +12,7 @@
     state: directory
     owner: "{{ item.owner | default('root') }}"
     group: "{{ item.group | default('root') }}"
-    mode: "{{ item.mode | default('0700') }}"
+    mode: "{{ item.mode | default('u=rwx,g=o=') }}"
   loop:
     - name: homeassistant
       mode: '0750'
@@ -40,7 +40,7 @@
     password: "{{ myelectricaldata_password }}"
     owner: root
     group: root
-    mode: 0640
+    mode: u=rw,g=r,o=
 - name: Add a user to a password file and ensure permissions are set for esphome
   become: true
   community.general.htpasswd:
@@ -49,25 +49,25 @@
     password: "{{ esphome_password }}"
     owner: root
     group: root
-    mode: 0640
+    mode: u=rw,g=r,o=
 - name: Copy mosquitto config file
   become: true
   ansible.builtin.template:
     src: mosquitto.conf
     dest: "{{ docker_volumes_path }}/mosquitto/mosquitto.conf"
-    mode: 0775
+    mode: u=g=rwx,o=rx
 - name: Copy myelectricaldata config file
   become: true
   ansible.builtin.template:
     src: myelectricaldata.yaml
     dest: "{{ docker_volumes_path }}/myelectricaldata/config.yaml"
-    mode: 0775
+    mode: u=g=rwx,o=rx
     force: false
 - name: Create docker-compose file
   ansible.builtin.template:
     src: docker-compose.yml
     dest: /home/{{ ansible_user }}/home-server/stacks/hassio/docker-compose.yml
-    mode: 0775
+    mode: u=g=rwx,o=rx
 - name: Configure homeassistant for proxy
   become: true
   ansible.builtin.blockinfile:
@@ -80,7 +80,7 @@
           - 172.0.0.0/8
 - name: Deploy compose from a compose file
   become: true
-  docker_compose:
+  community.docker.docker_compose:
     pull: true
     build: true
     state: present
@@ -92,3 +92,4 @@
 #       - /bin/bash
 #       - "-c"
 #       - "pip install --find-links $WHEELS_LINKS bluepy"
+...
