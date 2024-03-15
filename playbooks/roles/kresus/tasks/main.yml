@@ -9,50 +9,14 @@
       state: directory
       mode: 0775
 
-  - name: Load existing secret
-    become: true
-    ansible.builtin.fetch:
-      src: "{{ docker_volumes_path }}/secrets/{{ item }}"
-      dest: "{{ role_path }}/files/secrets/{{ item }}"
-      flat: true
-      fail_on_missing: false
-    loop:
-      - k_db_password
-      - k_db1_password
-      - k_password
-      - k1_password
-
-  - name: Generate passwords if not existant
-    become: true
-    ansible.builtin.set_fact:
-      k_db_password: "{{ lookup('password', '{{ role_path }}/files/secrets/k_db_password chars=ascii_letters,digits length=32') }}"
-      k_db1_password: "{{ lookup('password', '{{ role_path }}/files/secrets/k_db1_password chars=ascii_letters,digits length=32') }}"
-      k_password: "{{ lookup('password', '{{ role_path }}/files/secrets/k_password chars=ascii_letters,digits length=32') }}"
-      k1_password: "{{ lookup('password', '{{ role_path }}/files/secrets/k1_password chars=ascii_letters,digits length=32') }}"
-
-  - name: Push new secrets
-    become: true
-    ansible.builtin.copy:
-      src: "{{ role_path }}/files/secrets/{{ item }}"
-      dest: "{{ docker_volumes_path }}/secrets/{{ item }}"
-      force: false
-      mode: 0640
-    loop:
-      - k_db_password
-      - k_db1_password
-      - k_password
-      - k1_password
-
-  - name: remove local secret
-    ansible.builtin.file:
-      path: "{{ role_path }}/files/secrets/{{ item }}"
-      state: "absent"
-    delegate_to: localhost
-    loop:
-      - k_db_password
-      - k_db1_password
-      - k_password
-      - k1_password
+  - name: Retrive secret
+    ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
+    vars:
+      secrets:
+        - k_db_password
+        - k_db1_password
+        - k_password
+        - k1_password
 
 #  - name: upgrade db
 #    include_tasks: tasks/upgrade_postgres.yml

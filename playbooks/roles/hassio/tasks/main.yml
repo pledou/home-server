@@ -30,42 +30,12 @@
         mode: '0750'
         group: 0998
 
-  - name: Load existing secret
-    become: true
-    ansible.builtin.fetch:
-      src: "{{ docker_volumes_path }}/secrets/{{ item }}"
-      dest: "{{ role_path }}/files/secrets/{{ item }}"
-      flat: true
-      fail_on_missing: false
-    loop:
-      - esphome_password
-      - myelectricaldata_password
-
-  - name: Generate passwords if not existant
-    become: true
-    ansible.builtin.set_fact:
-      myelectricaldata_password: "{{ lookup('password', '{{ role_path }}/files/secrets/myelectricaldata_password chars=ascii_letters,digits length=32') }}"
-      esphome_password: "{{ lookup('password', '{{ role_path }}/files/secrets/esphome_password chars=ascii_letters,digits length=32') }}"
-
-  - name: Push new secrets
-    become: true
-    ansible.builtin.copy:
-      src: "{{ role_path }}/files/secrets/{{ item }}"
-      dest: "{{ docker_volumes_path }}/secrets/{{ item }}"
-      force: false
-      mode: 0640
-    loop:
-      - esphome_password
-      - myelectricaldata_password
-
-  - name: remove local secret
-    ansible.builtin.file:
-      path: "{{ role_path }}/files/secrets/{{ item }}"
-      state: "absent"
-    delegate_to: localhost
-    loop:
-      - esphome_password
-      - myelectricaldata_password
+  - name: Retrive secret
+    ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
+    vars:
+      secrets:
+        - esphome_password
+        - myelectricaldata_password
 
   - name: Add a user to a password file and ensure permissions are set for myelectricaldata
     become: true

@@ -19,32 +19,11 @@
       - traefik-public-certificates
       - traefik-rules
 
-  - name: Load existing secret
-    become: true
-    ansible.builtin.fetch:
-      src: "{{ docker_volumes_path }}/secrets/traefik_admin_password"
-      dest: "{{ role_path }}/files/secrets/traefik_admin_password"
-      flat: true
-      fail_on_missing: false
-
-  - name: Generate passwords if not existant
-    ansible.builtin.set_fact:
-      traefik_admin_password: "{{ lookup('password', '{{ role_path }}/files/secrets/traefik_admin_password chars=ascii_letters,digits length=32') }}"
-
-  - name: Push new secrets
-    become: true
-    ansible.builtin.copy:
-      src: "{{ role_path }}/files/secrets/traefik_admin_password"
-      dest: "{{ docker_volumes_path }}/secrets/traefik_admin_password"
-      force: false
-      mode: 0640
-
-  - name: remove local secret
-    ansible.builtin.file:
-      path: "{{ role_path }}/files/secrets/traefik_admin_password"
-      state: "absent"
-    delegate_to: localhost
-
+  - name: Retrive secret
+    ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
+    vars:
+      secrets:
+        - traefik_admin_password
 
   - name: Add a user to a password file and ensure permissions are set
     become: true
@@ -68,5 +47,3 @@
       build: true
       state: present
       project_src: /home/{{ ansible_user }}/home-server/stacks/traefik
-      # files:
-      #   - /home/{{ ansible_user }}/home-server/stacks/traefik/docker-compose.yml
