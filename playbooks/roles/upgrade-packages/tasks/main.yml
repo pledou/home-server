@@ -1,23 +1,26 @@
+# code: language=ansible
 ---
 - name: Upgrade all packages to the latest version
   become: true
-  apt:
+  ansible.builtin.apt:
     name: "*"
     state: latest # noqa package-latest
     force_apt_get: true
-    update_cache: yes
+    update_cache: true
 
-- name: check for reboot request
-  stat:
+- name: Check for reboot request
+  ansible.builtin.stat:
     path: /var/run/reboot-required
   register: reboot_request
 
 - name: Reboot host(s) after package upgrade
   become: true
-  reboot:
+  ansible.builtin.reboot:
     reboot_timeout: 60
   when: reboot_request.stat.exists
 
-- name: restic self update
+- name: Restic self update
   become: true
-  shell: restic self-update
+  ansible.builtin.command: restic self-update
+  changed_when: true
+...

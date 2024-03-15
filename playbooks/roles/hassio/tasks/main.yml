@@ -1,106 +1,94 @@
 # code: language=ansible
 ---
-- name: Install hassio
-  block:
-  - name: Verify stacks directory exists
-    ansible.builtin.file:
-      path: "/home/{{ ansible_user }}/home-server/stacks/hassio"
-      state: directory
-      mode: 0775
-
-  - name: Verify homeassistant volume path
-    become: true
-    ansible.builtin.file:
-      path: "{{ docker_volumes_path }}/{{ item.name }}"
-      state: directory
-      owner: "{{ item.owner | default('root') }}"
-      group: "{{ item.group | default('root') }}"
-      mode: "{{ item.mode | default('0700') }}"
-    loop:
-      - name: homeassistant
-        mode: '0750'
-        group: 0998
-      - name: esphome
-        mode: '0750'
-        group: 0998
-      - name: mosquitto
-        mode: '0750'
-        group: 0998
-      - name: myelectricaldata
-        mode: '0750'
-        group: 0998
-
-  - name: Retrive secret
-    ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
-    vars:
-      secrets:
-        - esphome_password
-        - myelectricaldata_password
-
-  - name: Add a user to a password file and ensure permissions are set for myelectricaldata
-    become: true
-    community.general.htpasswd:
-      path: "{{ docker_volumes_path }}/traefik-rules/myelectricaldata_users"
-      name: admin
-      password: "{{ myelectricaldata_password }}"
-      owner: root
-      group: root
-      mode: 0640
-
-  - name: Add a user to a password file and ensure permissions are set for esphome
-    become: true
-    community.general.htpasswd:
-      path: "{{ docker_volumes_path }}/traefik-rules/esphome_users"
-      name: admin
-      password: "{{ esphome_password }}"
-      owner: root
-      group: root
-      mode: 0640
-
-  - name: Copy mosquitto config file
-    become: true
-    ansible.builtin.template:
-      src: mosquitto.conf
-      dest: "{{ docker_volumes_path }}/mosquitto/mosquitto.conf"
-      mode: 0775
-
-  - name: Copy myelectricaldata config file
-    become: true
-    ansible.builtin.template:
-      src: myelectricaldata.yaml
-      dest: "{{ docker_volumes_path }}/myelectricaldata/config.yaml"
-      mode: 0775
-      force: false
-
-  - name: Create docker-compose file
-    ansible.builtin.template:
-      src: docker-compose.yml
-      dest: /home/{{ ansible_user }}/home-server/stacks/hassio/docker-compose.yml
-      mode: 0775
-
-  - name: Configure homeassistant for proxy
-    become: true
-    ansible.builtin.blockinfile:
-      path: "{{ docker_volumes_path }}/homeassistant/configuration.yaml"
-      block: |
-        http:
-          use_x_forwarded_for: true
-          trusted_proxies:
-            - 127.0.0.1
-            - 172.0.0.0/8
-
-  - name: Deploy compose from a compose file
-    become: true
-    docker_compose:
-      pull: true
-      build: true
-      state: present
-      project_src: /home/{{ ansible_user }}/home-server/stacks/hassio
-
-  # - name: Fix bluepy dependency
-  #   community.docker.docker_container_exec:
-  #     container: hassio_homeassistant_1
-  #     argv:
-  #       - /bin/bash
-  #       - "-c"
-  #       - "pip install --find-links $WHEELS_LINKS bluepy"
+- name: Verify stacks directory exists
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}/home-server/stacks/hassio"
+    state: directory
+    mode: u=g=rwx,o=rx
+- name: Verify homeassistant volume path
+  become: true
+  ansible.builtin.file:
+    path: "{{ docker_volumes_path }}/{{ item.name }}"
+    state: directory
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: "{{ item.mode | default('0700') }}"
+  loop:
+    - name: homeassistant
+      mode: '0750'
+      group: 0998
+    - name: esphome
+      mode: '0750'
+      group: 0998
+    - name: mosquitto
+      mode: '0750'
+      group: 0998
+    - name: myelectricaldata
+      mode: '0750'
+      group: 0998
+- name: Retrive secret
+  ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
+  vars:
+    secrets:
+      - esphome_password
+      - myelectricaldata_password
+- name: Add a user to a password file and ensure permissions are set for myelectricaldata
+  become: true
+  community.general.htpasswd:
+    path: "{{ docker_volumes_path }}/traefik-rules/myelectricaldata_users"
+    name: admin
+    password: "{{ myelectricaldata_password }}"
+    owner: root
+    group: root
+    mode: 0640
+- name: Add a user to a password file and ensure permissions are set for esphome
+  become: true
+  community.general.htpasswd:
+    path: "{{ docker_volumes_path }}/traefik-rules/esphome_users"
+    name: admin
+    password: "{{ esphome_password }}"
+    owner: root
+    group: root
+    mode: 0640
+- name: Copy mosquitto config file
+  become: true
+  ansible.builtin.template:
+    src: mosquitto.conf
+    dest: "{{ docker_volumes_path }}/mosquitto/mosquitto.conf"
+    mode: 0775
+- name: Copy myelectricaldata config file
+  become: true
+  ansible.builtin.template:
+    src: myelectricaldata.yaml
+    dest: "{{ docker_volumes_path }}/myelectricaldata/config.yaml"
+    mode: 0775
+    force: false
+- name: Create docker-compose file
+  ansible.builtin.template:
+    src: docker-compose.yml
+    dest: /home/{{ ansible_user }}/home-server/stacks/hassio/docker-compose.yml
+    mode: 0775
+- name: Configure homeassistant for proxy
+  become: true
+  ansible.builtin.blockinfile:
+    path: "{{ docker_volumes_path }}/homeassistant/configuration.yaml"
+    block: |
+      http:
+        use_x_forwarded_for: true
+        trusted_proxies:
+          - 127.0.0.1
+          - 172.0.0.0/8
+- name: Deploy compose from a compose file
+  become: true
+  docker_compose:
+    pull: true
+    build: true
+    state: present
+    project_src: /home/{{ ansible_user }}/home-server/stacks/hassio
+# - name: Fix bluepy dependency
+#   community.docker.docker_container_exec:
+#     container: hassio_homeassistant_1
+#     argv:
+#       - /bin/bash
+#       - "-c"
+#       - "pip install --find-links $WHEELS_LINKS bluepy"

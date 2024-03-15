@@ -2,44 +2,23 @@
 ---
 # tasks file for prep_backup
 
-- name: install restic
-  include_tasks: install_restic.yml
+- name: Install restic
+  ansible.builtin.include_tasks: install_restic.yml
 
 - name: Verify databases volume path
   become: true
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item }}"
     state: directory
-    mode: 0700
+    mode: u=rwx,g=o=
   loop:
     - databases
 
-- name: Load existing secret
-  become: true
-  ansible.builtin.fetch:
-    src: "{{ docker_volumes_path }}/secrets/restic_backup_secret"
-    dest: "{{ role_path }}/files/secrets/restic_backup_secret"
-    flat: true
-    fail_on_missing: false
-
-- name: Generate restic secret if restic_backup_secret is empty
-  become: true
-  ansible.builtin.set_fact:
-    restic_backup_secret: "{{ lookup('password', '{{ role_path }}/files/secrets/restic_backup_secret chars=ascii_letters,digits length=32') }}"
-
-- name: Push new secrets
-  become: true
-  ansible.builtin.copy:
-    src: "{{ role_path }}/files/secrets/restic_backup_secret"
-    dest: "{{ docker_volumes_path }}/secrets/restic_backup_secret"
-    force: false
-    mode: 0640
-
-- name: remove local secret
-  ansible.builtin.file:
-    path: "{{ role_path }}/files/secrets/restic_backup_secret"
-    state: "absent"
-  delegate_to: localhost
+- name: Retrive secret
+  ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
+  vars:
+    secrets:
+      - restic_backup_secret
 
 - name: Initialize repository
   become: true

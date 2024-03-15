@@ -1,35 +1,24 @@
 # code: language=ansible
 ---
-- name: Install portainer
-  run_once: true
-  block:
-  - name: Verify stacks directory exists
-    ansible.builtin.file:
-      path: "/home/{{ ansible_user }}/home-server/stacks/portainer"
-      state: directory
-      mode: 0775
-
-  - name: Verify Portainer volume path
-    become: true
-    ansible.builtin.file:
-      path: "{{ docker_volumes_path }}/portainer"
-      state: directory
-      mode: 0644
-
-  # - name: generate passwords if not existant
-  #   become: true
-  #   set_fact:
-  #     portainer_admin_secret: "{{ lookup('password', '{{ docker_volumes_path }}/secrets/portainer_admin_secret chars=ascii_letters,digits length=32') }}"
-
-  - name: Create docker-compose stack file
-    ansible.builtin.template:
-      src: docker-compose.yml
-      dest: /home/{{ ansible_user }}/home-server/stacks/portainer/docker-compose.yml
-      mode: 0775
-
-  - name: Deploy stack from a compose file
-    community.docker.docker_compose:
-      pull: true
-      build: true
-      state: present
-      project_src: /home/{{ ansible_user }}/home-server/stacks/portainer
+- name: Verify stacks directory exists
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}/home-server/stacks/portainer"
+    state: directory
+    mode: u=g=rwx,o=rx
+- name: Verify Portainer volume path
+  become: true
+  ansible.builtin.file:
+    path: "{{ docker_volumes_path }}/portainer"
+    state: directory
+    mode: u=rw,g=o=r
+- name: Create docker-compose stack file
+  ansible.builtin.template:
+    src: docker-compose.yml
+    dest: /home/{{ ansible_user }}/home-server/stacks/portainer/docker-compose.yml
+    mode: u=g=rwx,o=rx
+- name: Deploy stack from a compose file
+  community.docker.docker_compose:
+    pull: true
+    build: true
+    state: present
+    project_src: /home/{{ ansible_user }}/home-server/stacks/portainer

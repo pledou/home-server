@@ -1,10 +1,7 @@
 # code: language=ansible
 ---
-# - hosts: docker_server
-#   roles:
-#     - host-defaults
-
-- hosts: docker_server
+- name: Read snapshots
+  hosts: docker_server
   tasks:
     - name: Retrive secret
       ansible.builtin.include_tasks: "tasks/retrieve_password.yml"

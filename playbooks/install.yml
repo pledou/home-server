@@ -1,9 +1,11 @@
 ---
-- hosts: docker_server
+- name: Upgrade server
+  hosts: docker_server
   roles:
     - upgrade-packages
 
-- hosts: docker_server
+- name: Install apps & backup
+  hosts: docker_server
   roles:
     - docker
     - traefik
