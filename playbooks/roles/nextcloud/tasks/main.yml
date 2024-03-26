@@ -120,9 +120,9 @@
     argv:
       - /bin/bash
       - "-c"
-      - "php occ db:add-missing-indices ; \\"
-      - "php occ db:add-missing-columns ; \\"
-      - "php occ db:add-missing-primary-keys; \\"
+      - "php occ db:add-missing-indices ;"
+      - "php occ db:add-missing-columns ;"
+      - "php occ db:add-missing-primary-keys;"
       - "php occ db:convert-filecache-bigint"
   register: add_db_objects
   failed_when: add_db_objects.rc !=0
