@@ -1,5 +1,3 @@
-# code: language=dockercompose
-version: "3.6"
 services:
   watchtower: # auto update images
     image: containrrr/watchtower
