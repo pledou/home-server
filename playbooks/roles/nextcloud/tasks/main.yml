@@ -68,21 +68,18 @@
     dest: "{{ docker_volumes_path }}/nextcloud-nginx-config"
     mode: u=rw,g=o=r
   register: nginx2
-- name: Create nextcloud Dockerfile
+- name: Copy  docker files
   ansible.builtin.copy:
-    src: nextcloud/Dockerfile
-    dest: /home/{{ ansible_user }}/home-server/stacks/nc/nextcloud.Dockerfile
+    src: "{{ item.src }}"
+    dest: "/home/{{ ansible_user }}/home-server/stacks/nc/{{ item.dest }}"
     mode: u=rw,g=o=r
-- name: Create supervisord Dockerfile
-  ansible.builtin.copy:
-    src: nextcloud/supervisord.conf
-    dest: /home/{{ ansible_user }}/home-server/stacks/nc/supervisord.conf
-    mode: u=rw,g=o=r
-- name: Create elastic Dockerfile
-  ansible.builtin.copy:
-    src: elastic/Dockerfile
-    dest: /home/{{ ansible_user }}/home-server/stacks/nc/elastic.Dockerfile
-    mode: u=rw,g=o=r
+  loop:
+    - src: nextcloud/Dockerfile
+      dest: nextcloud.Dockerfile
+    - src: nextcloud/supervisord.conf
+      dest: supervisord.conf
+    - src: elastic/Dockerfile
+      dest: elastic.Dockerfile
 - name: Create docker-compose stack file
   ansible.builtin.template:
     src: docker-compose.yml
