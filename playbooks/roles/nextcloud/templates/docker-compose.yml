@@ -76,6 +76,8 @@ services:
       - nextcloud-config:/var/www/html/config:Z
       - nextcloud-data:/var/nc-data:Z
       - nginx_config:/etc/nginx:Z
+      - type: tmpfs
+        target: /tmp:exec
     working_dir: /var/www/html
     depends_on:
       - ncdb
