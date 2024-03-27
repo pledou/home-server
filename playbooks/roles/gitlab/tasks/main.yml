@@ -4,7 +4,7 @@
   ansible.builtin.file:
     path: "/home/{{ ansible_user }}/home-server/stacks/gitlab"
     state: directory
-    mode: 0775
+    mode: o=g=rwx,o=rx
 - name: Verify gitlab volume path
   become: true
   ansible.builtin.file:
@@ -22,20 +22,20 @@
   ansible.builtin.template:
     src: gitlab.rb
     dest: "{{ docker_volumes_path }}/gitlab-config/gitlab.rb"
-    mode: 0644
+    mode: u=rw,g=o=r
 - name: Retrive secret
   ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
   vars:
     secrets:
-        - gitlab_root_password
-        
+      - gitlab_root_password
+
 - name: Create docker-compose file
   ansible.builtin.template:
     src: docker-compose.yml
     dest: /home/{{ ansible_user }}/home-server/stacks/gitlab/docker-compose.yml
-    mode: 0775
+    mode: o=g=rwx,o=rx
 - name: Deploy compose from a compose file
-  docker_compose:
+  community.docker.docker_compose_v2:
     pull: "always"
     build: "always"
     state: present
