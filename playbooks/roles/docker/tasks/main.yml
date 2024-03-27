@@ -1,3 +1,4 @@
+# code: language=ansible
 ---
 - name: Install Docker Python library
   become: true
@@ -42,7 +43,7 @@
     dest: /usr/local/bin/docker-compose
     mode: u+x,g+x,o+x
 
-- name: Add "{{ ansible_user }}" user to "docker" group
+- name: Add user to "docker" group
   become: true
   ansible.builtin.user:
     name: "{{ ansible_user }}"
@@ -59,22 +60,6 @@
 
 - name: Reboot host(s) after package upgrade
   become: true
-  block:
-    # - name: Drain node
-    #   docker_node:
-    #     hostname: "{{ ansible_hostname }}"
-    #     availability: drain
-    #   ignore_errors: true
-    #   register: drained
-    # - name: Wait end of drain process
-    #   wait_for:
-    #     timeout: 60
-    - name: Reboot
-      ansible.builtin.reboot:
-        reboot_timeout: 60
-    # - name: Active node
-    #   docker_node:
-    #     hostname: "{{ ansible_hostname }}"
-    #     availability: active
-    #   when: drained is defined
+  ansible.builtin.reboot:
+    reboot_timeout: 60
   when: reboot_request.stat.exists

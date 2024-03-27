@@ -1,20 +1,21 @@
+# code: language=ansible
 ---
 - name: Upgrade server
   hosts: docker_server
   roles:
     - upgrade-packages
+    - docker
+    - prep_backup
 
 - name: Install apps & backup
   hosts: docker_server
   roles:
-    - docker
     - traefik
     # - portainer
     - nextcloud
     - kresus
     - hassio
     - gitlab
-    - prep_backup
   post_tasks:
     - name: Docker prune
       community.docker.docker_prune:
@@ -22,3 +23,5 @@
         containers: true
         containers_filters:
           until: 24h
+  tags: docker-apps
+...
