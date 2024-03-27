@@ -86,11 +86,10 @@
     dest: /home/{{ ansible_user }}/home-server/stacks/nc/docker-compose.yml
     mode: u=rw,g=o=r
 - name: Deploy stack from a compose file
-  community.docker.docker_compose:
-    pull: true
-    build: true
-    restarted: "{{ nginx1 is changed or nginx2 is changed }}"
-    state: present
+  community.docker.docker_compose_v2:
+    pull: "always"
+    build: "always"
+    state: "{{ 'restarted' if (nginx1 is changed or nginx2 is changed) else 'present' }}"
     project_src: /home/{{ ansible_user }}/home-server/stacks/nc
 - name: Wait for nextcloud container to come up
   become: true

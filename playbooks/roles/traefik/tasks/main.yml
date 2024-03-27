@@ -34,8 +34,8 @@
     dest: /home/{{ ansible_user }}/home-server/stacks/traefik/docker-compose.yml
     mode: u=rwx,g=o=rx
 - name: Deploy stack from a compose file
-  community.docker.docker_compose:
-    pull: true
-    build: true
+  community.docker.docker_compose_v2:
+    pull: "always"
+    build: "always"
     state: present
     project_src: /home/{{ ansible_user }}/home-server/stacks/traefik

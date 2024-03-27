@@ -80,9 +80,9 @@
           - 172.0.0.0/8
 - name: Deploy compose from a compose file
   become: true
-  community.docker.docker_compose:
-    pull: true
-    build: true
+  community.docker.docker_compose_v2:
+    pull: "always"
+    build: "always"
     state: present
     project_src: /home/{{ ansible_user }}/home-server/stacks/hassio
 # - name: Fix bluepy dependency
