@@ -105,11 +105,9 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      o: bind
       device: "{{ docker_volumes_path }}/traefik-public-certificates"
   traefik-rules:
     driver: local
     driver_opts:
       type: none
-      o: bind
       device: "{{ docker_volumes_path }}/traefik-rules"

@@ -29,5 +29,4 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      o: bind
       device: "{{ docker_volumes_path }}/portainer"

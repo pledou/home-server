@@ -118,26 +118,22 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      o: bind
       device: "{{ docker_volumes_path }}/homeassistant"
   esphome:
     driver: local
     driver_opts:
       type: none
-      o: bind
       device: "{{ docker_volumes_path }}/esphome"
   myelectricaldata:
     driver: local
     driver_opts:
       type: none
-      o: bind
       device: "{{ docker_volumes_path }}/myelectricaldata"
 
   mosquitto:
     driver: local
     driver_opts:
       type: none
-      o: bind
       device: "{{ docker_volumes_path }}/mosquitto"
   mosquitto-data:
     name: "mqtt-broker-data"
