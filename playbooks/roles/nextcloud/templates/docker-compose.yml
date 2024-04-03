@@ -88,8 +88,14 @@ services:
   redis:
     labels:
       - traefik.enable=false
-    command: redis-server --requirepass ***REMOVED_REDIS_PASSWORD***
+    command: redis-server --requirepass {{ redis_secret }}
     image: redis:alpine
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 3s
     restart: always
     networks:
       - nc_backend
@@ -253,5 +259,3 @@ secrets:
     file: "{{ docker_volumes_path }}/secrets/database_user_secret"
   talk_password:
     file: "{{ docker_volumes_path }}/secrets/talk_secret"
-  redis_password:
-    file: "{{ docker_volumes_path }}/secrets/redis_secret" 
