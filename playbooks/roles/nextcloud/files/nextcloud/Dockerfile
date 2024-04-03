@@ -11,6 +11,9 @@ RUN set -ex; \
         nginx \
         imagemagick\
         ghostscript\
+        tesseract-ocr\ 
+        tesseract-ocr-eng\ 
+        tesseract-ocr-fra\
     ;
     #rm -rf /var/lib/apt/lists/*
 
@@ -53,6 +56,7 @@ RUN mkdir -p \
 ;
 
 COPY supervisord.conf /
+COPY fulltextsearch.sh /
 
 ENV NEXTCLOUD_UPDATE=1
 

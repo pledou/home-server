@@ -78,8 +78,8 @@
       dest: nextcloud.Dockerfile
     - src: nextcloud/supervisord.conf
       dest: supervisord.conf
-    - src: elastic/Dockerfile
-      dest: elastic.Dockerfile
+    - src: nextcloud/fulltextsearch.sh
+      dest: fulltextsearch.sh
 - name: Create docker-compose stack file
   ansible.builtin.template:
     src: docker-compose.yml
@@ -126,15 +126,23 @@
           - "php occ config:system:set {{ item }}"
       loop: '{{ nextcloud_system_config }}'
 
-    - name: Install apps
-      community.docker.docker_container_exec:
-        container: nc-nextcloud-1
-        user: www-data
-        argv:
-          - /bin/bash
-          - "-c"
-          - "php occ app:install {{ item }} --no-interaction --no-warnings"
-      loop: "{{ nextcloud_app_config }}"
+- name: Install apps
+  become: true # necessary to read docker_volumes_path content
+  ansible.builtin.command:
+    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app:install {{ item }} --no-interaction --no-warnings'
+    creates: '{{ docker_volumes_path }}/nextcloud-www/apps/{{ item }}'
+  register: install_app
+  loop: "{{ nextcloud_app_config }}"
+
+- name: Configure fullsearch values
+  community.docker.docker_container_exec:
+    container: nc-nextcloud-1
+    user: www-data
+    argv:
+      - /bin/bash
+      - "-c"
+      - "php occ config:app:set {{ item }}"
+  loop: '{{ nextcloud_fulltext_config }}'
 
 - name: Update apps & Add missing db objects
   community.docker.docker_container_exec:

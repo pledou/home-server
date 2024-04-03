@@ -82,6 +82,7 @@ services:
     depends_on:
       - ncdb
       - redis
+      - elasticsearch
     secrets:
       - postgres_password
 
@@ -103,28 +104,31 @@ services:
       - redis-data:/data:rw
     working_dir: /data
 
-  # elasticsearch_tesseract:
-  #   labels:
-  #     traefik.enable: 'false'
-  #   restart: always
-  #   hostname: elasticsearch_tesseract
-  #   build:
-  #     context: .
-  #     dockerfile: elastic.Dockerfile
-  #   volumes:
-  #     - elastic_data:/usr/share/elasticsearch/data:rw
-  #   networks:
-  #     - nc_backend
-  #   working_dir: /usr/share/elasticsearch
-  #   environment:
-  #     - node.name=esearch
-  #     - discovery.type=single-node
-  #     - bootstrap.memory_lock=true
-  #     - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
-  #   ulimits:
-  #     memlock:
-  #       soft: -1
-  #       hard: -1
+  elasticsearch:   
+    labels:
+      traefik.enable: 'false'
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.6.1
+    networks:
+      - nc_backend
+    command: sh -c "bin/elasticsearch-plugin install --batch ingest-attachment; /bin/tini -s /usr/local/bin/docker-entrypoint.sh eswrapper"
+    restart: always
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx2048m"
+      # Disable authentication and ssl completely
+      - xpack.security.enabled=false
+      # Use this to enable Basic Authentication:
+      # - xpack.security.enabled=true
+      # - xpack.security.http.ssl.enabled=false
+      # - ELASTIC_PASSWORD=mySuperSecret
+    user: 1000:1000
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data:rw
 
   collabora_online:
     labels:
