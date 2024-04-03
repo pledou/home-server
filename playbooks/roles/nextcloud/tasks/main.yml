@@ -101,26 +101,42 @@
     path: "{{ docker_volumes_path }}/nextcloud-config/config.php"
   register: config_php
 
-- name: First setup nextcloud
-  ansible.builtin.command: >
-    docker exec --user www-data nextcloud php occ  maintenance:install
-    --database psql --database-host nc-db --database-name nextcloud
-    --database-user nextcloud --database-pass {{ database_user_secret }}
-    --admin-user admin --admin-pass {{ nextcloud_admin_password }} --data-dir {{ docker_volumes_path }}/nextcloud-data
+- name: Nextcloud setup
   when: ( not config_php.stat.exists )
   register: first_setup_nextcloud
   changed_when: first_setup_nextcloud.rc == 0
+  block:
+    - name: First setup nextcloud
+      community.docker.docker_container_exec:
+        container: nc-nextcloud-1
+        user: www-data
+        argv:
+          - /bin/bash
+          - "-c"
+          - "php occ  maintenance:install"
+          - --database psql --database-host nc-db --database-name nextcloud
+          - --database-user nextcloud --database-pass {{ database_user_secret }}
+          - --admin-user admin --admin-pass {{ nextcloud_admin_password }} --data-dir {{ docker_volumes_path }}/nextcloud-data
 
-- name: Install apps
-  community.docker.docker_container_exec:
-    container: nc-nextcloud-1
-    user: www-data
-    argv:
-      - /bin/bash
-      - "-c"
-      - "php occ app:install {{ item }} --no-interaction --no-warnings"
-  loop: "{{ nextcloud_app_config }}"
-  when: ( not config_php.stat.exists )
+    - name: Set nextcloud system config.php values
+      community.docker.docker_container_exec:
+        container: nc-nextcloud-1
+        user: www-data
+        argv:
+          - /bin/bash
+          - "-c"
+          - "php occ config:system:set {{ item }}"
+      loop: '{{ nextcloud_system_config }}'
+
+    - name: Install apps
+      community.docker.docker_container_exec:
+        container: nc-nextcloud-1
+        user: www-data
+        argv:
+          - /bin/bash
+          - "-c"
+          - "php occ app:install {{ item }} --no-interaction --no-warnings"
+      loop: "{{ nextcloud_app_config }}"
 
 - name: Update apps & Add missing db objects
   community.docker.docker_container_exec:
