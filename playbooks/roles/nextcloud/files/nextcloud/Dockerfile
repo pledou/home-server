@@ -7,26 +7,13 @@ RUN set -ex; \
         ffmpeg \
         libmagickcore-6.q16-6-extra \
         procps \
-#        smbclient \
         supervisor \
         nginx \
         imagemagick\
         ghostscript\
-        git\
     ;
     #rm -rf /var/lib/apt/lists/*
 
-# RUN cd ~; \
-#     git clone https://github.com/singlecomm/php-lua.git; \
-#     cd ./php-lua; \
-#     git checkout php8; \
-#     phpize && ./configure --with-lua-version=5.3; \
-#     make; \
-#     # The destination path may change depending on your PHP version \
-#     # You can find your extension directory by using: \
-#     # php -i | grep extension_dir \
-#     cp ./.libs/lua.so /usr/local/lib/php/extensions/no-debug-non-zts-20210902/; \
-#     docker-php-ext-enable lua;
 
 RUN set -ex; \
     \
@@ -45,8 +32,6 @@ RUN set -ex; \
         bz2 \
 #        imap \
     ; \
-#    pecl install smbclient; \
-#    docker-php-ext-enable smbclient; \
     \
 # reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
     apt-mark auto '.*' > /dev/null; \
@@ -72,6 +57,10 @@ COPY supervisord.conf /
 ENV NEXTCLOUD_UPDATE=1
 
 # Autoriser les aperçus de PDF par ImageMagick
-RUN sed -i 's/\(^ *<policy.*rights="\)\([^"]*\)\(".*PDF.*\/>\)/\1read|write\3/1' /etc/ImageMagick-6/policy.xml
+# growing cache
+RUN sed -i 's/\(^ *<policy.*rights="\)\([^"]*\)\(".*PDF.*\/>\)/\1read|write\3/1' /etc/ImageMagick-6/policy.xml; \
+    sed -i 's/\(opcache\.memory_consumption=\).*/\1256/1' "${PHP_INI_DIR}/conf.d/opcache-recommended.ini"; \
+    sed -i 's/\(opcache\.jit_buffer_size=\).*/\1256M/1' "${PHP_INI_DIR}/conf.d/opcache-recommended.ini"; \
+    sed -i 's/\(memory_limit=\).*/\11024M/1' "${PHP_INI_DIR}/conf.d/nextcloud.ini";
 
 CMD ["/usr/bin/supervisord", "-c", "/supervisord.conf"]
