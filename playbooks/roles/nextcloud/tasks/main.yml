@@ -68,7 +68,7 @@
     dest: "{{ docker_volumes_path }}/nextcloud-nginx-config"
     mode: u=rw,g=o=r
   register: nginx2
-- name: Copy  docker files
+- name: Copy docker files
   ansible.builtin.copy:
     src: "{{ item.src }}"
     dest: "/home/{{ ansible_user }}/home-server/stacks/nc/{{ item.dest }}"
@@ -103,8 +103,6 @@
 
 - name: Nextcloud setup
   when: ( not config_php.stat.exists )
-  register: first_setup_nextcloud
-  changed_when: first_setup_nextcloud.rc == 0
   block:
     - name: First setup nextcloud
       community.docker.docker_container_exec:
