@@ -12,6 +12,7 @@
   roles:
     - traefik
     # - portainer
+    - authentik
     - nextcloud
     - kresus
     - hassio
@@ -23,5 +24,6 @@
         containers: true
         containers_filters:
           until: 24h
+        volumes: true
   tags: docker-apps
 ...

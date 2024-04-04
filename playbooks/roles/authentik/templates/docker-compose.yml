@@ -1,0 +1,132 @@
+---
+services:
+  postgresql:
+    labels:
+      traefik.enable: 'false'
+    image: postgres:15
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d authentik -U authentik"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    volumes:
+      - database:/var/lib/postgresql/data:rw
+    secrets:
+      - postgres_password
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_USER: authentik
+      POSTGRES_DB: authentik
+    networks:
+      - authentik_backend
+  redis:
+    labels:
+      traefik.enable: 'false'
+    image: redis:alpine
+    command: --save 60 1 --loglevel warning
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 3s
+    volumes:
+      - redis:/data:rw
+    networks:
+      - authentik_backend
+  server:
+    labels:
+      traefik.enable: 'true'
+      # traefik.docker.network: traefik_backend
+      # traefik.constraint-label: traefik_backend
+      traefik.http.routers.authentik-http.rule: Host(`auth.{{app_domain_name}}`)
+      traefik.http.routers.authentik-http.entrypoints: http
+      traefik.http.routers.authentik-http.middlewares: https-redirect
+      traefik.http.routers.authentik-https.rule: Host(`auth.{{app_domain_name}}`)
+      traefik.http.routers.authentik-https.entrypoints: https
+      traefik.http.routers.authentik-https.tls: true
+      traefik.http.routers.authentik-https.tls.certresolver: le
+      traefik.http.services.authentik.loadbalancer.server.port: 9000
+    image: ghcr.io/goauthentik/server
+    restart: unless-stopped
+    command: server
+    networks:
+      - authentik_backend
+      - traefik_backend
+    volumes:
+      - media:/media
+      - custom-templates:/templates
+    environment:
+      AUTHENTIK_REDIS__HOST: authentik-redis-1
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgresql-1
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: "{{authentik_db_password}}"
+      AUTHENTIK_SECRET_KEY: "{{authentik_secret}}"
+    depends_on:
+      - postgresql
+      - redis
+  worker:
+    image: ghcr.io/goauthentik/server
+    restart: unless-stopped
+    command: worker
+    environment:
+      AUTHENTIK_EMAIL__HOST: "{{ authentik_mail_smtphost }}"
+      AUTHENTIK_EMAIL__PORT: "{{ authentik_mail_smtpport }}"
+      AUTHENTIK_EMAIL__USERNAME: "{{ authentik_mail_smtpname }}"
+      AUTHENTIK_EMAIL__PASSWORD: "{{ authentik_mail_smtppwd }}"
+      AUTHENTIK_EMAIL__USE_SSL: true
+      AUTHENTIK_EMAIL__TIMEOUT: 10
+      AUTHENTIK_EMAIL__FROM: "{{ authentik_mail_from }}"
+      AUTHENTIK_REDIS__HOST: authentik-redis-1
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgresql-1
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: "{{authentik_db_password}}"
+      AUTHENTIK_SECRET_KEY: "{{authentik_secret}}"
+    # `user: root` and the docker socket volume are optional.
+    # See more for the docker socket integration here:
+    # https://goauthentik.io/docs/outposts/integrations/docker
+    # Removing `user: root` also prevents the worker from fixing the permissions
+    # on the mounted folders, so when removing this make sure the folders have the correct UID/GID
+    # (1000:1000 by default)
+    user: root
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - media:/media
+      - certs:/certs
+      - custom-templates:/templates
+    depends_on:
+      - postgresql
+      - redis
+    networks:
+      - authentik_backend
+
+networks:
+  traefik_backend:
+    external: true
+  authentik_backend:
+
+volumes:
+  database:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/authentik-db"
+  redis:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/authentik-redis-data"
+  media:
+  certs:
+  custom-templates:
+
+secrets:
+  postgres_password:
+    file: "{{ docker_volumes_path }}/secrets/authentik_db_password"

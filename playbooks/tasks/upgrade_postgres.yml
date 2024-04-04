@@ -41,7 +41,7 @@
       ansible.builtin.file:
         path: "{{ postgres_data_dir }}.new"
         state: directory
-        mode: 0700
+        mode: u=rwx,g=o=
 
     - name: Initielize new cluster
       community.docker.docker_container:
