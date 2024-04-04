@@ -92,7 +92,7 @@ services:
     command: redis-server --requirepass {{ redis_secret }}
     image: redis:alpine
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
       start_period: 20s
       interval: 30s
       retries: 5
@@ -107,21 +107,21 @@ services:
   elasticsearch:   
     labels:
       traefik.enable: 'false'
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.6.1
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
     networks:
       - nc_backend
-    command: sh -c "bin/elasticsearch-plugin install --batch ingest-attachment; /bin/tini -s /usr/local/bin/docker-entrypoint.sh eswrapper"
     restart: always
     environment:
+      - TZ=Europe/Paris
       - discovery.type=single-node
       - bootstrap.memory_lock=true
       - "ES_JAVA_OPTS=-Xms512m -Xmx2048m"
-      # Disable authentication and ssl completely
-      - xpack.security.enabled=false
-      # Use this to enable Basic Authentication:
-      # - xpack.security.enabled=true
-      # - xpack.security.http.ssl.enabled=false
-      # - ELASTIC_PASSWORD=mySuperSecret
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - ELASTIC_PASSWORD={{ nc_elastic_secret }}
+      - logger.org.elasticsearch.discovery=WARN
+      - http.port=9200
+      - xpack.license.self_generated.type=basic
     user: 1000:1000
     ulimits:
       memlock:

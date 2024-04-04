@@ -13,6 +13,7 @@
       - database_user_secret
       - talk_secret
       - redis_secret
+      - nc_elastic_secret
 
 # - name: upgrade db
 #   include_tasks: tasks/upgrade_postgres.yml
