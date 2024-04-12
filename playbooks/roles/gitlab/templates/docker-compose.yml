@@ -4,10 +4,6 @@ services:
           - traefik.enable=true
           - traefik.docker.network=traefik_backend
           - traefik.constraint-label=traefik_backend
-          - traefik.http.routers.gitlab-http.rule=Host(`gitlab.{{app_domain_name}}`)
-          - traefik.http.routers.gitlab-http.entrypoints=http
-          - traefik.http.routers.gitlab-http.service=gitlab
-          - traefik.http.routers.gitlab-http.middlewares=https-redirect
           - traefik.http.routers.gitlab-https.rule=Host(`gitlab.{{app_domain_name}}`)
           - traefik.http.routers.gitlab-https.entrypoints=https
           - traefik.http.routers.gitlab-https.tls=true
@@ -21,10 +17,6 @@ services:
           - traefik.http.services.gitlab.loadbalancer.server.port=8181
 
           # Host settings for the registry
-          - traefik.http.routers.registry-g-http.rule=Host(`registry.gitlab.{{app_domain_name}}`)
-          - traefik.http.routers.registry-g-http.entrypoints=http
-          - traefik.http.routers.registry-g-http.service=registry-g
-          - traefik.http.routers.registry-g-http.middlewares=https-redirect
           - traefik.http.routers.registry-g-https.rule=Host(`registry.gitlab.{{app_domain_name}}`)
           - traefik.http.routers.registry-g-https.entrypoints=https
           - traefik.http.routers.registry-g-https.tls=true
@@ -32,10 +24,6 @@ services:
           - traefik.http.routers.registry-g-https.service=registry-g
           - traefik.http.services.registry-g.loadbalancer.server.port=5100
           # Host settings for GitLab pages. Since I don't have a wildcard certificate, I list every domain on it's own here
-          - traefik.http.routers.pages-g-http.rule=Host(`pages.gitlab.{{app_domain_name}}`)
-          - traefik.http.routers.pages-g-http.entrypoints=http
-          - traefik.http.routers.pages-g-http.service=pages-g
-          - traefik.http.routers.pages-g-http.middlewares=https-redirect
           - traefik.http.routers.pages-g-https.rule=Host(`pages.gitlab.{{app_domain_name}}`)
           - traefik.http.routers.pages-g-https.entrypoints=https
           - traefik.http.routers.pages-g-https.tls=true

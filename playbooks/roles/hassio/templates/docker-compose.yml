@@ -4,11 +4,7 @@ services:
       traefik.enable: 'true'
       # traefik.docker.network: traefik_backend
       # traefik.constraint-label: traefik_backend
-      
-      traefik.http.routers.home-http.rule: Host(`home.{{app_domain_name}}`)
-      traefik.http.routers.home-http.entrypoints: http
-      traefik.http.routers.home-http.middlewares: https-redirect
-      
+  
       traefik.http.routers.home-https.rule: Host(`home.{{app_domain_name}}`)
       traefik.http.routers.home-https.entrypoints: https
       traefik.http.routers.home-https.tls: 'true'
@@ -51,9 +47,6 @@ services:
       traefik.enable: 'true'
       # traefik.docker.network: traefik_backend
       # traefik.constraint-label: traefik_backend
-      traefik.http.routers.esphome-http.rule: Host(`esphome.{{app_domain_name}}`)
-      traefik.http.routers.esphome-http.entrypoints: http
-      traefik.http.routers.esphome-http.middlewares: https-redirect
       traefik.http.routers.esphome-https.rule: Host(`esphome.{{app_domain_name}}`)
       traefik.http.routers.esphome-https.entrypoints: https
       traefik.http.routers.esphome-https.tls: true
@@ -94,9 +87,6 @@ services:
       traefik.enable: 'true'
       # traefik.docker.network: traefik_backend
       # traefik.constraint-label: traefik_backend
-      traefik.http.routers.myelectricaldata-http.rule: Host(`myelectricaldata.{{app_domain_name}}`)
-      traefik.http.routers.myelectricaldata-http.entrypoints: http
-      traefik.http.routers.myelectricaldata-http.middlewares: https-redirect
       traefik.http.routers.myelectricaldata-https.rule: Host(`myelectricaldata.{{app_domain_name}}`)
       traefik.http.routers.myelectricaldata-https.entrypoints: https
       traefik.http.routers.myelectricaldata-https.tls: true

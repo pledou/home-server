@@ -27,8 +27,6 @@ services:
       - traefik.enable=true
       - traefik.docker.network=traefik_backend
       - traefik.http.middlewares.admin-auth.basicauth.usersfile=/rules/traefik_users
-      - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
-      - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
       - traefik.http.routers.traefik-public-https.rule=Host(`traefik.{{ app_domain_name }}`)
       - traefik.http.routers.traefik-public-https.entrypoints=https
       - traefik.http.routers.traefik-public-https.tls=true
@@ -49,13 +47,12 @@ services:
     environment:
       - DUCKDNS_TOKEN={{ traefik_duckdns_token }}
     hostname: traefik
-    image: traefik:latest  
+    image: traefik:latest
     restart: always    
     command:
       - --providers.docker
       - --providers.docker.watch
       - --providers.file.filename=/rules/rules.yaml
-      - --entrypoints.http.address=:80
       - --entrypoints.https.address=:443
       - --entrypoints.websecure.address=:8443
       - --experimental.http3=true
@@ -80,7 +77,6 @@ services:
     ports:
       - 0.0.0.0:8443:8443/tcp
       - 0.0.0.0:443:443/tcp
-      - 0.0.0.0:80:80/tcp
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:rw
       - traefik-public-certificates:/certificates

@@ -31,10 +31,6 @@ services:
       traefik.docker.network: traefik_backend
       traefik.constraint-label: traefik_backend
       
-      traefik.http.routers.nginx-http.rule: Host(`{{ app_domain_name }}`)
-      traefik.http.routers.nginx-http.entrypoints: http
-      traefik.http.routers.nginx-http.middlewares: https-redirect
-      
       traefik.http.routers.nginx-https.rule: Host(`{{ app_domain_name }}`)
       traefik.http.routers.nginx-https.entrypoints: https
       traefik.http.routers.nginx-https.middlewares: nginx@docker
@@ -135,10 +131,6 @@ services:
       traefik.enable: 'true'
       traefik.docker.network: traefik_backend
       traefik.constraint-label: traefik_backend
-      
-      traefik.http.routers.collabora-http.rule: Host(`collabora.{{ app_domain_name }}`)
-      traefik.http.routers.collabora-http.entrypoints: http
-      traefik.http.routers.collabora-http.middlewares: https-redirect
       
       traefik.http.routers.collabora-https.rule: Host(`collabora.{{ app_domain_name }}`)
       traefik.http.routers.collabora-https.middlewares: collabora@docker
