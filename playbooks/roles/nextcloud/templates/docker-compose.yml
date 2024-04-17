@@ -45,7 +45,6 @@ services:
 
       traefik.http.services.nginx.loadbalancer.server.port: 80
 
-      traefik.http.middlewares.nginx.headers.SSLRedirect: 'true'
       traefik.http.middlewares.nginx.headers.STSIncludeSubdomains: 'true'
       traefik.http.middlewares.nginx.headers.STSPreload: 'true'
       traefik.http.middlewares.nginx.headers.STSSeconds: 315360000
@@ -144,7 +143,6 @@ services:
       traefik.http.routers.collabora-websecure.tls: 'true'
       traefik.http.routers.collabora-websecure.tls.certresolver: le
 
-      traefik.http.middlewares.collabora.headers.SSLRedirect: 'true'
       traefik.http.middlewares.collabora.headers.STSIncludeSubdomains: 'true'
       traefik.http.middlewares.collabora.headers.STSPreload: 'true'
       traefik.http.middlewares.collabora.headers.STSSeconds: 315360000
