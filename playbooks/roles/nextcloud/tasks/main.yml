@@ -4,7 +4,7 @@
   ansible.builtin.file:
     path: "/home/{{ ansible_user }}/home-server/stacks/nc"
     state: directory
-    mode: o=g=rwx,o=rx
+    mode: u=g=rwx,o=rx
 - name: Retrive secret
   ansible.builtin.include_tasks: "retrieve_password.yml"
   vars:

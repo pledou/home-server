@@ -4,7 +4,7 @@
   ansible.builtin.file:
     path: "/home/{{ ansible_user }}/home-server/stacks/gitlab"
     state: directory
-    mode: o=g=rwx,o=rx
+    mode: u=g=rwx,o=rx
 - name: Verify gitlab volume path
   become: true
   ansible.builtin.file:
@@ -33,7 +33,7 @@
   ansible.builtin.template:
     src: docker-compose.yml
     dest: /home/{{ ansible_user }}/home-server/stacks/gitlab/docker-compose.yml
-    mode: o=g=rwx,o=rx
+    mode: u=g=rwx,o=rx
 - name: Deploy compose from a compose file
   community.docker.docker_compose_v2:
     pull: "always"
