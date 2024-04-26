@@ -1,0 +1,2 @@
+limits_config:
+  max_streams_per_user: 100000

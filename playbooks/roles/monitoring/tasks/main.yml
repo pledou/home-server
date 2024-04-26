@@ -1,0 +1,111 @@
+# code: language=ansible
+---
+- name: Verify stacks directory exists
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}/home-server/stacks/monitoring"
+    state: directory
+    mode: u=g=rwx,o=rx
+
+- name: Create Monitoring provisionning directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ docker_volumes_path }}/{{ item.name }}"
+    state: directory
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: u=rwx,g=o=r
+  loop:
+    - name: prometheus-conf
+    - name: promtail-conf
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+    - name: grafana-provisioning
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+    - name: alertmanager-conf
+    - name: loki-config
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+
+- name: Retrive secret
+  ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
+  vars:
+    secrets:
+      - grafana_admin_password
+
+- name: Ensure destination directory exists
+  ansible.builtin.file:
+    path: "{{ docker_volumes_path }}/{{ item }}"
+    state: directory
+    mode: u=rwx,g=o=rx
+  loop:
+    - grafana-provisioning/datasources
+    - grafana-provisioning/dashboards
+
+- name: Create configurations files as root
+  become: true
+  ansible.builtin.template:
+    src: "{{ item.file }}"
+    dest: "{{ docker_volumes_path }}/{{ item.dest }}"
+    mode: u=rwx,g=o=rx
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+  loop:
+    - file: prometheus.yml
+      dest: prometheus-conf/prometheus.yml
+    - file: loki.yml
+      dest: loki-config/local-config.yml
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+    - file: promtail-config.yml
+      dest: promtail-conf/config.yml
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+    - file: grafana/datasources.yml
+      dest: grafana-provisioning/datasources/datasource.yml
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+  loop_control:
+    label: "{{ item.file }} -> {{ item.dest }}"
+
+- name: Copy configurations files
+  become: true
+  ansible.builtin.copy:
+    src: "{{ item.file }}"
+    dest: "{{ docker_volumes_path }}/{{ item.dest }}"
+    mode: u=rwx,g=o=rx
+  loop:
+    - file: alerts.rules
+      dest: prometheus-conf/alerts.rules
+    - file: alertmanager/config.yml
+      dest: alertmanager-conf/config.yml
+  loop_control:
+    label: "{{ item.file }} -> {{ item.dest }}"
+
+- name: Copy grafana dashboards
+  become: true
+  ansible.builtin.copy:
+    src: templates/grafana/dashboards/
+    dest: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/"
+    mode: u=rwx,g=o=rx
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+
+- name: Get Users infos
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ ansible_user }}"
+
+- name: Create docker-compose stack file
+  ansible.builtin.template:
+    src: docker-compose.yml
+    dest: /home/{{ ansible_user }}/home-server/stacks/monitoring/docker-compose.yml
+    mode: u=g=rwx,o=rx
+
+- name: Deploy stack from a compose file
+  community.docker.docker_compose_v2:
+    pull: "always"
+    build: "always"
+    state: present
+    project_src: /home/{{ ansible_user }}/home-server/stacks/monitoring
+...

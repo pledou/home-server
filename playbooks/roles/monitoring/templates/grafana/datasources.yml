@@ -1,0 +1,20 @@
+# config file version
+apiVersion: 1
+
+datasources:
+- name: Prometheus
+  type: prometheus
+  # <string, required> access mode. direct or proxy. Required
+  access: proxy
+  url: http://monitoring-prometheus-1:9090
+  # <string> database password, if used
+  password:
+  # <string> database user, if used
+  user:
+  # <string> database name, if used
+  database:
+  editable: true
+- name: Loki
+  type: loki
+  url: http://monitoring-loki-1:3100
+  editable: true

@@ -1,0 +1,180 @@
+services:
+  prometheus:
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.constraint-label=traefik_backend
+      - traefik.http.routers.prometheus-https.rule=Host(`promotheus.{{app_domain_name}}`)
+      - traefik.http.routers.prometheus-https.entrypoints=https
+      - traefik.http.routers.prometheus-https.tls=true
+      - traefik.http.routers.prometheus-https.tls.certresolver=le
+      - traefik.http.services.prometheus.loadbalancer.server.port=9090
+    image: prom/prometheus:latest
+    volumes:
+      - prometheus-conf:/etc/prometheus
+      - prometheus-data:/prometheus
+    command: 
+      - --web.enable-lifecycle
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.console.libraries=/etc/prometheus/console_libraries
+      - --web.console.templates=/etc/prometheus/consoles
+      - --storage.tsdb.retention.time=200h
+    networks:
+      - monitoring_backend
+      - traefik_backend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    volumes:
+      - alertmanager-conf:/etc/alertmanager
+    command:
+      - --config.file=/etc/alertmanager/config.yml
+      - --storage.path=/alertmanager
+    restart: unless-stopped
+
+  node-exporter:
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.constraint-label=traefik_backend
+      - traefik.http.routers.nodexprt-https.rule=Host(`nodexprt.{{app_domain_name}}`)
+      - traefik.http.routers.nodexprt-https.entrypoints=https
+      - traefik.http.routers.nodexprt-https.tls=true
+      - traefik.http.routers.nodexprt-https.tls.certresolver=le
+      - traefik.http.services.nodexprt.loadbalancer.server.port=9100
+    image: quay.io/prometheus/node-exporter:latest
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - /:/host:ro,rslave
+    command: 
+      - '--path.rootfs=/host'
+      - '--path.procfs=/host/proc' 
+      - '--path.sysfs=/host/sys'
+      - --collector.filesystem.ignored-mount-points
+      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+    networks:
+      - monitoring_backend
+      - traefik_backend
+    restart: always
+    deploy:
+      mode: global
+
+  grafana:
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.constraint-label=traefik_backend
+      - traefik.http.routers.grafana-https.rule=Host(`grafana.{{ app_domain_name }}`)
+      - traefik.http.routers.grafana-https.entrypoints=https
+      - traefik.http.routers.grafana-https.tls=true
+      - traefik.http.routers.grafana-https.tls.certresolver=le
+      - traefik.http.services.grafana.loadbalancer.server.port=3000
+    image: grafana/grafana:latest
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - grafana-provisioning:/etc/grafana/provisioning
+    user: "{{ getent_passwd[ansible_user].1 }}"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password }}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_DOMAIN=grafana.{{ app_domain_name }}
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST={{ grafana_mail_smtphost }}:{{ grafana_mail_smtpport }}
+      - GF_SMTP_USER={{ grafana_mail_smtpname}}
+      - GF_SMTP_PASSWORD={{ grafana_mail_smtppwd }}
+      - GF_SMTP_FROM_ADDRESS={{ grafana_mail_from }}
+    networks:
+      - monitoring_backend
+      - traefik_backend
+
+  loki:
+    image: grafana/loki:latest
+    volumes:
+      - loki-data:/loki
+      - loki-config:/etc/loki
+    networks:
+      - monitoring_backend
+
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - "/var/log:/var/log:ro"
+      - "/var/lib/docker/containers:/var/lib/docker/containers:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - promtail-conf:/etc/promtail/
+    #command: "-config.file=/etc/promtail/config.yaml"
+    #user: "{{ getent_passwd[ansible_user].1 }}"
+    networks:
+      - monitoring_backend
+    depends_on:
+      - grafana
+
+  cadvisor:
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.constraint-label=traefik_backend
+      - traefik.http.routers.cadv-https.rule=Host(`cadvisor.{{ app_domain_name }}`)
+      - traefik.http.routers.cadv-https.entrypoints=https
+      - traefik.http.routers.cadv-https.tls=true
+      - traefik.http.routers.cadv-https.tls.certresolver=le
+      - traefik.http.services.cadvisor.loadbalancer.server.port=8080
+    image: gcr.io/cadvisor/cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - monitoring_backend
+      - traefik_backend
+    restart: always
+    deploy:
+      mode: global
+
+networks:
+  traefik_backend:
+    external: true
+  monitoring_backend:
+
+volumes:
+  loki-config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/loki-config"
+  loki-data:
+  alertmanager-conf:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/alertmanager-conf"
+  grafana-data:
+  grafana-provisioning:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/grafana-provisioning"
+  prometheus-data:
+  prometheus-conf:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/prometheus-conf"
+  promtail-conf:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/promtail-conf"
