@@ -4,8 +4,8 @@
   ansible.builtin.file:
     path: "/home/{{ ansible_user }}/home-server/stacks/authentik"
     state: directory
-    mode: o=g=rwx,o=rx
-- name: Verify authentik volume path
+    mode: u=g=rwx,o=rx
+- name: Create authentik provisionning directories 
   become: true
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item.name }}"
@@ -28,11 +28,24 @@
       - authentik_db_password
       - authentik_secret
 
+- name: Add a user to a password file and ensure permissions are set
+  become: true
+  ansible.builtin.copy:
+    dest: "{{ docker_volumes_path }}/traefik-rules/authSources.yaml"
+    content: |
+      authSources:
+        clientCredsSource:
+          oAuthClientCredentials:
+            url: https://auth.{{ app_domain_name }}
+    owner: root
+    group: root
+    mode: 'u=rw,g=o=r'
+
 - name: Create docker-compose file
   ansible.builtin.template:
     src: docker-compose.yml
     dest: /home/{{ ansible_user }}/home-server/stacks/authentik/docker-compose.yml
-    mode: o=g=rwx,o=rx
+    mode: u=g=rwx,o=rx
 - name: Deploy compose from a compose file
   community.docker.docker_compose_v2:
     pull: "always"
