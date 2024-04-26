@@ -1,0 +1,6 @@
+# code: language=ansible
+---
+dependencies:
+  - docker
+  - traefik
+...
