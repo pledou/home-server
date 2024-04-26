@@ -53,8 +53,6 @@ services:
   #   image: gitlab/gitlab-runner:alpine
   #   networks:
   #     - gitlab_backend
-  #   labels: 
-  #     - traefik.enable=false
 
 
 secrets:

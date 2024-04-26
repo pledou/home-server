@@ -9,8 +9,6 @@ services:
     command: --schedule "15 2 * * * *"
 
   autoheal: # restart container when healthcheck is ko
-    labels:
-      - traefik.enable=false
     image: willfarrell/autoheal
     restart: always
     environment:
@@ -52,6 +50,7 @@ services:
     command:
       - --providers.docker
       - --providers.docker.watch
+      - --providers.docker.exposedByDefault=false
       - --providers.file.filename=/rules/rules.yaml
       - --entrypoints.https.address=:443
       - --entrypoints.websecure.address=:8443
@@ -64,11 +63,14 @@ services:
       - --certificatesresolvers.le.acme.dnschallenge.provider=duckdns
       - --entrypoints.websecure.http.tls.domains[0].main={{ app_domain_name }}
       - --entrypoints.websecure.http.tls.domains[0].sans=*.{{ app_domain_name }}
-      
       - --accesslog
       - --log
       - --log.level=INFO
       - --api
+      - --metrics.prometheus=true
+      - --metrics.prometheus.addrouterslabels=true
+      - --entryPoints.metrics.address=:8082
+      - --metrics.prometheus.entryPoint=metrics
     networks:
       backend:
     extra_hosts:
@@ -84,29 +86,30 @@ services:
 
   authentik-proxy:
     image: ghcr.io/goauthentik/proxy
-    ports:
-        - 9000:9000
-        - 9443:9443
+    # ports:
+      # - 9000:9000
+      # - 9443:9443
     environment:
-        AUTHENTIK_HOST: http://authentik-server-1
-        AUTHENTIK_INSECURE: "true"
-        AUTHENTIK_TOKEN: token-generated-by-authentik
-        # Starting with 2021.9, you can optionally set this too
-        # when authentik_host for internal communication doesn't match the public URL
-        AUTHENTIK_HOST_BROWSER: https://auth.{{ app_domain_name }}
+      AUTHENTIK_HOST: https://auth.{{ app_domain_name }}
+      AUTHENTIK_INSECURE: "false"
+      AUTHENTIK_TOKEN: {{ authentik_traefik_outputs_token }}
     labels:
-        traefik.enable: true
-        traefik.port: 9000
-        traefik.http.routers.authentik.rule: Host(`{{ app_domain_name }}`) && PathPrefix(`/outpost.goauthentik.io/`)
-        # `authentik-proxy` refers to the service name in the compose file.
-        traefik.http.middlewares.authentik.forwardauth.address: http://traefik-authentik-proxy-1:9000/outpost.goauthentik.io/auth/traefik
-        traefik.http.middlewares.authentik.forwardauth.trustForwardHeader: true
-        traefik.http.middlewares.authentik.forwardauth.authResponseHeaders: X-authentik-username,X-authentik-groups,X-authentik-email,X-authentik-name,X-authentik-uid,X-authentik-jwt,X-authentik-meta-jwks,X-authentik-meta-outpost,X-authentik-meta-provider,X-authentik-meta-app,X-authentik-meta-version
+      traefik.enable: true
+      traefik.port: 9443
+      traefik.http.routers.authentik-proxy-https.rule: Host(`{{ app_domain_name }}`) && PathPrefix(`/outpost.goauthentik.io/`)
+      traefik.http.routers.authentik-proxy-https.entrypoints: https
+      traefik.http.routers.authentik-proxy-https.tls: 'true'
+      traefik.http.routers.authentik-proxy-https.tls.certresolver: le
+      traefik.http.routers.authentik-proxy-websecure.rule: Host(`{{ app_domain_name }}`) && PathPrefix(`/outpost.goauthentik.io/`)
+      traefik.http.routers.authentik-proxy-websecure.entrypoints: websecure
+      traefik.http.routers.authentik-proxy-websecure.tls: 'true'
+      traefik.http.routers.authentik-proxy-websecure.tls.certresolver: le
+      traefik.http.middlewares.authentik.forwardauth.address: https://traefik-authentik-proxy-1:9443/outpost.goauthentik.io/auth/traefik
+      traefik.http.middlewares.authentik.forwardauth.trustForwardHeader: true
+      traefik.http.middlewares.authentik.forwardauth.authResponseHeaders: X-authentik-username,X-authentik-groups,X-authentik-email,X-authentik-name,X-authentik-uid,X-authentik-jwt,X-authentik-meta-jwks,X-authentik-meta-outpost,X-authentik-meta-provider,X-authentik-meta-app,X-authentik-meta-version
     restart: unless-stopped
 
   updateDuckDNSIP:
-    labels:
-      - traefik.enable=false
     # used to update duckdns
     # if you have a static IP, you can comment this out
     # using busybox due to it having an image for almost every platform

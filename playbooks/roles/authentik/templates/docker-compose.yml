@@ -1,8 +1,6 @@
 ---
 services:
   postgresql:
-    labels:
-      traefik.enable: 'false'
     image: postgres:15
     restart: unless-stopped
     healthcheck:
@@ -37,14 +35,14 @@ services:
       - redis:/data:rw
     networks:
       - authentik_backend
+  
+  # https://docs.goauthentik.io/docs/installation/docker-compose
+  # To start the initial setup, navigate to http://<your server's IP or hostname>:9000/if/flow/initial-setup/.
   server:
     labels:
       traefik.enable: 'true'
-      # traefik.docker.network: traefik_backend
-      # traefik.constraint-label: traefik_backend
-      traefik.http.routers.authentik-http.rule: Host(`auth.{{app_domain_name}}`)
-      traefik.http.routers.authentik-http.entrypoints: http
-      traefik.http.routers.authentik-http.middlewares: https-redirect
+      traefik.docker.network: traefik_backend
+      traefik.constraint-label: traefik_backend
       traefik.http.routers.authentik-https.rule: Host(`auth.{{app_domain_name}}`)
       traefik.http.routers.authentik-https.entrypoints: https
       traefik.http.routers.authentik-https.tls: true
@@ -93,7 +91,6 @@ services:
     # Removing `user: root` also prevents the worker from fixing the permissions
     # on the mounted folders, so when removing this make sure the folders have the correct UID/GID
     # (1000:1000 by default)
-    user: root
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - media:/media

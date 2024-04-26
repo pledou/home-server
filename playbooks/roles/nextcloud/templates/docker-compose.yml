@@ -2,7 +2,6 @@ services:
 
   ncdb:
     labels:
-      - traefik.enable=false
       - "com.centurylinklabs.watchtower.enable=false"
     environment:
       - POSTGRES_DB=nextcloud
@@ -82,8 +81,6 @@ services:
       - postgres_password
 
   redis:
-    labels:
-      - traefik.enable=false
     command: redis-server --requirepass {{ redis_secret }}
     image: redis:alpine
     healthcheck:
@@ -100,8 +97,6 @@ services:
     working_dir: /data
 
   elasticsearch:   
-    labels:
-      traefik.enable: 'false'
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
     networks:
       - nc_backend
@@ -171,8 +166,6 @@ services:
       - /etc/localtime:/etc/localtime:ro
 
   turn_server:
-    labels:
-      - traefik.enable=false
     command:
       - '-n --log-file=stdout --external-ip=$$(detect-external-ip) --listening-port=3478
         --no-cli --fingerprint --use-auth-secret --static-auth-secret=jzstsfmh41l4wdhcyrqdjmiegc0b8i48

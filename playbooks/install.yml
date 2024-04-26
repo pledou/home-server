@@ -4,19 +4,17 @@
   hosts: docker_server
   roles:
     - upgrade-packages
-    - docker
     - prep_backup
 
 - name: Install apps & backup
   hosts: docker_server
   roles:
-    - traefik
-    # - portainer
-    - authentik
-    - nextcloud
-    - kresus
-    - hassio
-    - gitlab
+    - monitoring
+    # - authentik
+    # - nextcloud
+    # - kresus
+    # - hassio
+    # - gitlab
   post_tasks:
     - name: Docker prune
       community.docker.docker_prune:
