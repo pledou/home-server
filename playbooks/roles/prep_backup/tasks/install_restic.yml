@@ -5,12 +5,6 @@
   ansible.builtin.uri:
     url: https://api.github.com/repos/restic/restic/tags
   register: restic_tags
-  when: restic_version == 'latest'
-
-- name: Set restic version
-  ansible.builtin.set_fact:
-    restic_version: "{{ restic_tags.json.0.name | replace('v', '') }}"
-  when: restic_version == 'latest'
 
 - name: Install restic binary
   become: true

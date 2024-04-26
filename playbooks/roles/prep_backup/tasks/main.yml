@@ -46,7 +46,7 @@
   become: true
   ansible.builtin.cron:
     name: "backup selfhosted"
-    day: "{{ restic_backup_day }}"
-    minute: "{{ restic_backup_minute }}"
-    hour: "{{ restic_backup_hour }}"
+    day: "{{ prep_backup_day }}"
+    minute: "{{ prep_backup_minute }}"
+    hour: "{{ prep_backup_hour }}"
     job: "/usr/local/bin/backup_volumes.sh > /var/log/backup_volumes.log 2>&1"
