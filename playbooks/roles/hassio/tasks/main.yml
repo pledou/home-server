@@ -5,7 +5,7 @@
     path: "/home/{{ ansible_user }}/home-server/stacks/hassio"
     state: directory
     mode: u=g=rwx,o=rx
-- name: Verify homeassistant volume path
+- name: Create homeassistant provisionning directories
   become: true
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item.name }}"

@@ -30,7 +30,7 @@
 #       password: k_db1_password
 #       container: kresus_k-db1_1
 
-- name: Verify kresus volume path
+- name: Create kresus provisionning directories
   become: true
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item.name }}"

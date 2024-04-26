@@ -5,7 +5,7 @@
     path: "/home/{{ ansible_user }}/home-server/stacks/gitlab"
     state: directory
     mode: u=g=rwx,o=rx
-- name: Verify gitlab volume path
+- name: Create gitlab provisionning directories
   become: true
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item.name }}"

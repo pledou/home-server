@@ -24,7 +24,7 @@
 #     postgres_db: "nextcloud"
 #     postgres_user: "nextcloud"
 
-- name: Verify nextcloud volume path
+- name: Create nextcloud provisionning directories
   become: true
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item.name }}"

@@ -5,7 +5,7 @@
     path: "/home/{{ ansible_user }}/home-server/stacks/traefik"
     state: directory
     mode: u=rwx,g=o=rx
-- name: Verify traefik volume path
+- name: Create traefik provisionning directories
   become: true
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item }}"
