@@ -102,8 +102,36 @@ services:
       TZ: Europe/Paris
     ports:
       - 5000:5000
+  
+  wyoming-piper:
+    image: rhasspy/wyoming-piper
+    restart: always
+    ports:
+      - "10200:10200"
+    volumes:
+      - piper-data:/data
+    command: [ "--voice", "fr_FR-upmc-medium" ]
+
+  faster-whisper:
+    image: lscr.io/linuxserver/faster-whisper:latest
+    container_name: faster-whisper
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - WHISPER_MODEL=small-int8
+      - WHISPER_BEAM=1 #optional
+      - WHISPER_LANG=fr #optional
+    volumes:
+      - /path/to/data:/config
+    ports:
+      - 10300:10300
+    restart: unless-stopped
 
 volumes:
+  piper-data:
+    driver: local
+
   homeassistant:
     driver: local
     driver_opts:
