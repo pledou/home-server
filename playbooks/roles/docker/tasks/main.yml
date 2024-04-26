@@ -63,3 +63,12 @@
   ansible.builtin.reboot:
     reboot_timeout: 60
   when: reboot_request.stat.exists
+
+- name: Configure Docker daemon
+  become: true
+  ansible.builtin.template:
+    src: daemon.json
+    dest: /etc/docker/daemon.json
+    mode: u=rw,g=r,o=r
+  notify: restart docker
+...
