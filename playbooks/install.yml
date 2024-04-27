@@ -23,5 +23,10 @@
         containers_filters:
           until: 24h
         volumes: true
+        networks: true
+    - name: Remove stacks directory
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/home-server/stacks"
+        state: absent
   tags: docker-apps
 ...
