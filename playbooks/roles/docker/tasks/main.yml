@@ -70,5 +70,8 @@
     src: daemon.json
     dest: /etc/docker/daemon.json
     mode: u=rw,g=r,o=r
-  notify: restart docker
+  notify: Restart docker
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
 ...

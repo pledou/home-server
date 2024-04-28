@@ -93,6 +93,7 @@ services:
     networks:
       - monitoring_backend
       - traefik_backend
+    restart: unless-stopped
 
   loki:
     image: grafana/loki:latest
@@ -101,6 +102,9 @@ services:
       - loki-config:/etc/loki
     networks:
       - monitoring_backend
+    depends_on:
+      - grafana
+    restart: unless-stopped
 
   promtail:
     image: grafana/promtail:latest
@@ -109,12 +113,11 @@ services:
       - "/var/lib/docker/containers:/var/lib/docker/containers:ro"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - promtail-conf:/etc/promtail/
-    #command: "-config.file=/etc/promtail/config.yaml"
-    #user: "{{ getent_passwd[ansible_user].1 }}"
     networks:
       - monitoring_backend
     depends_on:
       - grafana
+    restart: unless-stopped
 
   cadvisor:
     labels:

@@ -54,7 +54,7 @@
     - file: prometheus.yml
       dest: prometheus-conf/prometheus.yml
     - file: loki.yml
-      dest: loki-config/local-config.yml
+      dest: loki-config/local-config.yaml
       owner: "{{ ansible_user }}"
       group: "{{ ansible_user }}"
     - file: promtail-config.yml
