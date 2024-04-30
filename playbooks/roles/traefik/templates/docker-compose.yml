@@ -54,7 +54,6 @@ services:
       - --providers.file.filename=/rules/rules.yaml
       - --entrypoints.https.address=:443
       - --entrypoints.websecure.address=:8443
-      - --experimental.http3=true
       - --entrypoints.https.http3
       - --entrypoints.websecure.http3
       - --certificatesresolvers.le.acme.email={{ traefik_email }}
@@ -83,31 +82,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:rw
       - traefik-public-certificates:/certificates
       - traefik-rules:/rules
-
-  authentik-proxy:
-    image: ghcr.io/goauthentik/proxy
-    # ports:
-      # - 9000:9000
-      # - 9443:9443
-    environment:
-      AUTHENTIK_HOST: https://auth.{{ app_domain_name }}
-      AUTHENTIK_INSECURE: "false"
-      AUTHENTIK_TOKEN: {{ authentik_traefik_outputs_token }}
-    labels:
-      traefik.enable: true
-      traefik.port: 9443
-      traefik.http.routers.authentik-proxy-https.rule: Host(`{{ app_domain_name }}`) && PathPrefix(`/outpost.goauthentik.io/`)
-      traefik.http.routers.authentik-proxy-https.entrypoints: https
-      traefik.http.routers.authentik-proxy-https.tls: 'true'
-      traefik.http.routers.authentik-proxy-https.tls.certresolver: le
-      traefik.http.routers.authentik-proxy-websecure.rule: Host(`{{ app_domain_name }}`) && PathPrefix(`/outpost.goauthentik.io/`)
-      traefik.http.routers.authentik-proxy-websecure.entrypoints: websecure
-      traefik.http.routers.authentik-proxy-websecure.tls: 'true'
-      traefik.http.routers.authentik-proxy-websecure.tls.certresolver: le
-      traefik.http.middlewares.authentik.forwardauth.address: https://traefik-authentik-proxy-1:9443/outpost.goauthentik.io/auth/traefik
-      traefik.http.middlewares.authentik.forwardauth.trustForwardHeader: true
-      traefik.http.middlewares.authentik.forwardauth.authResponseHeaders: X-authentik-username,X-authentik-groups,X-authentik-email,X-authentik-name,X-authentik-uid,X-authentik-jwt,X-authentik-meta-jwks,X-authentik-meta-outpost,X-authentik-meta-provider,X-authentik-meta-app,X-authentik-meta-version
-    restart: unless-stopped
 
   updateDuckDNSIP:
     # used to update duckdns
