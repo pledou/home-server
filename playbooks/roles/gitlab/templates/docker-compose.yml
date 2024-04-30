@@ -38,7 +38,7 @@ services:
     # healthcheck:
     #   disable: true
     networks:
-      gitlab_backend:
+      backend:
         aliases:
           - gitlab.{{app_domain_name}}
           - gitlab
@@ -52,7 +52,7 @@ services:
   # gitlab-runner:
   #   image: gitlab/gitlab-runner:alpine
   #   networks:
-  #     - gitlab_backend
+  #     - backend
 
 
 secrets:
@@ -60,6 +60,6 @@ secrets:
     file: "{{ docker_volumes_path }}/secrets/gitlab_root_password"
 
 networks:
-  gitlab_backend:
+  backend:
   traefik_backend:
     external: true

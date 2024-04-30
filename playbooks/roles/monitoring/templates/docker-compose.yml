@@ -21,7 +21,7 @@ services:
       - --web.console.templates=/etc/prometheus/consoles
       - --storage.tsdb.retention.time=200h
     networks:
-      - monitoring_backend
+      - backend
       - traefik_backend
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -60,7 +60,7 @@ services:
       - --collector.filesystem.ignored-mount-points
       - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
     networks:
-      - monitoring_backend
+      - backend
       - traefik_backend
     restart: always
     deploy:
@@ -82,16 +82,31 @@ services:
       - grafana-provisioning:/etc/grafana/provisioning
     user: "{{ getent_passwd[ansible_user].1 }}"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password }}
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_DOMAIN=grafana.{{ app_domain_name }}
-      - GF_SMTP_ENABLED=true
-      - GF_SMTP_HOST={{ grafana_mail_smtphost }}:{{ grafana_mail_smtpport }}
-      - GF_SMTP_USER={{ grafana_mail_smtpname}}
-      - GF_SMTP_PASSWORD={{ grafana_mail_smtppwd }}
-      - GF_SMTP_FROM_ADDRESS={{ grafana_mail_from }}
+      GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password }}"
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_SERVER_DOMAI: "grafana.{{ app_domain_name }}"
+      GF_SMTP_ENABLED: true
+      GF_SMTP_HOST: "{{ grafana_mail_smtphost }}:{{ grafana_mail_smtpport }}"
+      GF_SMTP_USER: "{{ grafana_mail_smtpname}}"
+      GF_SMTP_PASSWORD: "{{ grafana_mail_smtppwd }}"
+      GF_SMTP_FROM_ADDRESS: "{{ grafana_mail_from }}"
+
+      # Generic OAuth
+      GF_AUTH_GENERIC_OAUTH_ENABLED: "true"
+      GF_AUTH_GENERIC_OAUTH_NAME: "authentik"
+      GF_AUTH_GENERIC_OAUTH_CLIENT_ID: "{{ grafana_oauth_client_id }}"
+      GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: "{{ grafana_oauth_client_secret }}"
+      GF_AUTH_GENERIC_OAUTH_SCOPES: "openid profile email"
+      GF_AUTH_GENERIC_OAUTH_AUTH_URL: "https://auth.{{ app_domain_name }}/application/o/authorize/"
+      GF_AUTH_GENERIC_OAUTH_TOKEN_URL: "https://auth.{{ app_domain_name }}/application/o/token/"
+      GF_AUTH_GENERIC_OAUTH_API_URL: "https://auth.{{ app_domain_name }}/application/o/userinfo/"
+      GF_AUTH_SIGNOUT_REDIRECT_URL: "https://auth.{{ app_domain_name }}/application/o/grafana-slug/end-session/"
+      # Optionally enable auto-login (bypasses Grafana login screen)
+      GF_AUTH_OAUTH_AUTO_LOGIN: "true"
+      # Optionally map user groups to Grafana roles
+      GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "contains(groups, 'Grafana Admins') && 'Admin' || contains(groups, 'Grafana Editors') && 'Editor' || 'Viewer'"
     networks:
-      - monitoring_backend
+      - backend
       - traefik_backend
     restart: unless-stopped
 
@@ -101,7 +116,7 @@ services:
       - loki-data:/loki
       - loki-config:/etc/loki
     networks:
-      - monitoring_backend
+      - backend
     depends_on:
       - grafana
     restart: unless-stopped
@@ -114,7 +129,7 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - promtail-conf:/etc/promtail/
     networks:
-      - monitoring_backend
+      - backend
     depends_on:
       - grafana
     restart: unless-stopped
@@ -136,7 +151,7 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
     networks:
-      - monitoring_backend
+      - backend
       - traefik_backend
     restart: always
     deploy:
@@ -145,7 +160,7 @@ services:
 networks:
   traefik_backend:
     external: true
-  monitoring_backend:
+  backend:
 
 volumes:
   loki-config:

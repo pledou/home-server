@@ -18,7 +18,7 @@ services:
       POSTGRES_USER: authentik
       POSTGRES_DB: authentik
     networks:
-      - authentik_backend
+      - backend
   redis:
     labels:
       traefik.enable: 'false'
@@ -34,7 +34,7 @@ services:
     volumes:
       - redis:/data:rw
     networks:
-      - authentik_backend
+      - backend
   
   # https://docs.goauthentik.io/docs/installation/docker-compose
   # To start the initial setup, navigate to http://<your server's IP or hostname>:9000/if/flow/initial-setup/.
@@ -52,7 +52,7 @@ services:
     restart: unless-stopped
     command: server
     networks:
-      - authentik_backend
+      - backend
       - traefik_backend
     volumes:
       - media:/media
@@ -100,12 +100,13 @@ services:
       - postgresql
       - redis
     networks:
-      - authentik_backend
+      - backend
 
 networks:
   traefik_backend:
     external: true
-  authentik_backend:
+  backend:
+    attachable: true
 
 volumes:
   database:

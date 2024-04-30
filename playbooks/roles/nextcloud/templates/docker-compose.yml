@@ -11,7 +11,7 @@ services:
     image: postgres:15
     restart: always
     networks:
-      - nc_backend
+      - backend
     volumes:
       #- nexcloud-database-vol:/var/lib/postgresql/data:rw
       - nextcloud-database:/var/lib/postgresql/data:rw
@@ -63,7 +63,7 @@ services:
       dockerfile: nextcloud.Dockerfile
       target: nc_nextcloud
     networks:
-      - nc_backend
+      - backend
       - traefik_backend
     volumes:
       - nextcloud-www:/var/www/html:Z
@@ -91,7 +91,7 @@ services:
       timeout: 3s
     restart: always
     networks:
-      - nc_backend
+      - backend
     volumes:
       - redis-data:/data:rw
     working_dir: /data
@@ -99,7 +99,7 @@ services:
   elasticsearch:   
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
     networks:
-      - nc_backend
+      - backend
     restart: always
     environment:
       - TZ=Europe/Paris
@@ -160,7 +160,7 @@ services:
           - DICTIONARIES="en_GB fr_FR"
     networks:
       - traefik_backend
-      - nc_backend
+      - backend
     volumes:
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
@@ -176,7 +176,7 @@ services:
     image: instrumentisto/coturn:latest
     restart: always
     networks:
-      - nc_backend
+      - backend
     ports:
       - 0.0.0.0:3478:3478/tcp
       - 0.0.0.0:3478:3478/udp
@@ -187,7 +187,7 @@ services:
 networks:
   traefik_backend:
     external: true
-  nc_backend:
+  backend:
 
 volumes:
   nextcloud-www: 
