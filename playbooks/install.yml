@@ -10,11 +10,11 @@
   hosts: docker_server
   roles:
     - monitoring
-    # - authentik
-    # - nextcloud
-    # - kresus
-    # - hassio
-    # - gitlab
+    - authentik
+    - nextcloud
+    - kresus
+    - hassio
+    - gitlab
   post_tasks:
     - name: Docker prune
       community.docker.docker_prune:
@@ -24,9 +24,6 @@
           until: 24h
         volumes: true
         networks: true
-    - name: Remove stacks directory
-      ansible.builtin.file:
-        path: "/home/{{ ansible_user }}/home-server/stacks"
-        state: absent
+
   tags: docker-apps
 ...

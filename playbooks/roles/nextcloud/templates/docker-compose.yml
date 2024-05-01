@@ -36,12 +36,6 @@ services:
       traefik.http.routers.nginx-https.tls: 'true'
       traefik.http.routers.nginx-https.tls.certresolver: le
 
-      traefik.http.routers.nginx-websecure.rule: Host(`{{ app_domain_name }}`)
-      traefik.http.routers.nginx-websecure.entrypoints: websecure
-      traefik.http.routers.nginx-websecure.middlewares: nginx@docker
-      traefik.http.routers.nginx-websecure.tls: 'true'
-      traefik.http.routers.nginx-websecure.tls.certresolver: le
-
       traefik.http.services.nginx.loadbalancer.server.port: 80
 
       traefik.http.middlewares.nginx.headers.STSIncludeSubdomains: 'true'
@@ -131,12 +125,6 @@ services:
       traefik.http.routers.collabora-https.entrypoints: https
       traefik.http.routers.collabora-https.tls: 'true'
       traefik.http.routers.collabora-https.tls.certresolver: le
-
-      traefik.http.routers.collabora-websecure.rule: Host(`collabora.{{ app_domain_name }}`)
-      traefik.http.routers.collabora-websecure.entrypoints: websecure
-      traefik.http.routers.collabora-websecure.middlewares: collabora@docker
-      traefik.http.routers.collabora-websecure.tls: 'true'
-      traefik.http.routers.collabora-websecure.tls.certresolver: le
 
       traefik.http.middlewares.collabora.headers.STSIncludeSubdomains: 'true'
       traefik.http.middlewares.collabora.headers.STSPreload: 'true'

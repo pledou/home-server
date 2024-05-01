@@ -10,11 +10,6 @@ services:
       traefik.http.routers.home-https.tls: 'true'
       traefik.http.routers.home-https.tls.certresolver: le
 
-      traefik.http.routers.home-websecure.rule: Host(`home.{{app_domain_name}}`)
-      traefik.http.routers.home-websecure.entrypoints: websecure
-      traefik.http.routers.home-websecure.tls: 'true'
-      traefik.http.routers.home-websecure.tls.certresolver: le
-
       traefik.http.services.home.loadbalancer.server.port: 8123
       traefik.http.services.home.loadbalancer.passHostHeader: 'true'
     entrypoint:
@@ -99,8 +94,6 @@ services:
       - myelectricaldata:/data:rw
     environment:
       TZ: Europe/Paris
-    ports:
-      - 5000:5000
   
   wyoming-piper:
     image: rhasspy/wyoming-piper

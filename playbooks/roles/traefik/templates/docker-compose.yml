@@ -51,15 +51,13 @@ services:
       - --providers.docker.exposedByDefault=false
       - --providers.file.filename=/rules/rules.yaml
       - --entrypoints.https.address=:443
-      - --entrypoints.websecure.address=:8443
       - --entrypoints.https.http3
-      - --entrypoints.websecure.http3
       - --certificatesresolvers.le.acme.email={{ traefik_email }}
       - --certificatesresolvers.le.acme.storage=/certificates/acme.json
       - --certificatesresolvers.le.acme.dnschallenge=true
       - --certificatesresolvers.le.acme.dnschallenge.provider=duckdns
-      - --entrypoints.websecure.http.tls.domains[0].main={{ app_domain_name }}
-      - --entrypoints.websecure.http.tls.domains[0].sans=*.{{ app_domain_name }}
+      - --entrypoints.https.http.tls.domains[0].main={{ app_domain_name }}
+      - --entrypoints.https.http.tls.domains[0].sans=*.{{ app_domain_name }}
       - --accesslog
       - --log
       - --log.level=INFO
