@@ -26,30 +26,6 @@
     - name: myelectricaldata
       mode: '0750'
       group: 0998
-- name: Retrive secret
-  ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
-  vars:
-    secrets:
-      - esphome_password
-      - myelectricaldata_password
-- name: Add a user to a password file and ensure permissions are set for myelectricaldata
-  become: true
-  community.general.htpasswd:
-    path: "{{ docker_volumes_path }}/traefik-rules/myelectricaldata_users"
-    name: admin
-    password: "{{ myelectricaldata_password }}"
-    owner: root
-    group: root
-    mode: u=rw,g=r,o=
-- name: Add a user to a password file and ensure permissions are set for esphome
-  become: true
-  community.general.htpasswd:
-    path: "{{ docker_volumes_path }}/traefik-rules/esphome_users"
-    name: admin
-    password: "{{ esphome_password }}"
-    owner: root
-    group: root
-    mode: u=rw,g=r,o=
 - name: Copy mosquitto config file
   become: true
   ansible.builtin.template:

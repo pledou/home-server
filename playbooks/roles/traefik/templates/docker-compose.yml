@@ -24,23 +24,21 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=traefik_backend
-      - traefik.http.middlewares.admin-auth.basicauth.usersfile=/rules/traefik_users
       - traefik.http.routers.traefik-public-https.rule=Host(`traefik.{{ app_domain_name }}`)
       - traefik.http.routers.traefik-public-https.entrypoints=https
       - traefik.http.routers.traefik-public-https.tls=true
       # Use the special Traefik service api@internal with the web UI/Dashboard
       - traefik.http.routers.traefik-public-https.service=api@internal
-      # Use the "le" (Let's Encrypt) resolver created below
       - traefik.http.routers.traefik-public-https.tls.certresolver=le
-       # Enable HTTP Basic auth, using the middleware created above
-      - traefik.http.routers.traefik-public-https.middlewares=admin-auth
-
-      # - traefik.http.middlewares.localip.ipwhitelist.sourcerange=192.168.21.0/24, 2a01:cb08:87f6:500::/56
-      # Define the port inside of the Docker service to use
+      - traefik.http.routers.traefik-public-https.middlewares=authentik@docker
       - traefik.http.services.traefik-public.loadbalancer.server.port=8585
 
       - traefik.http.routers.traefik-public-https.tls.domains[0].main={{ app_domain_name }}
       - traefik.http.routers.traefik-public-https.tls.domains[0].sans=*.{{ app_domain_name }}
+
+      - traefik.http.middlewares.authentik.forwardauth.address=http://authentik-server-1:9000/outpost.goauthentik.io/auth/traefik
+      - traefik.http.middlewares.authentik.forwardauth.trustForwardHeader=true
+      - traefik.http.middlewares.authentik.forwardauth.authResponseHeaders=X-authentik-username,X-authentik-groups,X-authentik-email,X-authentik-name,X-authentik-uid,X-authentik-jwt,X-authentik-meta-jwks,X-authentik-meta-outpost,X-authentik-meta-provider,X-authentik-meta-app,X-authentik-meta-version
 
     environment:
       - DUCKDNS_TOKEN={{ traefik_duckdns_token }}

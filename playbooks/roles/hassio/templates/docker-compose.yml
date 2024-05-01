@@ -52,8 +52,7 @@ services:
       traefik.http.routers.esphome-https.tls: true
       traefik.http.routers.esphome-https.tls.certresolver: le
       traefik.http.services.esphome.loadbalancer.server.port: 6052
-      traefik.http.routers.esphome-https.middlewares: esphome-auth
-      traefik.http.middlewares.esphome-auth.basicauth.usersfile: /rules/esphome_users
+      traefik.http.routers.esphome-https.middlewares: authentik@docker
     restart: always
     image: esphome/esphome
     network_mode: host
@@ -92,8 +91,8 @@ services:
       traefik.http.routers.myelectricaldata-https.tls: true
       traefik.http.routers.myelectricaldata-https.tls.certresolver: le
       traefik.http.services.myelectricaldata.loadbalancer.server.port: 5000
-      traefik.http.routers.myelectricaldata-https.middlewares: myelectricaldata-auth
-      traefik.http.middlewares.myelectricaldata-auth.basicauth.usersfile: /rules/myelectricaldata_users
+      traefik.http.routers.myelectricaldata-https.middlewares: authentik@docker
+
     image: m4dm4rtig4n/myelectricaldata:latest
     restart: always
     volumes:

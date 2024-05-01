@@ -5,7 +5,7 @@
     path: "/home/{{ ansible_user }}/home-server/stacks/authentik"
     state: directory
     mode: u=g=rwx,o=rx
-- name: Create authentik provisionning directories 
+- name: Create authentik provisionning directories
   become: true
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item.name }}"
@@ -52,3 +52,4 @@
     build: "always"
     state: present
     project_src: /home/{{ ansible_user }}/home-server/stacks/authentik
+...
