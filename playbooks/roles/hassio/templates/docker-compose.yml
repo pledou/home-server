@@ -87,13 +87,16 @@ services:
       traefik.http.routers.myelectricaldata-https.tls.certresolver: le
       traefik.http.services.myelectricaldata.loadbalancer.server.port: 5000
       traefik.http.routers.myelectricaldata-https.middlewares: authentik@docker
-
     image: m4dm4rtig4n/myelectricaldata:latest
     restart: always
     volumes:
       - myelectricaldata:/data:rw
     environment:
       TZ: Europe/Paris
+    networks:
+      - traefik_backend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
   
   wyoming-piper:
     image: rhasspy/wyoming-piper

@@ -47,7 +47,7 @@ influxdb:
     exponential_base: 2
 mqtt:
   enable: true
-  hostname: mosquitto
+  hostname: host.docker.internal
   port: 1883
   username: null
   password: null
