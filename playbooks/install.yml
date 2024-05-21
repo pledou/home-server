@@ -11,6 +11,7 @@
   roles:
     - monitoring
     - authentik
+    - ia
     - nextcloud
     - kresus
     - hassio

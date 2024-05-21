@@ -1,0 +1,77 @@
+services:
+
+  webui:
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.constraint-label=traefik_backend
+      - traefik.http.routers.ai-https.rule=Host(`ai.{{ app_domain_name }}`)
+      - traefik.http.routers.ai-https.entrypoints=https
+      - traefik.http.routers.ai-https.tls=true
+      - traefik.http.routers.ai-https.tls.certresolver=le
+      - traefik.http.services.ai.loadbalancer.server.port=8080
+      - traefik.http.routers.ai-https.middlewares=authentik@docker
+    image: ghcr.io/open-webui/open-webui:main
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_AUTH_TRUSTED_EMAIL_HEADER=X-authentik-email
+      - WEBUI_AUTH_TRUSTED_GROUPS_HEADER=X-authentik-groups
+      - WEBUI_AUTH_TRUSTED_NAME_HEADER=X-authentik-name
+      - WEBUI_AUTH_TRUSTED_UID_HEADER=X-authentik-uid
+      - WEBUI_AUTH_TRUSTED_USERNAME_HEADER=X-authentik-username
+      - WEBUI_AUTH_TRUSTED_JWT_HEADER=X-authentik-jwt
+      - WEBUI_AUTH_TRUSTED_META_JWKS_HEADER=X-authentik-meta-jwks
+      - WEBUI_AUTH_TRUSTED_META_OUTPOST_HEADER=X-authentik-meta-outpost
+      - WEBUI_AUTH_TRUSTED_META_PROVIDER_HEADER=X-authentik-meta-provider
+      - WEBUI_AUTH_TRUSTED_META_APP_HEADER=X-authentik-meta-app
+      - WEBUI_AUTH_TRUSTED_META_VERSION_HEADER=X-authentik-meta-version
+    volumes:
+      - open-webui:/app/backend/data
+    networks:
+      - ollama-docker
+      - traefik_backend
+    depends_on:
+     - ollama
+
+  ollama:
+    image: ollama/ollama
+    expose:
+     - 11434/tcp
+    ports:
+     - 11434:11434/tcp
+    healthcheck:
+      test: ollama --version || exit 1
+    command: serve
+    pull_policy: always
+    tty: true
+    restart: always
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_HOST=0.0.0.0
+    networks:
+      ollama-docker:
+        aliases:
+          - ollama
+    volumes:
+      - ollama:/root/.ollama
+    
+    mem_limit: "32G"
+    shm_size: "16g" 
+
+    # for nvidea gpu
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           device_ids: ['all']
+    #           capabilities: [gpu]
+
+volumes:
+  ollama:
+  open-webui:
+
+networks:
+  ollama-docker:
+  traefik_backend:
+    external: true
