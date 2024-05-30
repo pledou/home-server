@@ -133,9 +133,9 @@
     cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app:install {{ item }} --no-interaction --no-warnings'
     creates: '{{ docker_volumes_path }}/nextcloud-www/apps/{{ item }}'
   register: install_app
-  loop: "{{ nextcloud_app_config }}"
+  loop: "{{ nextcloud_defaultapp_list }}"
 
-- name: Configure fullsearch values
+- name: Configure apps config values
   community.docker.docker_container_exec:
     container: nc-nextcloud-1
     user: www-data
@@ -143,7 +143,7 @@
       - /bin/bash
       - "-c"
       - "php occ config:app:set {{ item }}"
-  loop: '{{ nextcloud_fulltext_config }}'
+  loop: '{{ nextcloud_apps_config }}'
 
 - name: Update apps & Add missing db objects
   community.docker.docker_container_exec:
