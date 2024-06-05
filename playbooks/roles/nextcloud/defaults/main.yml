@@ -8,7 +8,7 @@ nextcloud_defaultapp_list:
   - richdocuments
   - previewgenerator
   - integration_openai
-  - integration_homeassistant
+
 nextcloud_system_config:
   - "overwrite.cli.url --value=https://{{ app_domain_name }}"
   - "trusted_domains 0 --value={{ app_domain_name }}"
@@ -92,4 +92,3 @@ nextcloud_apps_config:
   - richdocuments public_wopi_url --value="http://collabora.{{ app_domain_name }}"
   - richdocuments wopi_url --value="https://collabora.{{ app_domain_name }}"
   - richdocuments disable_certificate_verification --value="false"
-  - integration_homeassistant base_url --value="https://home.{{ app_domain_name }}"
