@@ -39,20 +39,45 @@ services:
           - gitlab
       traefik_backend:
     volumes:
-      - "{{ docker_volumes_path }}/gitlab-data:/var/opt/gitlab"
-      - "{{ docker_volumes_path }}/gitlab-logs:/var/log/gitlab"
-      - "{{ docker_volumes_path }}/gitlab-config:/etc/gitlab"
+      - gitlab-data:/var/opt/gitlab
+      - gitlab-logs:/var/log/gitlab
+      - gitlab-config:/etc/gitlab
     secrets:
       - gitlab_root_password
-  # gitlab-runner:
-  #   image: gitlab/gitlab-runner:alpine
-  #   networks:
-  #     - backend
+  gitlab-runner:
+    restart: unless-stopped
+    image: gitlab/gitlab-runner
+    container_name: gitlab-runner
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - runner:/etc/gitlab-runner
+      - gitlab-config:/etc/gitlab
+    network_mode: host
+    # networks:
+    #   - backend
+    depends_on:
+      - gitlab
 
 
 secrets:
   gitlab_root_password:
     file: "{{ docker_volumes_path }}/secrets/gitlab_root_password"
+
+volumes:
+  runner:
+  gitlab-config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/gitlab-config"
+  gitlab-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/gitlab-data"
+  gitlab-logs:
 
 networks:
   backend:

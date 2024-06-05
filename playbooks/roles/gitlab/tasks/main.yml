@@ -14,9 +14,8 @@
     group: "{{ item.group | default('root') }}"
     mode: "{{ item.mode | default('u=rwx,g=o=') }}"
   loop:
-    - name: gitlab-logs
-    - name: gitlab-config
     - name: gitlab-data
+    - name: gitlab-config
 - name: Copy gitlab config
   become: true
   ansible.builtin.template:
