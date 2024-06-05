@@ -9,6 +9,7 @@ services:
       - traefik.http.routers.prometheus-https.tls=true
       - traefik.http.routers.prometheus-https.tls.certresolver=le
       - traefik.http.services.prometheus.loadbalancer.server.port=9090
+      - traefik.http.routers.prometheus-https.middlewares=authentik@docker
     image: prom/prometheus:latest
     volumes:
       - prometheus-conf:/etc/prometheus
@@ -28,6 +29,16 @@ services:
     restart: unless-stopped
 
   alertmanager:
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.constraint-label=traefik_backend
+      - traefik.http.routers.alertmanager-https.rule=Host(`alertmanager.{{app_domain_name}}`)
+      - traefik.http.routers.alertmanager-https.entrypoints=https
+      - traefik.http.routers.alertmanager-https.tls=true
+      - traefik.http.routers.alertmanager-https.tls.certresolver=le
+      - traefik.http.services.alertmanager.loadbalancer.server.port=9090
+      - traefik.http.routers.alertmanager-https.middlewares=authentik@docker
     image: prom/alertmanager:latest
     container_name: alertmanager
     volumes:
@@ -38,15 +49,6 @@ services:
     restart: unless-stopped
 
   node-exporter:
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=traefik_backend
-      - traefik.constraint-label=traefik_backend
-      - traefik.http.routers.nodexprt-https.rule=Host(`nodexprt.{{app_domain_name}}`)
-      - traefik.http.routers.nodexprt-https.entrypoints=https
-      - traefik.http.routers.nodexprt-https.tls=true
-      - traefik.http.routers.nodexprt-https.tls.certresolver=le
-      - traefik.http.services.nodexprt.loadbalancer.server.port=9100
     image: quay.io/prometheus/node-exporter:latest
     volumes:
       - /proc:/host/proc:ro
@@ -136,15 +138,6 @@ services:
     restart: unless-stopped
 
   cadvisor:
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=traefik_backend
-      - traefik.constraint-label=traefik_backend
-      - traefik.http.routers.cadv-https.rule=Host(`cadvisor.{{ app_domain_name }}`)
-      - traefik.http.routers.cadv-https.entrypoints=https
-      - traefik.http.routers.cadv-https.tls=true
-      - traefik.http.routers.cadv-https.tls.certresolver=le
-      - traefik.http.services.cadvisor.loadbalancer.server.port=8080
     image: gcr.io/cadvisor/cadvisor
     volumes:
       - /:/rootfs:ro
