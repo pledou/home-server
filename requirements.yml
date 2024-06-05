@@ -3,4 +3,5 @@ roles:
 - src: geerlingguy.firewall
 collections:
 - name: community.docker
+- name: community.general
 ...
