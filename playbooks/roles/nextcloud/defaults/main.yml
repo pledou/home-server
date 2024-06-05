@@ -64,6 +64,7 @@ nextcloud_system_config:
   - "mail_smtpport     --value={{ nextcloud_mail_smtpport }}"
   - "mail_smtpname     --value={{ nextcloud_mail_smtpname }}"
   - "mail_smtppassword --value={{ nextcloud_mail_smtppwd }}"
+  - "maintenance_window_start --type=integer --value=1"
 nextcloud_default_phone_region: "FR"
 
 nextcloud_apps_config:
