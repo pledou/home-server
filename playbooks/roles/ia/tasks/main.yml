@@ -12,8 +12,19 @@
     state: directory
     mode: u=rw,g=o=r
   loop:
-    - traefik-public-certificates
-    - traefik-rules
+    - searxng
+
+- name: Copy searxng configuration file
+  become: true
+  ansible.builtin.template:
+    src: searxng_{{ item }}
+    dest: "{{ docker_volumes_path }}/searxng/{{ item }}"
+    mode: u=rw,g=o=r
+  loop:
+    - limiter.toml
+    - settings.yml
+    - uwsgi.ini
+
 - name: Create docker-compose stack file
   ansible.builtin.template:
     src: docker-compose.yml

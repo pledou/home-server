@@ -25,6 +25,11 @@ services:
       - WEBUI_AUTH_TRUSTED_META_PROVIDER_HEADER=X-authentik-meta-provider
       - WEBUI_AUTH_TRUSTED_META_APP_HEADER=X-authentik-meta-app
       - WEBUI_AUTH_TRUSTED_META_VERSION_HEADER=X-authentik-meta-version
+      - ENABLE_RAG_WEB_SEARCH=True
+      - RAG_WEB_SEARCH_ENGINE="searxng"
+      - RAG_WEB_SEARCH_RESULT_COUNT=3
+      - RAG_WEB_SEARCH_CONCURRENT_REQUESTS=10
+      - SEARXNG_QUERY_URL="http://searxng:8080/search?q=<query>"
     volumes:
       - open-webui:/app/backend/data
     networks:
@@ -32,6 +37,31 @@ services:
       - traefik_backend
     depends_on:
      - ollama
+     - searxng
+
+  searxng:
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.constraint-label=traefik_backend
+      - traefik.http.routers.search-https.rule=Host(`search.{{ app_domain_name }}`)
+      - traefik.http.routers.search-https.entrypoints=https
+      - traefik.http.routers.search-https.tls=true
+      - traefik.http.routers.search-https.tls.certresolver=le
+      - traefik.http.services.search.loadbalancer.server.port=8080
+      - traefik.http.routers.search-https.middlewares=authentik@docker
+    environment:
+      - BASE_URL=search.{{ app_domain_name }}
+    image: searxng/searxng:latest
+    container_name: searxng
+    volumes:
+      - searxng:/etc/searxng
+    restart: always
+    networks:
+      ollama-docker:
+        aliases:
+          - searxng
+      traefik_backend:
 
   ollama:
     image: ollama/ollama
@@ -70,6 +100,12 @@ services:
 volumes:
   ollama:
   open-webui:
+  searxng:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/searxng"
 
 networks:
   ollama-docker:
