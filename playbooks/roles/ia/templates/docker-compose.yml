@@ -30,10 +30,20 @@ services:
       - RAG_WEB_SEARCH_RESULT_COUNT=3
       - RAG_WEB_SEARCH_CONCURRENT_REQUESTS=10
       - SEARXNG_QUERY_URL="http://searxng:8080/search?q=<query>"
+      - OPENAI_API_BASE_URL="http://pipelines:9099/v1"
+      - OPENAI_API_KEY="0p3n-w3bu!"
+      - AUDIO_OPENAI_API_BASE_URL="http://speech:8000/v1"
+      - AUDIO_OPENAI_API_MODEL="tts-1"
+      - AUDIO_OPENAI_API_SPEAKER="upmc"
+      - AUDIO_OPENAI_API_KEY="openai-api-key"
+      - WHISPER_MODEL_AUTO_UPDATE=True
+      - WHISPER_MODEL_AUTO_UPDATE_INTERVAL=2w
+      - ENABLE_ADMIN_EXPORT=False
+    restart: always
     volumes:
       - open-webui:/app/backend/data
     networks:
-      - ollama-docker
+      - network
       - traefik_backend
     depends_on:
      - ollama
@@ -58,10 +68,21 @@ services:
       - searxng:/etc/searxng
     restart: always
     networks:
-      ollama-docker:
+      network:
         aliases:
           - searxng
       traefik_backend:
+
+  pipelines:
+    image: ghcr.io/open-webui/pipelines:main
+    container_name: pipelines
+    networks:
+      network:
+        aliases:
+          - pipelines
+    volumes:
+      - pipelines:/app/pipelines
+    restart: always
 
   ollama:
     image: ollama/ollama
@@ -79,7 +100,7 @@ services:
       - OLLAMA_KEEP_ALIVE=24h
       - OLLAMA_HOST=0.0.0.0
     networks:
-      ollama-docker:
+      network:
         aliases:
           - ollama
     volumes:
@@ -97,9 +118,51 @@ services:
     #           device_ids: ['all']
     #           capabilities: [gpu]
 
+  speech:
+    image: ghcr.io/matatonic/openedai-speech
+    environment:
+      - TTS_HOME=voices
+      - HF_HOME=voices
+      #PRELOAD_MODEL=xtts
+      #PRELOAD_MODEL=xtts_v2.0.2
+      #PRELOAD_MODEL=parler-tts/parler_tts_mini_v0.1
+    # ports:
+    #   - "8000:8000"
+    networks:
+      network:
+        aliases:
+          - speech
+    volumes:
+      - voices:/app/voices
+      - speech_config:/app/config
+    restart: unless-stopped
+    # Set nvidia runtime if it's not the default
+    #runtime: nvidia
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           #device_ids: ['0', '1'] # Select a gpu, or
+    #           count: all
+    #           capabilities: [gpu]
+
 volumes:
   ollama:
   open-webui:
+  voices:
+   driver: local
+   driver_opts:
+     type: none
+     o: bind
+     device: "{{ docker_volumes_path }}/voices"
+  pipelines:
+  speech_config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/speech"
   searxng:
     driver: local
     driver_opts:
@@ -108,6 +171,6 @@ volumes:
       device: "{{ docker_volumes_path }}/searxng"
 
 networks:
-  ollama-docker:
+  network:
   traefik_backend:
     external: true

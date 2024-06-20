@@ -13,6 +13,8 @@
     mode: u=rw,g=o=r
   loop:
     - searxng
+    - speech
+    - voices
 
 - name: Copy searxng configuration file
   become: true
@@ -25,6 +27,16 @@
     - settings.yml
     - uwsgi.ini
 
+- name: Copy speech configuration file
+  become: true
+  ansible.builtin.template:
+    src: speech_{{ item }}
+    dest: "{{ docker_volumes_path }}/speech/{{ item }}"
+    mode: u=rw,g=o=r
+  loop:
+    - pre_process_map.yaml
+    - voice_to_speaker.yaml
+
 - name: Create docker-compose stack file
   ansible.builtin.template:
     src: docker-compose.yml
@@ -34,5 +46,12 @@
   community.docker.docker_compose_v2:
     pull: "always"
     build: "always"
-    state: present
+    state: restarted
     project_src: /home/{{ ansible_user }}/home-server/stacks/ia
+
+- name: Load speech models
+  become: true # necessary to read docker_volumes_path content
+  ansible.builtin.command:
+    cmd: "docker exec ia-speech-1 /bin/sh -c ./download_voices_tts-1.sh fr_FR-upmc-medium"
+    creates: "{{ docker_volumes_path }}/voices/fr_FR-upmc-medium.onnx"
+...

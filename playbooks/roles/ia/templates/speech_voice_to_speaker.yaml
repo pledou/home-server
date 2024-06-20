@@ -1,0 +1,32 @@
+tts-1:
+  upmc:
+    model: voices/fr_FR-upmc-medium.onnx
+    speaker: # default speaker
+tts-1-hd:
+  alloy-alt:
+    model: xtts
+    speaker: voices/alloy-alt.wav
+  alloy:
+    model: xtts
+    speaker: voices/alloy.wav
+  echo:
+    model: xtts
+    speaker: voices/echo.wav
+  fable:
+    model: xtts
+    speaker: voices/fable.wav
+  onyx:
+    model: xtts
+    speaker: voices/onyx.wav
+  nova:
+    model: xtts
+    speaker: voices/nova.wav
+  shimmer:
+    model: xtts
+    speaker: voices/shimmer.wav
+  parler:
+    model: parler-tts/parler_tts_mini_v0.1
+    speaker: A female speaker with a slightly low-pitched voice delivers her words quite expressively, in a very confined sounding environment with clear audio quality. She speaks very fast.
+  parler2:
+    model: parler-tts/parler_tts_mini_v0.1
+    speaker: A female voice with an Indian accent enunciates every word with precision. The speaker's voice is very close-sounding, and the recording is excellent, capturing her voice with crisp clarity.
