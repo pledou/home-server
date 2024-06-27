@@ -26,6 +26,7 @@
     - name: loki-config
       owner: "{{ ansible_user }}"
       group: "{{ ansible_user }}"
+    - name: nextcloud-exporter-conf
 
 - name: Retrive secret
   ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
@@ -65,6 +66,8 @@
       dest: grafana-provisioning/datasources/datasource.yml
       owner: "{{ ansible_user }}"
       group: "{{ ansible_user }}"
+    - file: nextcloud-exporter-conf.yml
+      dest: nextcloud-exporter-conf/config.yml
   loop_control:
     label: "{{ item.file }} -> {{ item.dest }}"
 

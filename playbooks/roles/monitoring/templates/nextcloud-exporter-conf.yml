@@ -1,0 +1,8 @@
+# required
+server: "https://{{ app_domain_name }}"
+# required for token authentication
+authToken: "{{ nextcloud_exporter_auth_token }}"
+# optional
+listenAddress: ":9205"
+timeout: "5s"
+tlsSkipVerify: false

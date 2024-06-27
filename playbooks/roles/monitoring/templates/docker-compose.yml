@@ -4,7 +4,7 @@ services:
       - traefik.enable=true
       - traefik.docker.network=traefik_backend
       - traefik.constraint-label=traefik_backend
-      - traefik.http.routers.prometheus-https.rule=Host(`promotheus.{{app_domain_name}}`)
+      - traefik.http.routers.prometheus-https.rule=Host(`prometheus.{{app_domain_name}}`)
       - traefik.http.routers.prometheus-https.entrypoints=https
       - traefik.http.routers.prometheus-https.tls=true
       - traefik.http.routers.prometheus-https.tls.certresolver=le
@@ -151,6 +151,20 @@ services:
     deploy:
       mode: global
 
+  nextcloud-exporter:
+    container_name: nextcloud-exporter
+    image: "xperimental/nextcloud-exporter"
+    security_opt:
+      - no-new-privileges:true
+    command: nextcloud-exporter -c /conf/config.yml 
+    volumes:
+      - nextcloud_exporter_conf:/conf:ro
+    restart: always
+    networks:
+      backend:
+        aliases:
+          - nextcloud-exporter
+
 networks:
   traefik_backend:
     external: true
@@ -163,6 +177,12 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/loki-config"
+  nextcloud_exporter_conf:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/nextcloud-exporter-conf"
   loki-data:
   alertmanager-conf:
     driver: local

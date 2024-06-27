@@ -31,6 +31,11 @@ scrape_configs:
   - job_name: docker
       # metrics_path defaults to '/metrics'
       # scheme defaults to 'http'.
-
     static_configs:
       - targets: ["host.docker.internal:9323"]
+  - job_name: nextcloud-exporter
+    static_configs:
+      - targets: ['nextcloud-exporter:9205']
+  - job_name: authentik
+    static_configs:
+      - targets: ['auth-authentik-1:9300']

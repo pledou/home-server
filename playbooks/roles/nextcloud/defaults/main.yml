@@ -92,3 +92,4 @@ nextcloud_apps_config:
   - richdocuments public_wopi_url --value="http://collabora.{{ app_domain_name }}"
   - richdocuments wopi_url --value="https://collabora.{{ app_domain_name }}"
   - richdocuments disable_certificate_verification --value="false"
+  - serverinfo token --value "{{ nextcloud_exporter_auth_token }}"
