@@ -5,12 +5,12 @@ services:
       - traefik.enable=true
       - traefik.docker.network=traefik_backend
       - traefik.constraint-label=traefik_backend
-      - traefik.http.routers.ai-https.rule=Host(`ai.{{ app_domain_name }}`)
-      - traefik.http.routers.ai-https.entrypoints=https
-      - traefik.http.routers.ai-https.tls=true
-      - traefik.http.routers.ai-https.tls.certresolver=le
-      - traefik.http.services.ai.loadbalancer.server.port=8080
-      - traefik.http.routers.ai-https.middlewares=authentik@docker
+      - traefik.http.routers.ia-https.rule=Host(`ia.{{ app_domain_name }}`)
+      - traefik.http.routers.ia-https.entrypoints=https
+      - traefik.http.routers.ia-https.tls=true
+      - traefik.http.routers.ia-https.tls.certresolver=le
+      - traefik.http.services.ia.loadbalancer.server.port=8080
+      - traefik.http.routers.ia-https.middlewares=authentik@docker
     image: ghcr.io/open-webui/open-webui:main
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434

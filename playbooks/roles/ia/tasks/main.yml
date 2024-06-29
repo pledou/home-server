@@ -46,7 +46,7 @@
   community.docker.docker_compose_v2:
     pull: "always"
     build: "always"
-    state: restarted
+    state: present
     project_src: /home/{{ ansible_user }}/home-server/stacks/ia
 
 - name: Load speech models
