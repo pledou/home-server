@@ -47,6 +47,9 @@ services:
       - --config.file=/etc/alertmanager/config.yml
       - --storage.path=/alertmanager
     restart: unless-stopped
+    networks:
+      - backend
+      - traefik_backend
 
   node-exporter:
     image: quay.io/prometheus/node-exporter:latest

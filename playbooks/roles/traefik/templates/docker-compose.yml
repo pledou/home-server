@@ -49,7 +49,6 @@ services:
       - --providers.docker
       - --providers.docker.watch
       - --providers.docker.exposedByDefault=false
-      - --providers.file.filename=/rules/rules.yaml
       - --entrypoints.https.address=:443
       - --entrypoints.https.http3
       - --certificatesresolvers.le.acme.email={{ traefik_email }}

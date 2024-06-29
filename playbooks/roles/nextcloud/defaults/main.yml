@@ -88,7 +88,7 @@ nextcloud_apps_config:
   - files_fulltextsearch_tesseract tesseract_psm --value="4"
   - files_fulltextsearch_tesseract tesseract_lang --value="eng,fra"
   - files_fulltextsearch_tesseract tesseract_pdf --value="1"
-  - integration_openai url --value="https://ai.{{ app_domain_name }}"
+  - integration_openai url --value="https://ia.{{ app_domain_name }}"
   - richdocuments public_wopi_url --value="http://collabora.{{ app_domain_name }}"
   - richdocuments wopi_url --value="https://collabora.{{ app_domain_name }}"
   - richdocuments disable_certificate_verification --value="false"
