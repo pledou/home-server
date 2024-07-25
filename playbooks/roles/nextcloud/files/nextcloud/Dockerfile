@@ -9,13 +9,14 @@ RUN set -ex; \
         procps \
         supervisor \
         nginx \
-        imagemagick\
-        ghostscript\
-        tesseract-ocr\ 
-        tesseract-ocr-eng\ 
-        tesseract-ocr-fra\
-    ;
-    #rm -rf /var/lib/apt/lists/*
+        imagemagick \
+        ghostscript \
+        tesseract-ocr \ 
+        tesseract-ocr-eng \ 
+        tesseract-ocr-fra \
+        smbclient \
+    ; \
+    rm -rf /var/lib/apt/lists/*
 
 
 RUN set -ex; \
@@ -35,6 +36,8 @@ RUN set -ex; \
         bz2 \
 #        imap \
     ; \
+    pecl install smbclient; \
+    docker-php-ext-enable smbclient; \
     \
 # reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
     apt-mark auto '.*' > /dev/null; \
