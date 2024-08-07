@@ -25,11 +25,6 @@ services:
       - WEBUI_AUTH_TRUSTED_META_PROVIDER_HEADER=X-authentik-meta-provider
       - WEBUI_AUTH_TRUSTED_META_APP_HEADER=X-authentik-meta-app
       - WEBUI_AUTH_TRUSTED_META_VERSION_HEADER=X-authentik-meta-version
-      - ENABLE_RAG_WEB_SEARCH=True
-      - RAG_WEB_SEARCH_ENGINE="searxng"
-      - RAG_WEB_SEARCH_RESULT_COUNT=3
-      - RAG_WEB_SEARCH_CONCURRENT_REQUESTS=10
-      - SEARXNG_QUERY_URL="http://searxng:8080/search?q=<query>"
       - OPENAI_API_BASE_URL="http://pipelines:9099/v1"
       - OPENAI_API_KEY="0p3n-w3bu!"
       - AUDIO_OPENAI_API_BASE_URL="http://speech:8000/v1"
@@ -47,31 +42,6 @@ services:
       - traefik_backend
     depends_on:
      - ollama
-     - searxng
-
-  searxng:
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=traefik_backend
-      - traefik.constraint-label=traefik_backend
-      - traefik.http.routers.search-https.rule=Host(`search.{{ app_domain_name }}`)
-      - traefik.http.routers.search-https.entrypoints=https
-      - traefik.http.routers.search-https.tls=true
-      - traefik.http.routers.search-https.tls.certresolver=le
-      - traefik.http.services.search.loadbalancer.server.port=8080
-      - traefik.http.routers.search-https.middlewares=authentik@docker
-    environment:
-      - BASE_URL=search.{{ app_domain_name }}
-    image: searxng/searxng:latest
-    container_name: searxng
-    volumes:
-      - searxng:/etc/searxng
-    restart: always
-    networks:
-      network:
-        aliases:
-          - searxng
-      traefik_backend:
 
   pipelines:
     image: ghcr.io/open-webui/pipelines:main
@@ -98,6 +68,7 @@ services:
     restart: always
     environment:
       - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_NUM_THREADS=10
       - OLLAMA_HOST=0.0.0.0
     networks:
       network:

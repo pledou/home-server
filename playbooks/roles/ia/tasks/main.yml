@@ -12,20 +12,8 @@
     state: directory
     mode: u=rw,g=o=r
   loop:
-    - searxng
     - speech
     - voices
-
-- name: Copy searxng configuration file
-  become: true
-  ansible.builtin.template:
-    src: searxng_{{ item }}
-    dest: "{{ docker_volumes_path }}/searxng/{{ item }}"
-    mode: u=rw,g=o=r
-  loop:
-    - limiter.toml
-    - settings.yml
-    - uwsgi.ini
 
 - name: Copy speech configuration file
   become: true
