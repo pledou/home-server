@@ -10,30 +10,28 @@ services:
       - traefik.http.routers.ia-https.tls=true
       - traefik.http.routers.ia-https.tls.certresolver=le
       - traefik.http.services.ia.loadbalancer.server.port=8080
-      - traefik.http.routers.ia-https.middlewares=authentik@docker
     image: ghcr.io/open-webui/open-webui:main
     environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - WEBUI_AUTH_TRUSTED_EMAIL_HEADER=X-authentik-email
-      - WEBUI_AUTH_TRUSTED_GROUPS_HEADER=X-authentik-groups
-      - WEBUI_AUTH_TRUSTED_NAME_HEADER=X-authentik-name
-      - WEBUI_AUTH_TRUSTED_UID_HEADER=X-authentik-uid
-      - WEBUI_AUTH_TRUSTED_USERNAME_HEADER=X-authentik-username
-      - WEBUI_AUTH_TRUSTED_JWT_HEADER=X-authentik-jwt
-      - WEBUI_AUTH_TRUSTED_META_JWKS_HEADER=X-authentik-meta-jwks
-      - WEBUI_AUTH_TRUSTED_META_OUTPOST_HEADER=X-authentik-meta-outpost
-      - WEBUI_AUTH_TRUSTED_META_PROVIDER_HEADER=X-authentik-meta-provider
-      - WEBUI_AUTH_TRUSTED_META_APP_HEADER=X-authentik-meta-app
-      - WEBUI_AUTH_TRUSTED_META_VERSION_HEADER=X-authentik-meta-version
-      - OPENAI_API_BASE_URL="http://pipelines:9099/v1"
-      - OPENAI_API_KEY="0p3n-w3bu!"
-      - AUDIO_OPENAI_API_BASE_URL="http://speech:8000/v1"
-      - AUDIO_OPENAI_API_MODEL="tts-1"
-      - AUDIO_OPENAI_API_SPEAKER="upmc"
-      - AUDIO_OPENAI_API_KEY="openai-api-key"
-      - WHISPER_MODEL_AUTO_UPDATE=True
-      - WHISPER_MODEL_AUTO_UPDATE_INTERVAL=2w
-      - ENABLE_ADMIN_EXPORT=False
+      OLLAMA_BASE_URL: http://ollama:11434
+
+      # Generic OAuth
+      OAUTH_PROVIDER_NAME: "authentik"
+      OAUTH_CLIENT_ID: "{{ webui_oauth_client_id }}"
+      OAUTH_CLIENT_SECRET: "{{ webui_oauth_client_secret }}"
+      OAUTH_SCOPES: "openid profile email"
+      OPENID_PROVIDER_URL: "https://auth.{{ app_domain_name }}/application/o/{{ webui_oauth_slug_name }}/.well-known/openid-configuration"
+      ENABLE_OAUTH_SIGNUP: True
+      OAUTH_MERGE_ACCOUNTS_BY_EMAIL: True
+
+      OPENAI_API_BASE_URL: "http://pipelines:9099/v1"
+      OPENAI_API_KEY: "0p3n-w3bu!"
+      AUDIO_OPENAI_API_BASE_URL: "http://speech:8000/v1"
+      AUDIO_OPENAI_API_MODEL: "tts-1"
+      AUDIO_OPENAI_API_SPEAKER: "upmc"
+      AUDIO_OPENAI_API_KEY: "openai-api-key"
+      WHISPER_MODEL_AUTO_UPDATE: True
+      WHISPER_MODEL_AUTO_UPDATE_INTERVAL: 2w
+      ENABLE_ADMIN_EXPORT: False
     restart: always
     volumes:
       - open-webui:/app/backend/data
