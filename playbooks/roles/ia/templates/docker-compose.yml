@@ -52,6 +52,7 @@ services:
       - pipelines:/app/pipelines
     restart: always
 
+  {% if gpu != 'intel' -%}
   ollama:
     image: ollama/ollama
     expose:
@@ -78,14 +79,60 @@ services:
     mem_limit: "32G"
     shm_size: "16g" 
 
-    # for nvidea gpu
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           device_ids: ['all']
-    #           capabilities: [gpu]
+    {% if gpu == 'nvidia' -%}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['all']
+              capabilities: [gpu]
+    {%- endif %}
+  {% else -%}
+  ollama:
+    user: root
+    image: intelanalytics/ipex-llm-inference-cpp-xpu:latest
+    mem_limit: "32G"
+    shm_size: "16g" 
+    pull_policy: always
+    tty: true
+    restart: always
+    expose:
+    - 11434/tcp
+    ports:
+    - 11434:11434/tcp
+    # healthcheck:
+    #   test: ollama --version || exit 1
+    environment:
+      - DEVICE=iGPU
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_NUM_THREADS=10
+      - OLLAMA_HOST=0.0.0.0
+      - no_proxy=localhost,127.0.0.1
+      - OLLAMA_NUM_GPU=999
+      - ZES_ENABLE_SYSMAN=1
+      - SYCL_CACHE_PERSISTENT=1
+      - SYCL_PI_LEVEL_ZERO_USE_IMMEDIATE_COMMANDLISTS=1
+    working_dir: /llm/scripts/
+    command: ["bash", "-c", "source ipex-llm-init --gpu --device iGPU && bash start-ollama.sh"]
+    {#- command: ["bash", "-c", "source ipex-llm-init --gpu --device iGPU && tail -F anything"] # debuggage #}
+    
+    volumes:
+      - ollama:/root/.ollama
+    devices:
+      - /dev/dri:/dev/dri
+    networks:
+      network:
+        aliases:
+          - ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: intel
+              device_ids: ['all']
+              capabilities: [gpu]
+  {%- endif %}
 
   speech:
     image: ghcr.io/matatonic/openedai-speech
@@ -105,16 +152,18 @@ services:
       - voices:/app/voices
       - speech_config:/app/config
     restart: unless-stopped
-    # Set nvidia runtime if it's not the default
-    #runtime: nvidia
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           #device_ids: ['0', '1'] # Select a gpu, or
-    #           count: all
-    #           capabilities: [gpu]
+    {%- if gpu == 'nvidia' %}
+    {#- Set nvidia runtime if it's not the default #}
+    runtime: nvidia
+     deploy:
+       resources:
+         reservations:
+           devices:
+             - driver: nvidia
+               # device_ids: ['0', '1'] # Select a gpu, or use 'all' to use all available gpus
+               count: all
+               capabilities: [gpu]
+    {%- endif %}
 
 volumes:
   ollama:
@@ -132,12 +181,6 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/speech"
-  searxng:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: "{{ docker_volumes_path }}/searxng"
 
 networks:
   network:
