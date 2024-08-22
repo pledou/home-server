@@ -16,7 +16,7 @@
 - name: Reboot host(s) after package upgrade
   become: true
   ansible.builtin.reboot:
-    reboot_timeout: 60
+    reboot_timeout: 600
   when: reboot_request.stat.exists
 
 - name: Restic self update
