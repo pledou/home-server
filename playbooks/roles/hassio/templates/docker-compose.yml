@@ -40,8 +40,6 @@ services:
   esphome:
     labels:
       traefik.enable: 'true'
-      # traefik.docker.network: traefik_backend
-      # traefik.constraint-label: traefik_backend
       traefik.http.routers.esphome-https.rule: Host(`esphome.{{app_domain_name}}`)
       traefik.http.routers.esphome-https.entrypoints: https
       traefik.http.routers.esphome-https.tls: true
@@ -50,15 +48,11 @@ services:
       traefik.http.routers.esphome-https.middlewares: authentik@docker
     restart: always
     image: esphome/esphome
+    privileged: true
     network_mode: host
-    # networks:
-    #   - traefik_backend
-    # ports:
-    #   - 0.0.0.0:6052:6052
-    #   - 0.0.0.0:6123:6123
     volumes:
       - esphome:/config:rw
-    command: config/ dashboard
+      - /etc/localtime:/etc/localtime:ro
 
   mosquitto:
     image: eclipse-mosquitto
