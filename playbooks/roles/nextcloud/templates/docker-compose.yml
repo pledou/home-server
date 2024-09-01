@@ -114,45 +114,6 @@ services:
     volumes:
       - elastic_data:/usr/share/elasticsearch/data:rw
 
-  collabora_online:
-    labels:
-      traefik.enable: 'true'
-      traefik.docker.network: traefik_backend
-      traefik.constraint-label: traefik_backend
-      
-      traefik.http.routers.collabora-https.rule: Host(`collabora.{{ app_domain_name }}`)
-      traefik.http.routers.collabora-https.middlewares: collabora@docker
-      traefik.http.routers.collabora-https.entrypoints: https
-      traefik.http.routers.collabora-https.tls: 'true'
-      traefik.http.routers.collabora-https.tls.certresolver: le
-
-      traefik.http.middlewares.collabora.headers.STSIncludeSubdomains: 'true'
-      traefik.http.middlewares.collabora.headers.STSPreload: 'true'
-      traefik.http.middlewares.collabora.headers.STSSeconds: 315360000
-      traefik.http.middlewares.collabora.headers.browserXSSFilter: 'true'
-      traefik.http.middlewares.collabora.headers.contentTypeNosniff: 'true'
-      traefik.http.middlewares.collabora.headers.customFrameOptionsValue: SAMEORIGIN
-      traefik.http.middlewares.collabora.headers.forceSTSHeader: 'true'
-      traefik.http.middlewares.collabora.headers.referrerPolicy: no-referrer
-
-      traefik.http.services.collabora.loadbalancer.server.port: 9980
-
-    cap_add:
-      - MKNOD
-    image: collabora/code:latest
-    restart: always
-    environment:
-          - "DONT_GEN_SSL_CERT=true"
-          - "extra_params=--o:ssl.enable=false --o:ssl.termination=true"
-          - ALLOWED_HOSTS=*
-          - DICTIONARIES="en_GB fr_FR"
-    networks:
-      - traefik_backend
-      - backend
-    volumes:
-      - /etc/timezone:/etc/timezone:ro
-      - /etc/localtime:/etc/localtime:ro
-
   turn_server:
     command:
       - '-n --log-file=stdout --external-ip=$$(detect-external-ip) --listening-port=3478
