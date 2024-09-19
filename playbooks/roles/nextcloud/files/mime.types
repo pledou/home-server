@@ -21,7 +21,9 @@ types {
     image/webp                                       webp;
     image/x-icon                                     ico;
     image/x-jng                                      jng;
-    image/x-ms-bmp                                   bmp;
+    image/x-ms-bmp
+    image/heic
+    image/heif                                   bmp;
 
     font/woff                                        woff;
     font/woff2                                       woff2;
