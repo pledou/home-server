@@ -22,9 +22,6 @@
     - name: homeassistant
       mode: u=rwx,g=rx,o=
       group: 0998
-    - name: jeedom
-      mode: u=rwx,g=rx,o=
-      group: 0998
     - name: zigbee2mqtt
       mode: u=rwx,g=rx,o=
       group: 0998
