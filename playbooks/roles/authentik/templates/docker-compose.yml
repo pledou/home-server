@@ -64,6 +64,13 @@ services:
       AUTHENTIK_POSTGRESQL__NAME: authentik
       AUTHENTIK_POSTGRESQL__PASSWORD: "{{authentik_db_password}}"
       AUTHENTIK_SECRET_KEY: "{{authentik_secret}}"
+      AUTHENTIK_EMAIL__FROM: "{{ authentik_mail_from }}"
+      AUTHENTIK_EMAIL__HOST: "{{ authentik_mail_smtphost }}"
+      AUTHENTIK_EMAIL__PORT: "{{ authentik_mail_smtpport }}"
+      AUTHENTIK_EMAIL__USERNAME: "{{ authentik_mail_smtpname }}"
+      AUTHENTIK_EMAIL__PASSWORD: "{{ authentik_mail_smtppwd }}"
+      AUTHENTIK_EMAIL__USE_SSL: true
+      AUTHENTIK_LOG_LEVEL: info
     depends_on:
       - postgresql
       - redis

@@ -49,8 +49,8 @@ mqtt:
   enable: true
   hostname: host.docker.internal
   port: 1883
-  username: null
-  password: null
+  username: {{ mqtt_user }}
+  password: {{ mqtt_password }}
   prefix: myelectricaldata
   client_id: myelectricaldata     # DOIT ETRE UNIQUE SUR LA TOTALITE DES CLIENTS CONNECTE AU SERVEUR MQTT
   retain: true

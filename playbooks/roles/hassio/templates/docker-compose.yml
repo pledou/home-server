@@ -25,8 +25,6 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_BIND_SERVICE
-    devices:
-      - /dev/ttyUSB0:/dev/ttyUSB0
     privileged: true
     restart: unless-stopped
     security_opt:
@@ -36,6 +34,56 @@ services:
       - homeassistant:/config:rw
       - /etc/machine-id:/etc/machine-id:ro
     working_dir: /config
+
+  zigbee2mqtt:
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: traefik_backend
+      traefik.constraint-label: traefik_backend
+      traefik.http.routers.zigbee2mqtt-https.rule: Host(`zigbee2mqtt.{{app_domain_name}}`)
+      traefik.http.routers.zigbee2mqtt-https.entrypoints: https
+      traefik.http.routers.zigbee2mqtt-https.tls: true
+      traefik.http.routers.zigbee2mqtt-https.tls.certresolver: le
+      traefik.http.services.zigbee2mqtt.loadbalancer.server.port: 8080
+      traefik.http.services.zigbee2mqtt.loadbalancer.server.scheme: http
+      traefik.http.routers.zigbee2mqtt-https.middlewares: authentik@docker
+    image: koenkk/zigbee2mqtt:latest
+    restart: always
+    volumes:
+      - zigbee2mqtt:/app/data:rw
+      - /run/udev:/run/udev:ro # only required for auto-detecting the port and some adapters like ConBee
+    devices:
+      - /dev/serial/by-id/{{ zigbee2mqtt_device_id }}:/dev/ttyACM0
+    environment:
+      TZ: Europe/Paris
+    expose:
+      - 8080
+    networks:
+      - backend
+      - traefik_backend
+
+  jeedom:
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: traefik_backend
+      traefik.constraint-label: traefik_backend
+      traefik.http.routers.jeedom-https.rule: Host(`jeedom.{{app_domain_name}}`)
+      traefik.http.routers.jeedom-https.entrypoints: https
+      traefik.http.routers.jeedom-https.tls: true
+      traefik.http.routers.jeedom-https.tls.certresolver: le
+      traefik.http.services.jeedom.loadbalancer.server.port: 80
+      traefik.http.routers.jeedom-https.middlewares: authentik@docker
+    image: jeedom/jeedom:latest
+    restart: always
+    volumes:
+      - jeedom:/var/www/html:rw
+    environment:
+      TZ: Europe/Paris
+    networks:
+      - backend
+      - traefik_backend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   esphome:
     labels:
@@ -57,9 +105,12 @@ services:
   mosquitto:
     image: eclipse-mosquitto
     volumes:
-      - mosquitto:/mosquitto/config:ro
+      - mosquitto:/mosquitto/config:rw # rw for startup script to fix permissions
       - mosquitto-data:/mosquitto/data:rw
     restart: always
+    expose:
+      - 1883
+      - 9001
     ports:
       - target: 1883
         published: 1883
@@ -69,6 +120,10 @@ services:
         published: 9001
         protocol: tcp
         mode: host  
+    networks:
+      backend:
+        aliases:
+          - mqtt    
 
   myelectricaldata:
     labels:
@@ -120,7 +175,18 @@ services:
 volumes:
   piper-data:
     driver: local
-
+  jeedom:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/jeedom"
+  zigbee2mqtt:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/zigbee2mqtt"
   homeassistant:
     driver: local
     driver_opts:
@@ -150,6 +216,7 @@ volumes:
     name: "mqtt-broker-data"
 
 networks:
+  backend:
   traefik_backend:
     external: true
 

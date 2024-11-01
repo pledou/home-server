@@ -1,2 +1,3 @@
 vault-pass.txt
 pleduc_opc
+playbooks/roles/hassio/filter_plugins/__pycache__/*

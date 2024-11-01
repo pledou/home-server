@@ -5,6 +5,11 @@
     path: "/home/{{ ansible_user }}/home-server/stacks/hassio"
     state: directory
     mode: u=g=rwx,o=rx
+- name: Retrive secret
+  ansible.builtin.include_tasks: "retrieve_password.yml"
+  vars:
+    secrets:
+      - mqtt_password
 - name: Create homeassistant provisionning directories
   become: true
   ansible.builtin.file:
@@ -15,16 +20,20 @@
     mode: "{{ item.mode | default('u=rwx,g=o=') }}"
   loop:
     - name: homeassistant
-      mode: '0750'
+      mode: u=rwx,g=rx,o=
+      group: 0998
+    - name: jeedom
+      mode: u=rwx,g=rx,o=
+      group: 0998
+    - name: zigbee2mqtt
+      mode: u=rwx,g=rx,o=
       group: 0998
     - name: esphome
-      mode: '0750'
+      mode: u=rwx,g=rx,o=
       group: 0998
     - name: mosquitto
-      mode: '0750'
-      group: 0998
     - name: myelectricaldata
-      mode: '0750'
+      mode: u=rwx,g=rx,o=
       group: 0998
 - name: Copy mosquitto config file
   become: true
@@ -32,11 +41,31 @@
     src: mosquitto.conf
     dest: "{{ docker_volumes_path }}/mosquitto/mosquitto.conf"
     mode: u=g=rwx,o=rx
+    force: true
+- name: Passlib pip package install
+  become: true
+  ansible.builtin.pip:
+    name: passlib
+    state: present
+- name: Create mosquitto password file without mosquitto_passwd
+  become: true
+  ansible.builtin.copy:
+    content: "{{ mqtt_user }}:{{ mqtt_password | mosquitto_passwd }}"
+    dest: "{{ docker_volumes_path }}/mosquitto/mosquitto_passwords"
+    mode: u=g=rwx,o=rx
+    force: true
 - name: Copy myelectricaldata config file
   become: true
   ansible.builtin.template:
     src: myelectricaldata.yaml
     dest: "{{ docker_volumes_path }}/myelectricaldata/config.yaml"
+    mode: u=g=rwx,o=rx
+    force: false
+- name: Copy zigbee2mqtt config file
+  become: true
+  ansible.builtin.template:
+    src: zigbee2mqtt.yaml
+    dest: "{{ docker_volumes_path }}/zigbee2mqtt/configuration.yaml"
     mode: u=g=rwx,o=rx
     force: false
 - name: Create docker-compose file
