@@ -37,7 +37,6 @@ trap "" EXIT
 restic backup --tag min --verbose {{ docker_volumes_path }}/secrets
 
 restic backup --tag min --verbose {{ docker_volumes_path }}/homeassistant
-restic backup --tag min --verbose {{ docker_volumes_path }}/esphome
 
 restic backup --tag min --verbose {{ docker_volumes_path }}/traefik-public-certificates
 
