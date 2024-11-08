@@ -1,0 +1,9 @@
+# code: language=ansible
+---
+- name: Restart systemd-resolved
+  become: true
+  ansible.builtin.systemd:
+    name: systemd-resolved
+    state: restarted
+    enabled: true
+...

@@ -14,11 +14,64 @@
   loop:
     - traefik-public-certificates
     - traefik-rules
+
+- name: Create unbound directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ docker_volumes_path }}/unbound"
+    state: directory
+    mode: u=rw,g=o=r
+  when: unbound is defined and unbound
+
+- name: Copy unbound configuration templates
+  become: true
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "{{ docker_volumes_path }}/unbound/{{ item }}"
+    mode: u=rw,g=o=r
+  loop:
+    - unbound.conf
+    - a-records.conf
+    - srv-records.conf
+    - forward-records.conf
+  when: unbound is defined and unbound
+
 - name: Create docker-compose stack file
   ansible.builtin.template:
     src: docker-compose.yml
     dest: /home/{{ ansible_user }}/home-server/stacks/traefik/docker-compose.yml
     mode: u=rwx,g=o=rx
+
+- name: Set DNS as 127.0.0.1 in systemd-resolved configuration
+  become: true
+  ansible.builtin.replace:
+    path: /etc/systemd/resolved.conf
+    regexp: '#DNS=.*'
+    replace: 'DNS=127.0.0.1'
+  notify: Restart systemd-resolved
+  when: unbound is defined and unbound
+
+- name: Prevent systemd-resolved from listening on port 53
+  become: true
+  ansible.builtin.replace:
+    path: /etc/systemd/resolved.conf
+    regexp: '#DNSStubListener=.*'
+    replace: 'DNSStubListener=no'
+  notify: Restart systemd-resolved
+  when: unbound is defined and unbound
+
+- name: Disable named service
+  become: true
+  ansible.builtin.systemd:
+    name: named
+    state: stopped
+    enabled: false
+  when: unbound is defined and unbound
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+  when: unbound is defined and unbound
+
 - name: Deploy stack from a compose file
   community.docker.docker_compose_v2:
     pull: "always"
