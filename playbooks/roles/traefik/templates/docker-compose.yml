@@ -76,21 +76,42 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:rw
       - traefik-public-certificates:/certificates
       - traefik-rules:/rules
+  
+{% if unbound %}
+  unbound:
+    # unbound DNS server
+    image: mvance/unbound:latest
+    expose:
+      - 53
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+    volumes:
+      - unbound:/opt/unbound/etc/unbound
+    restart: unless-stopped
+{% endif %}
 
-  {% if duckdns_nonstatic %}
-    updateDuckDNSIP:
-      # used to update duckdns
-      # if you have a static IP, you can comment this out
-      command: /bin/sh -c "while true; do wget -O - 'https://www.duckdns.org/update?domains={{ duckdns_subdomain }}&token={{ traefik_duckdns_token }}&ip='; sleep 1200; done"
-      image: alpine:latest
-      network_mode: bridge
-  {% endif %}
+{% if duckdns_nonstatic %}
+  updateDuckDNSIP:
+    # used to update duckdns
+    # if you have a static IP, you can comment this out
+    command: /bin/sh -c "while true; do wget -O - 'https://www.duckdns.org/update?domains={{ duckdns_subdomain }}&token={{ traefik_duckdns_token }}&ip='; sleep 1200; done"
+    image: alpine:latest
+    network_mode: bridge
+    restart: unless-stopped
+{% endif %}
 
 networks:
   backend:
     attachable: true
 
 volumes:
+  unbound:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/unbound"
   traefik-public-certificates:
     driver: local
     driver_opts:
