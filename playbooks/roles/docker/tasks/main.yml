@@ -32,16 +32,10 @@
       - docker-ce
       - docker-ce-cli
       - containerd.io
+      - docker-compose-plugin
     state: latest # noqa package-latest
     force_apt_get: true
     update_cache: true
-
-- name: Install Docker Compose
-  become: true
-  ansible.builtin.get_url:
-    url: https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-Linux-x86_64
-    dest: /usr/local/bin/docker-compose
-    mode: u+x,g+x,o+x
 
 - name: Add user to "docker" group
   become: true
