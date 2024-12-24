@@ -38,9 +38,9 @@ services:
 {% if enocean_device_id is defined  and not jeedom %}
   enocean2mqtt:
     build: 
-      context: ./Ha_enonceanmqtt/
+      context: ./ha_enonceanmqtt/
       dockerfile: Dockerfile
-      target: ha_enonceanmqtt
+      # target: ha_enonceanmqtt
     devices:
       - /dev/serial/by-id/{{enocean_device_id}}:/dev/enocean
     entrypoint: ["python", "/usr/local/bin/enoceanmqtt", "/enoceanmqtt-default.conf", "/config/enoceanmqtt.conf", "--debug"]
