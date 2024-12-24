@@ -35,6 +35,26 @@ services:
       - /etc/machine-id:/etc/machine-id:ro
     working_dir: /config
 
+{% if enocean_device_id is defined  and not jeedom %}
+  enocean2mqtt:
+    build: 
+      context: ./Ha_enonceanmqtt/
+      dockerfile: Dockerfile
+      target: ha_enonceanmqtt
+    devices:
+      - /dev/serial/by-id/{{enocean_device_id}}:/dev/enocean
+    entrypoint: ["python", "/usr/local/bin/enoceanmqtt", "/enoceanmqtt-default.conf", "/config/enoceanmqtt.conf", "--debug"]
+    # entrypoint: ["tail", "-f", "/dev/null"]
+    volumes:
+      - enocean2mqtt:/config
+    restart: always
+    environment:
+      TZ: Europe/Paris
+    networks:
+      - backend
+{% endif %}
+
+{% if zigbee2mqtt_device_id is defined %}
   zigbee2mqtt:
     labels:
       traefik.enable: 'true'
@@ -61,6 +81,37 @@ services:
     networks:
       - backend
       - traefik_backend
+
+{% endif %}
+
+{% if jeedom %}
+  jeedom:
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: traefik_backend
+      traefik.constraint-label: traefik_backend
+      traefik.http.routers.jeedom-https.rule: Host(`jeedom.{{app_domain_name}}`)
+      traefik.http.routers.jeedom-https.entrypoints: https
+      traefik.http.routers.jeedom-https.tls: true
+      traefik.http.routers.jeedom-https.tls.certresolver: le
+      traefik.http.services.jeedom.loadbalancer.server.port: 80
+      traefik.http.routers.jeedom-https.middlewares: authentik@docker
+    image: jeedom/jeedom:latest
+    #restart: unless-stopped
+    volumes:
+      - jeedom:/var/www/html:rw
+    devices:
+      - /dev/serial/by-id/{{enocean_device_id}}:/dev/tty
+    environment:
+      TZ: Europe/Paris
+      # MARIADB_JEEDOM_PASSWD: {jeedom_mysql_password}
+    networks:
+      - backend
+      - traefik_backend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  {% endif %}
 
   esphome:
     labels:
@@ -152,6 +203,18 @@ services:
 volumes:
   piper-data:
     driver: local
+  jeedom:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/jeedom"
+  enocean2mqtt:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/enocean2mqtt"
   zigbee2mqtt:
     driver: local
     driver_opts:
