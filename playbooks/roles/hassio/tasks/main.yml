@@ -9,7 +9,6 @@
   vars:
     secrets:
       - mqtt_password
-      # - jeedom_mysql_password
 - name: Create homeassistant provisionning directories
   become: true
   ansible.builtin.file:
@@ -26,6 +25,9 @@
       mode: u=rwx,g=rx,o=
       group: 0998
     - name: jeedom
+      mode: u=rwx,g=rx,o=
+      group: 0998
+    - name: jeedom-db
       mode: u=rwx,g=rx,o=
       group: 0998
     - name: enocean2mqtt
@@ -103,12 +105,15 @@
         trusted_proxies:
           - 127.0.0.1
           - 172.0.0.0/8
-- name: Restore Ha_enonceanmqtt git repo
+- name: Restore ha_enonceanmqtt git repo
   become: true
   ansible.builtin.git:
     repo: 'https://gitlab.leducd.duckdns.org/p.leduc/HA_enoceanmqtt.git'
-    dest: "/home/{{ ansible_user }}/home-server/stacks/hassio/Ha_enonceanmqtt"
-    version: 'jeanocean'
+    dest: "/home/{{ ansible_user }}/home-server/stacks/hassio/ha_enonceanmqtt"
+    version: 'jenocean'
+    single_branch: true
+  environment:
+    GIT_TERMINAL_PROMPT: 0 # reports "terminal prompts disabled" on missing password
   when: enocean_device_id is defined
 
 - name: Deploy compose from a compose file
