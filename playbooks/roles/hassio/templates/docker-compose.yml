@@ -43,8 +43,8 @@ services:
       # target: ha_enonceanmqtt
     devices:
       - /dev/serial/by-id/{{enocean_device_id}}:/dev/enocean
-    entrypoint: ["python", "/usr/local/bin/enoceanmqtt", "/enoceanmqtt-default.conf", "/config/enoceanmqtt.conf", "--debug"]
-    # entrypoint: ["tail", "-f", "/dev/null"]
+    # entrypoint: ["python", "/usr/local/bin/enoceanmqtt", "/enoceanmqtt-default.conf", "/config/enoceanmqtt.conf", "--debug"]
+    entrypoint: ["tail", "-f", "/dev/null"]
     volumes:
       - enocean2mqtt:/config
     restart: always
@@ -100,6 +100,7 @@ services:
     #restart: unless-stopped
     volumes:
       - jeedom:/var/www/html:rw
+      - jeedom-db:/var/lib/mysql:rw
     devices:
       - /dev/serial/by-id/{{enocean_device_id}}:/dev/tty
     environment:
@@ -203,12 +204,20 @@ services:
 volumes:
   piper-data:
     driver: local
+{% if jeedom %}
   jeedom:
     driver: local
     driver_opts:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/jeedom"
+  jeedom-db:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/jeedom-db"
+{% endif %}
   enocean2mqtt:
     driver: local
     driver_opts:
