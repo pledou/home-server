@@ -1,7 +1,7 @@
 # code: language=ansible
 ---
 - name: Read snapshots
-  hosts: docker_server
+  hosts: backup
   tasks:
     - name: Retrive secret
       ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
@@ -19,3 +19,15 @@
     - name: Display it
       ansible.builtin.debug:
         var: restic_repos
+    - name: Read AWS repository
+      ansible.builtin.command: 'restic snapshots --group-by path'
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+        RESTIC_REPOSITORY: "s3:{{ aws_bucket }}"
+        RESTIC_PASSWORD: "{{ restic_backup_secret }}"
+      register: restic_repos_aws
+      changed_when: false
+    - name: Display AWS repository
+      ansible.builtin.debug:
+        var: restic_repos_aws
