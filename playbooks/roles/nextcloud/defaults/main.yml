@@ -90,7 +90,7 @@ nextcloud_apps_config:
   - files_fulltextsearch_tesseract tesseract_psm --value="4"
   - files_fulltextsearch_tesseract tesseract_lang --value="eng,fra"
   - files_fulltextsearch_tesseract tesseract_pdf --value="1"
-  - integration_openai url --value="https://ia.{{ app_domain_name }}"
+  - integration_openai url --value="https://ia.{{ app_domain_name }}/api"
   - richdocuments enabled --value="yes"
   - richdocuments wopi_url --value="https://{{ app_domain_name }}/apps/richdocumentscode/proxy.php?req="
   - richdocuments public_wopi_url --value="https://{{ app_domain_name }}"
