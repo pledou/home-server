@@ -24,12 +24,6 @@
     - name: zigbee2mqtt
       mode: u=rwx,g=rx,o=
       group: 0998
-    - name: jeedom
-      mode: u=rwx,g=rx,o=
-      group: 0998
-    - name: jeedom-db
-      mode: u=rwx,g=rx,o=
-      group: 0998
     - name: enocean2mqtt
       mode: u=rwx,g=rx,o=
       group: 0998

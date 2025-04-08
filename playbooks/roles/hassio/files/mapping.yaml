@@ -1174,7 +1174,7 @@
                    {% endif %}
                  set_position_topic: "req"
                  set_position_template: >-
-                   {"CMD":"1","POS":"{{ position }}","ANG":"127","REPO":"0","LOCK":"0","CHN":"0","send":"clear"}
+                   {"CMD":"1","POS":"{{ Position_}}","ANG":"127","REPO":"0","LOCK":"0","CHN":"0","send":"clear"}
                  tilt_status_topic: "CMD4"
                  tilt_status_template: >-
                    {% if (value_json.ANG <= 100) and (value_json.ANG >= 0) %}
@@ -1184,7 +1184,7 @@
                    {% endif %}
                  tilt_command_topic: "req"
                  tilt_command_template: >-
-                   {"CMD":"1","POS":"127","ANG":"{{ tilt_position }}","REPO":"0","LOCK":"0","CHN":"0","send":"clear"}
+                   {"CMD":"1","POS":"127","ANG":"{{ tilt_Position_}}","REPO":"0","LOCK":"0","CHN":"0","send":"clear"}
             - component: "cover"
               name: "cover2"
               config:
@@ -1206,7 +1206,7 @@
                    {% endif %}
                  set_position_topic: "req"
                  set_position_template: >-
-                   {"CMD":"1","POS":"{{ 100 - position }}","ANG":"127","REPO":"0","LOCK":"0","CHN":"0","send":"clear"}
+                   {"CMD":"1","POS":"{{ 100 - Position_}}","ANG":"127","REPO":"0","LOCK":"0","CHN":"0","send":"clear"}
                  tilt_status_topic: "CMD4"
                  tilt_status_template: >-
                    {% if (value_json.ANG <= 100) and (value_json.ANG >= 0) %}
@@ -1216,7 +1216,7 @@
                    {% endif %}
                  tilt_command_topic: "req"
                  tilt_command_template: >-
-                   {"CMD":"1","POS":"127","ANG":"{{ tilt_position }}","REPO":"0","LOCK":"0","CHN":"0","send":"clear"}
+                   {"CMD":"1","POS":"127","ANG":"{{ tilt_Position_}}","REPO":"0","LOCK":"0","CHN":"0","send":"clear"}
       0x02: *D20500
    0x14:
       0x30:
@@ -3448,7 +3448,7 @@
                    {% set ns = namespace() %}
                    {% for entity in device_entities(device_id(entity_id)) %}
                      {% if entity is search('config_valve_position',ignorecase=True) %}
-                       {% set ns.valve_position = (states(entity)|int(default=0)) %}
+                       {% set ns.valve_Position_= (states(entity)|int(default=0)) %}
                      {% elif entity is search('config_t_setpoint',ignorecase=True) %}
                        {% set ns.temperature_setpoint = ((states(entity)|int(default=0))*255/40)|int %}
                      {% elif entity is search('config_t_RCU',ignorecase=True) %}
@@ -3975,7 +3975,7 @@
                    {% set ns = namespace() %}
                    {% for entity in device_entities(device_id(entity_id)) %}
                      {% if entity is search('config_valve_position',ignorecase=True) %}
-                       {% set ns.valve_position = (states(entity)|int(default=0)) %}
+                       {% set ns.valve_Position_= (states(entity)|int(default=0)) %}
                      {% elif entity is search('config_temperature_setpoint',ignorecase=True) %}
                        {% set ns.temperature_setpoint = ((states(entity)|int(default=0))*2) %}
                      {% elif entity is search('config_temperature_RCU',ignorecase=True) %}
@@ -4329,7 +4329,7 @@
             device_config:
                 command: "CMD"
                 channel: ""
-                log_learn: ""
+                log_learn: "1"
                 direction: ""
                 answer: ""
             entities:
@@ -4342,7 +4342,7 @@
                     device_class: "temperature"
                     state_class: "measurement"
                     state_topic: ""
-                    value_template: "{{ value_json.TEMP }}"
+                    value_template: "{{ value_json.TEMP | round(1) }}"
                 - component: "sensor"
                   name: "Humidite"
                   config:
@@ -4356,94 +4356,137 @@
                 - component: "sensor"
                   name: "Batterie"
                   config:
+                    device_class: "battery"
+                    entity_category": "diagnostic"
                     unit_of_measurement: "%"
                     icon: "mdi:battery"
                     state_topic: ""
-                    value_template: "{{ value_json.BATT /7*100 }}"
-
+                    value_template: "{{ (value_json.BATT / 7 * 100) | round }}"
     0x01:
         0x00:
             device_config:
                 command: "CMD"
                 channel: ""
-                log_learn: ""
+                log_learn: "1"
                 direction: ""
                 answer: ""
             entities:
-                - component: "state"
-                  name: "MF"
+                - component: "select"
+                  name: "Bypass"
                   config:
-                    name: "Mode de fonctionnement"
+                    options:
+                      - "Toiture"
+                      - "Autre"
                     state_topic: ""
-                    value_template: "{{ value_json.MF }}"
-                    icon: "mdi:fan"
-                - component: "state"
-                  name: "BYP"
-                  label: "Bypass"
-                  config:
-                    state_topic: ""
-                    value_template: "{{ value_json.BYP }}"
+                    value_template: >-
+                      {% if value_json.BYP ==0 %}Toiture
+                      {% elif value_json.BYP ==1 %}Autre
+                      {% endif %}
+                    command_topic: "req"
+                    command_template: >-
+                      {% for entity in device_entities(device_id(entity_id)) %}
+                        {% if entity is search('Plage horaire') %}
+                          {% if is_state(entity, "on") %}{% set ns.plage = 1 %}{% else %}{% set ns.plage = 0 %}{% endif %}
+                        {% elif entity is search('Surventilation') %}
+                          {% if is_state(entity, "on") %}{% set ns.surv = 1 %}{% else %}{% set ns.surv = 0 %}{% endif %}
+                        {% elif entity is search('Débit fixe') %}
+                          {% if is_state(entity, "on") %}{% set ns.debitfixe = 1 %}{% else %}{% set ns.debitfixe = 0 %}{% endif %}
+                        {% endif %}
+                      {% endfor %}
+                      {% set modes = {"Toiture": "0", "Autre": "1"} %}
+                      {"MSC":"1","command":"0","FONC":{{ '00' ~ modes[value] ~ ns.plage ~ ns.debitfixe ~ '0' ~ ns.surv ~ '0' }}, "send":"clear"}
                     icon: "mdi:bypass"
-                - component: "binary_sensor"
-                  name: "PLH"
-                  label: "Plage horaire"
+                - component: "switch"
+                  name: "Plage_horaire"
                   config:
                     state_topic: ""
                     value_template: >-
                       {% if value_json.PLH == 1 %}ON{% else %}OFF{% endif %}
+                    command_topic: "req"
+                    command_template: >-
+                      {% for entity in device_entities(device_id(entity_id)) %}
+                        {% if entity is search('Bypass') %}
+                          {% if is_state(entity, "on") %}{% set ns.bypass = 1 %}{% else %}{% set ns.bypass = 0 %}{% endif %}
+                        {% elif entity is search('Surventilation') %}
+                          {% if is_state(entity, "on") %}{% set ns.surv = 1 %}{% else %}{% set ns.surv = 0 %}{% endif %}
+                        {% elif entity is search('Débit fixe') %}
+                          {% if is_state(entity, "on") %}{% set ns.debitfixe = 1 %}{% else %}{% set ns.debitfixe = 0 %}{% endif %}
+                        {% endif %}
+                      {% endfor %}
+                      {"MSC":"1","command":"0","FONC":{{ '00' ~ ns.bypass ~ value ~ ns.debitfixe ~ '0' ~ ns.surv ~ '0' }}, "send":"clear"}
+                    payload_on: "1"
+                    payload_off: "0"
                     icon: "mdi:clock-time-four-outline"
-                - component: "binary_sensor"
-                  name: "DEBF"
-                  label: "Débit fixe"
+                - component: "switch"
+                  name: "Debit_fixe"
                   config:
                     state_topic: ""
                     value_template: >-
                       {% if value_json.DEBF == 1 %}ON{% else %}OFF{% endif %}
+                    command_topic: "req"
+                    command_template: >-
+                      {% for entity in device_entities(device_id(entity_id)) %}
+                        {% if entity is search('Bypass') %}
+                          {% if is_state(entity, "on") %}{% set ns.bypass = 1 %}{% else %}{% set ns.bypass = 0 %}{% endif %}
+                        {% elif entity is search('Plage horaire') %}
+                          {% if is_state(entity, "on") %}{% set ns.plage = 1 %}{% else %}{% set ns.plage = 0 %}{% endif %}
+                        {% elif entity is search('Surventilation') %}
+                          {% if is_state(entity, "on") %}{% set ns.surv = 1 %}{% else %}{% set ns.surv = 0 %}{% endif %}
+                        {% endif %}
+                      {% endfor %}
+                      {"MSC":"1","command":"0","FONC":{{ '00' ~ ns.bypass ~ ns.plage ~ value ~ '0' ~ ns.surv ~ '0' }}, "send":"clear"}
+                    payload_on: "1"
+                    payload_off: "0"
                     icon: "mdi:fan"
-                - component: "binary_sensor"
-                  name: "SURV"
-                  label: "Sur ventilation"
+                - component: "switch"
+                  name: "Surventilation"
                   config:
                     state_topic: ""
                     value_template: >-
                       {% if value_json.SURV == 1 %}ON{% else %}OFF{% endif %}
+                    command_topic: "req"
+                    command_template: >-
+                      {% for entity in device_entities(device_id(entity_id)) %}
+                        {% if entity is search('Bypass') %}
+                          {% if is_state(entity, "on") %}{% set ns.bypass = 1 %}{% else %}{% set ns.bypass = 0 %}{% endif %}
+                        {% elif entity is search('Plage horaire') %}
+                          {% if is_state(entity, "on") %}{% set ns.plage = 1 %}{% else %}{% set ns.plage = 0 %}{% endif %}
+                        {% elif entity is search('Débit fixe') %}
+                          {% if is_state(entity, "on") %}{% set ns.debitfixe = 1 %}{% else %}{% set ns.debitfixe = 0 %}{% endif %}
+                        {% endif %}
+                      {% endfor %}
+                      {"MSC":"1","command":"0","FONC":{{ '00' ~ ns.bypass ~ ns.plage ~ ns.debitfixe ~ '0' ~ value ~ '0' }}, "send":"clear"}
+                    payload_on: "1"
+                    payload_off: "0"
                     icon: "mdi:fan"
                 - component: "binary_sensor"
-                  name: "VAC"
-                  label: "Vacances"
+                  name: "Vacances"
                   config:
                     state_topic: ""
                     value_template: >-
                       {% if value_json.VAC == 1 %}ON{% else %}OFF{% endif %}
                     icon: "mdi:calendar-star" 
-                - component: "binary_sensor"
-                  name: "BOOST"
-                  config:
-                    state_topic: ""
-                    value_template: >-
-                      {% if value_json.BOOS == 1 %}ON{% else %}OFF{% endif %}
                 - component: "number"
-                  name: "dBoost"
-                  label: "Durée Boost"
+                  name: "Boost"
                   config:
                     command_topic: "req"
                     command_template: >-
-                      {"MSC":"1","command":"0","BOOST":{{dBoost[value]}}}
+                      {"MSC":"1","command":"0","BOOST":{{value}}, "send":"clear"}
                     min: "0"
                     max: "200"
                     step: "1"
-                    mode: "slider"
-                    optimistic: "false"
+                    mode: "box"
                     unit_of_measurement: "min"
                     icon: "mdi:timer"
-
+                    state_topic: ""
+                    value_template:  >-
+                      {{ value_json.BOOS }}
                 - component: "binary_sensor"
-                  name: "MAJL"
-                  label: "Mise à jour logiciel"
+                  name: "Maj_logiciel"
                   config:
                     state_topic: ""
                     value_template: >-
-                      {% if value_json.MAJL == 1 %}ON{% else %}OFF{% endif %}
+                      {% value_json.MAJL %}
                     icon: "mdi:download"
                 - component: "binary_sensor"
                   name: "Appairage"
@@ -4457,64 +4500,56 @@
                   config:
                     state_topic: ""
                     value_template: >-
-                      {% if value_json.TEST == 1 %}ON{% else %}OFF{% endif %}
+                      {% if value_json.Test_== 1 %}ON{% else %}OFF{% endif %}
                     icon: "mdi:download"
                 - component: "binary_sensor"
-                  name: "LOC"
-                  label: "Localisation"
+                  name: "Localisation"
                   config:
                     state_topic: ""
                     value_template: >-
                       {% if value_json.LOC == 1 %}ON{% else %}OFF{% endif %}
                     icon: "mdi:download"
-                - component: "state"
-                  name: "SAI"
-                  label: "Saison"
+                - component: "sensor"
+                  name: "Saison"
                   config:
                     state_topic: ""
-                    value_template: "{{ value_json.SAI }}"
-                    icon: "mdi:calendar-star"
-                - component: "state"
-                  name: "TYPEV"
-                  label: "Type d'évènement"
-                  config:
-                    state_topic: ""
-                    value_template: "{{ value_json.TYPEV }}"
+                    value_template: "{% if value_json.SAI == 0 %}Ete{% elif value_json.SAI == 1 %}Hiver{% elif value_json.SAI == 2 %}Intermediaire{% endif %}"
                     icon: "mdi:calendar-star"
                 - component: "sensor"
-                  name: "DEBAS"
-                  label: "Débit air sortant"
+                  name: "Type_evt"
+                  config:
+                    state_topic: ""
+                    value_template: "{% if value_json.TYPEV == 0 %}Stockage periodique{% elif value_json.TYPEV == 1 %}Stockage evenementielle{% endif %}"
+                    icon: "mdi:calendar-star"
+                - component: "sensor"
+                  name: "Debit_air_sortant"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.DEBAS }}"
                     unit_of_measurement: "m3/h"
                     icon: "mdi:fan"
                 - component: "sensor"
-                  name: "PCHAUFF"
-                  label: "Puissance chauffage"
+                  name: "Puissance_chauffage"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.PCHAUFF }}"
                     unit_of_measurement: "%"
                     icon: "mdi:fan"
-                - component: "state"
-                  name: "ETATS"
-                  label: "Etat système"
+                - component: "sensor"
+                  name: "Etat_systeme"
                   config:
                     state_topic: ""
-                    value_template: "{{ value_json.ETATS }}"
+                    value_template: "{% if value_json.ETATS == 0 %}Mode Boost{% elif value_json.ETATS == 1 %}Mode Vacances{% elif value_json.ETATS == 2 %}Mode Standby{% elif value_json.ETATS == 3 %}Mode Debit Fixe{% elif value_json.ETATS == 4 %}Mode Normal{% endif %}"
                     icon: "mdi:fan"
                 - component: "sensor"
-                  name: "CVITM"
-                  label: "Consigne vitesse moteur"
+                  name: "Consigne_vitesse_moteur"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.CVITM }}"
                     unit_of_measurement: ""
                     icon: "mdi:fan"
                 - component: "sensor"
-                  name: "TEMPEXT"
-                  label: "Température extérieure"
+                  name: "Temperature_exterieure"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.TEMPEXT }}"
@@ -4523,76 +4558,58 @@
                     device_class: "temperature"
                     state_class: "measurement"
                 - component: "sensor"
-                  name: "CPDIFF"
-                  label: "Consigne pression différentielle"
+                  name: "Consigne_pression_differentielle"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.CPDIFF }}"
                     unit_of_measurement: "Pa"
                     icon: "mdi:fan"
                 - component: "sensor"
-                  name: "IEFIL"
-                  label: "Indice encrassement filtre"
+                  name: "Indice_encrassement_filtre"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.IEFIL }}"
                     unit_of_measurement: "%"
                     icon: "mdi:fan"   
                 - component: "sensor"
-                  name: "RCBEAU"
-                  label: "Rapport cyclique boucle eau"
+                  name: "Rapport_cyclique_boucle_eau"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.RCBEAU }}"
                     unit_of_measurement: "%"
                     icon: "mdi:fan" 
                 - component: "sensor"
-                  name: "DFONC"
-                  label: "Durée de fonctionnement"
-                  config:
-                    state_topic: ""
-                    value_template: >-
-                      {{ value_json.DFONC|regex_replace(find='\..*$', replace='')|as_datetime()|as_local() }}
-                    device_class: "timestamp"
-                    icon: "mdi:clock"
-                - component: "state"
-                  name: "TQAI"
-                  label: "Test QAI"
+                  name: "Test_TQAI"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.TQAI }}"
                     icon: "mdi:download"
-                - component: "state"
-                  name: "TMOT"
-                  label: "Test Moteur"
+                - component: "sensor"
+                  name: "Test_Moteur"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.TMOT }}"
                     icon: "mdi:download"
-                - component: "state"
-                  name: "TPCHAU"
-                  label: "Test Préchauffe"
+                - component: "sensor"
+                  name: "Test_Prechauffe"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.TPCHAU }}"
                     icon: "mdi:download"
-                - component: "state"
-                  name: "TSOND"
-                  label: "Test Sonde"
+                - component: "sensor"
+                  name: "Test_Sonde"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.TSOND }}"
                     icon: "mdi:download"
-                - component: "state"
-                  name: "TGLOB"
-                  label: "Test Global"
+                - component: "sensor"
+                  name: "Test_Global"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.TGLOB }}"
                     icon: "mdi:download"
-                - component: "state"
-                  name: "CERR"
-                  label: "Code erreur"
+                - component: "sensor"
+                  name: "Code_erreur"
                   config:
                     state_topic: ""
                     value_template: >
@@ -4635,7 +4652,7 @@
                         {% case 40 %} 
                           'Problème inconnu sur l’assistant'
                         {% case 41 %} 
-                          'Erreur de température de l’assistant'
+                          'Erreur de Temperature_de l’assistant'
                         {% case 42 %} 
                           'Perte de communication de l’assistant'
                         {% case 43 %} 
@@ -4672,16 +4689,14 @@
                     icon: "mdi:download"
                     class: "error"
                 - component: "sensor"
-                  name: "NBSDMAINT"
-                  label: "Nombre de semaine depuis la dernière maintenance"
+                  name: "Nb_sem_depuis_derniere_maintenance"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.NBSDMAINT }}"
                     unit_of_measurement: "sem"
                     icon: "mdi:download"
                 - component: "sensor"
-                  name: "CONSO"
-                  label: "Consommation cumulée"
+                  name: "Consommation_cumul"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.CONSO }}"
@@ -4689,134 +4704,112 @@
                     state_class: "total_increasing"
                     device_class: "energy"
                     icon: "mdi:download"
-                - component: "state"
-                  name: "VLOG"
-                  label: "Version logiciel embarqué"
+                - component: "sensor"
+                  name: "Version_logiciel"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.VLOG }}"
                     icon: "mdi:download"
-                - component: "state"
-                  name: "VLEC"
-                  label: "Version électronique"
+                - component: "sensor"
+                  name: "Version_electronique"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.VELEC }}"
                     icon: "mdi:download"
-                - component: "state"
-                  name: "OVHYDR"
-                  label: "Ouverture vanne HydroR"
+                - component: "sensor"
+                  name: "Ouverture_vanne_HydroR"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.OVHYDR }}"
+                    unit_of_measurement: "%"
                     icon: "mdi:download"
-                - component: "state"
-                  name: "IDMACH"
-                  label: "Identifiant machine"
+                - component: "sensor"
+                  name: "Identifiant_machine"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.IDMACH }}"
                     icon: "mdi:download"
-                - component: "state"
-                  name: "TYPCAI"
-                  label: "Type caisson"
+                - component: "sensor"
+                  name: "Type_caisson"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.TYPCAI }}"
                     icon: "mdi:download"
                 - component: "binary_sensor"
-                  name: "BYPAMO"
-                  label: "Bypass amont"
+                  name: "Bypass_amont"
                   config:
                     state_topic: ""
                     value_template: >-
                       {% if value_json.BYPAMO == 1 %}ON{% else %}OFF{% endif %}
                     icon: "mdi:download"
                 - component: "binary_sensor"
-                  name: "SOLARR"
+                  name: "SolarR"
                   config:
                     state_topic: ""
                     value_template: >-
                       {% if value_json.SOLARR == 1 %}ON{% else %}OFF{% endif %}
                     icon: "mdi:download"
                 - component: "binary_sensor"
-                  name: "HYDROR"
+                  name: "HydroR"
                   config:
                     state_topic: ""
                     value_template: >-
                       {% if value_json.HYDROR == 1 %}ON{% else %}OFF{% endif %}
                     icon: "mdi:download"
-                - component: "number"
-                  name: "VVENT"
-                  label: "Volume à ventiler"
+                - component: "sensor"
+                  name: "Volume_a_ventiler"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.VVENT }}"
                     unit_of_measurement: "m3"
                     icon: "mdi:download"
                 - component: "sensor"
-                  name: "JINST"
-                  label: "Date installation"
-                  config:
-                    state_topic: ""
-                    value_template: >
-                      {{ value_json.AINST ~ value_json.MINST ~ value_json.JINST |regex_replace(find='\..*$', replace='')|as_datetime()|as_local() }}
-                    icon: "mdi:download"
-                - component: "sensor"
-                  name: "OUVBY1"
-                  label: "Ouverture bypass 1"
+                  name: "Ouverture_bypass_1"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.OUVBY1 }}"
                     unit_of_measurement: "%"
                     icon: "mdi:download"
-                - component: "state"
-                  name: "TYBY1"
-                  label: "Type bypass 1"
+                - component: "sensor"
+                  name: "Type_bypass_1"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.TYBY1 }}"
                     icon: "mdi:download"
                 - component: "sensor"
-                  name: "OUVBY2"
-                  label: "Ouverture bypass 2"
+                  name: "Ouverture_bypass_2"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.OUVBY2 }}"
                     unit_of_measurement: "%"
                     icon: "mdi:download"
-                - component: "state"
-                  name: "TYBY2"
-                  label: "Type bypass 2"
+                - component: "sensor"
+                  name: "Type_bypass_2"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.TYBY2 }}"
                     icon: "mdi:download"                
                 - component: "sensor"
-                  name: "OUVBY3"
-                  label: "Ouverture bypass 3"
+                  name: "Ouverture_bypass_3"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.OUVBY3 }}"
                     unit_of_measurement: "%"
                     icon: "mdi:download"
-                - component: "state"
-                  name: "TYBY3"
-                  label: "Type bypass 3"
+                - component: "sensor"
+                  name: "Type_bypass_3"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.TYBY3 }}"
                     icon: "mdi:download"
-                - component: "state"
-                  name: "POS0"
-                  label: "Position 0"
+                - component: "sensor"
+                  name: "Position_0"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.POS0 }}"
                     icon: "mdi:download"
                 - component: "sensor"
-                  name: "TEMP0"
-                  label: "Température 0"
+                  name: "Temperature_0"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.TEMP0 }}"
@@ -4825,8 +4818,7 @@
                     device_class: "temperature"
                     state_class: "measurement"
                 - component: "sensor"
-                  name: "HUM0"
-                  label: "Humidité 0"
+                  name: "Humidite_0"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.HUM0 }}"
@@ -4834,16 +4826,14 @@
                     icon: "mdi:water-percent"
                     device_class: "humidity"
                     state_class: "measurement"
-                - component: "state"
-                  name: "POS1"
-                  label: "Position 1"
+                - component: "sensor"
+                  name: "Position_1"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.POS1 }}"
                     icon: "mdi:download"
                 - component: "sensor"
-                  name: "TEMP1"
-                  label: "Température 1"
+                  name: "Temperature_1"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.TEMP1 }}"
@@ -4852,8 +4842,7 @@
                     device_class: "temperature"
                     state_class: "measurement"
                 - component: "sensor"
-                  name: "HUM1"
-                  label: "Humidité 1"
+                  name: "Humidite_1"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.HUM1 }}"
@@ -4861,16 +4850,14 @@
                     icon: "mdi:water-percent"
                     device_class: "humidity"
                     state_class: "measurement"
-                - component: "state"
-                  name: "POS2"
-                  label: "Position 2"
+                - component: "sensor"
+                  name: "Position_2"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.POS2 }}"
                     icon: "mdi:download"
                 - component: "sensor"
-                  name: "TEMP2"
-                  label: "Température 2"
+                  name: "Temperature_2"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.TEMP2 }}"
@@ -4879,8 +4866,7 @@
                     device_class: "temperature"
                     state_class: "measurement"
                 - component: "sensor"
-                  name: "HUM2"
-                  label: "Humidité 2"
+                  name: "Humidite_2"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.HUM2 }}"
@@ -4888,16 +4874,14 @@
                     icon: "mdi:water-percent"
                     device_class: "humidity"
                     state_class: "measurement"
-                - component: "state"
-                  name: "POS3"
-                  label: "Position 3"
+                - component: "sensor"
+                  name: "Position_3"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.POS3 }}"
                     icon: "mdi:download"
                 - component: "sensor"
-                  name: "TEMP3"
-                  label: "Température 3"
+                  name: "Temperature_3"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.TEMP3 }}"
@@ -4906,8 +4890,7 @@
                     device_class: "temperature"
                     state_class: "measurement"
                 - component: "sensor"
-                  name: "HUM3"
-                  label: "Humidité 3"
+                  name: "Humidite_3"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.HUM3 }}"
@@ -4915,16 +4898,14 @@
                     icon: "mdi:water-percent"
                     device_class: "humidity"
                     state_class: "measurement"
-                - component: "state"
-                  name: "POS4"
-                  label: "Position 4"
+                - component: "sensor"
+                  name: "Position_4"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.POS4 }}"
                     icon: "mdi:download"
                 - component: "sensor"
-                  name: "TEMP4"
-                  label: "Température 4"
+                  name: "Temperature_4"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.TEMP4 }}"
@@ -4933,8 +4914,7 @@
                     device_class: "temperature"
                     state_class: "measurement"
                 - component: "sensor"
-                  name: "HUM4"
-                  label: "Humidité 4"
+                  name: "Humidite_4"
                   config:
                     state_topic: ""
                     value_template: "{{ value_json.HUM4 }}"
@@ -4942,90 +4922,96 @@
                     icon: "mdi:water-percent"
                     device_class: "humidity"
                     state_class: "measurement"
-                - component: "number"
-                  name: "ModeFonctionnement"
-                  label: "Mode de fonctionnement"
+                - component: "select"
+                  name: "Mode_de_fonctionnement"
                   config:
+                    options:
+                      - "Standby"
+                      - "Eco"
+                      - "Std"
+                      - "Confort"
                     command_topic: "req"
                     command_template: >-
-                      {"MSC":"1","command":"0","COMMAND":{{ModeFonctionnement[value]}}}
-                    min: "1"
-                    max: "3"
-                    step: "1"
-                    mode: "slider"
-                    unit_of_measurement: ""
+                      {% set modes = {"Eco": "1", "Std": "2", "Confort": "3"} %}
+                      {"MSC":"1","CMD":"0","MODEFONC":"{{modes[value]}}", "send":"clear"}
                     icon: "mdi:fan"
-                    value_template: "{{ value_json.COMMAND }}"
+                    state_topic: ""
+                    value_template: >-
+                      {% if value_json.MF == 0 %}Standby
+                      {% elif value_json.MF == 1 %}Eco
+                      {% elif value_json.MF == 2 %}Std
+                      {% elif value_json.MF == 3 %}Confort
+                      {% endif %}
                 - component: "number"
-                  name: "VACS"
-                  label: "Nombre de jours Vacances"
+                  name: "Nombre_de_jours_Vacances"
                   config:
                     command_topic: "req"
                     command_template: >-
-                      {"MSC":"1","command":"0","VACS":{{VACS[value]}}}
+                      {"MSC":"1","CMD":"0","VACS":{{value}}, "send":"clear"}
                     min: "0"
                     max: "200"
                     step: "1"
-                    mode: "slider"
+                    mode: "box"
                     unit_of_measurement: ""
                     icon: "mdi:calendar-star"
-                    value_template: "{{ value_json.VACS }}"
+                    state_topic: ""
+                    value_template: "{{ value_json.VAC }}"
                 - component: "number"
-                  name: "TEMPEL"
-                  label: "Température consigne Elec"
+                  name: "Temperature_consigne_Elec"
                   config:
                     command_topic: "req"
                     command_template: >-
-                      {"MSC":"1","command":"0","TEMPEL":{{TEMPEL[value]}}}
+                      {"MSC":"1","CMD":"0","TEMPEL":{{value}}, "send":"clear"}
                     min: "0"
-                    max: "20"
+                    max: "18"
                     step: "1"
                     mode: "slider"
                     unit_of_measurement: "°C"
                     icon: "mdi:thermometer"
+                    state_topic: ""
                     value_template: "{{ value_json.TEMPCELEC }}"
                 - component: "number"
-                  name: "TEMPSOUF"
-                  mabel: "Température max de soufflage"
+                  name: "Temperature_max_de_soufflage"
                   config:
                     command_topic: "req"
                     command_template: >-
-                      {"MSC":"1","command":"0","TEMPSOUF":{{TEMPSOUF[value]}}}
-                    min: "0"
-                    max: "20"
+                      {"MSC":"1","CMD":"0","TEMPSOUF":{{value}}, "send":"clear"}
+                    min: "20"
+                    max: "45"
                     step: "1"
                     mode: "slider"
                     unit_of_measurement: "°C"
                     icon: "mdi:thermometer"
-                    value_template: "{{ value_json.TEMPSOUFF }}"
+                    state_topic: ""
+                    value_template: "{{ value_json.TEMPMSOUFFL }}"
                 - component: "number"
-                  name: "TEMPHYD"
-                  label: "Température consigne HygroR"
+                  name: "Temperature_consigne_HygroR"
                   config:
                     command_topic: "req"
                     command_template: >-
-                      {"MSC":"1","command":"0","TEMPHYD":{{TEMPHYD[value]}}}
+                      {"MSC":"1","CMD":"0","TEMPHYD":{{value}}, "send":"clear"}
                     min: "8"
                     max: "28"
                     step: "1"
                     mode: "slider"
                     unit_of_measurement: "°C"
                     icon: "mdi:thermometer"
-                    value_template: "{{ value_json.TEMPHYGRO }}"
+                    state_topic: ""
+                    value_template: "{{ value_json.TEMPCHYDROR }}"
                 - component: "number"
-                  name: "TEMPSOL"
-                  label: "Température consigne SolarR"
+                  name: "Temperature_consigne_SolarR"
                   config:
                     command_topic: "req"
                     command_template: >-
-                      {"MSC":"1","command":"0","TEMPSOL":"{{TEMPSOL[value]}}"}
+                      {"MSC":"1","CMD":"0","TEMPSOL":"{{value}}", "send":"clear"}
                     min: "18"
                     max: "30"
                     step: "1"
                     mode: "slider"
                     unit_of_measurement: "°C"
                     icon: "mdi:thermometer"
-                    value_template: "{{ value_json.TEMPSOLAR }}"
+                    state_topic: ""
+                    value_template: "{{ value_json.TEMPCSOLAR }}"
 
 # Below are mappings common to all EEPs
 common:
@@ -5037,16 +5023,6 @@ common:
            value_template: "{{ value_json._RSSI_ }}"
            unit_of_measurement: "dBm"
            device_class: "signal_strength"
-           state_class: "measurement"
-           entity_category: "diagnostic"
-   date:
-      - component: "sensor"
-        name: "last_seen"
-        config:
-           state_topic: ""
-           value_template: >-
-             {{ value_json._DATE_|regex_replace(find='\..*$', replace='')|as_datetime()|as_local() }}
-           device_class: "timestamp"
            entity_category: "diagnostic"
 
 # Mapping for system purpose (HA <-> enoceanmqtt configurations)
