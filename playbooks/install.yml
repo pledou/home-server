@@ -14,8 +14,8 @@
     - ia
     - nextcloud
     - kresus
-    - hassio
     - gitlab
+    - hassio
   post_tasks:
     - name: Docker prune
       community.docker.docker_prune:

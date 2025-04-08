@@ -68,4 +68,29 @@
 
 - name: Flush handlers
   ansible.builtin.meta: flush_handlers
+
+- name: Ensure docker volumes path exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ docker_volumes_path }}"
+    state: directory
+    mode: '0755'
+
+- name: Add entry to /etc/fstab for docker volume
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: "^{{ docker_volume_device }}\\s"
+    line: "{{ docker_volume_device }} {{ docker_volumes_path }} ext4 defaults 0 2"
+    state: present
+  when: docker_volume_device is defined
+
+- name: Mount docker volume
+  become: true
+  ansible.posix.mount:
+    src: "{{ docker_volume_device }}"  # Replace with the actual device, e.g., /dev/sdX1
+    path: "{{ docker_volumes_path }}"  # Replace with the actual mount path, e.g., /var/lib/docker/volumes
+    fstype: ext4                       # Replace with the appropriate filesystem type
+    state: mounted
+  when: docker_volume_device is defined
 ...
