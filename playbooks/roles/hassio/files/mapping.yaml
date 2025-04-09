@@ -1174,7 +1174,7 @@
                    {% endif %}
                  set_position_topic: "req"
                  set_position_template: >-
-                   {"CMD":"1","POS":"{{ Position_}}","ANG":"127","REPO":"0","LOCK":"0","CHN":"0","send":"clear"}
+                   {"CMD":"1","POS":"{{ position }}","ANG":"127","REPO":"0","LOCK":"0","CHN":"0","send":"clear"}
                  tilt_status_topic: "CMD4"
                  tilt_status_template: >-
                    {% if (value_json.ANG <= 100) and (value_json.ANG >= 0) %}
@@ -1184,7 +1184,7 @@
                    {% endif %}
                  tilt_command_topic: "req"
                  tilt_command_template: >-
-                   {"CMD":"1","POS":"127","ANG":"{{ tilt_Position_}}","REPO":"0","LOCK":"0","CHN":"0","send":"clear"}
+                   {"CMD":"1","POS":"127","ANG":"{{ tilt_position }}","REPO":"0","LOCK":"0","CHN":"0","send":"clear"}
             - component: "cover"
               name: "cover2"
               config:
@@ -1206,7 +1206,7 @@
                    {% endif %}
                  set_position_topic: "req"
                  set_position_template: >-
-                   {"CMD":"1","POS":"{{ 100 - Position_}}","ANG":"127","REPO":"0","LOCK":"0","CHN":"0","send":"clear"}
+                   {"CMD":"1","POS":"{{ 100 - position }}","ANG":"127","REPO":"0","LOCK":"0","CHN":"0","send":"clear"}
                  tilt_status_topic: "CMD4"
                  tilt_status_template: >-
                    {% if (value_json.ANG <= 100) and (value_json.ANG >= 0) %}
@@ -1216,7 +1216,7 @@
                    {% endif %}
                  tilt_command_topic: "req"
                  tilt_command_template: >-
-                   {"CMD":"1","POS":"127","ANG":"{{ tilt_Position_}}","REPO":"0","LOCK":"0","CHN":"0","send":"clear"}
+                   {"CMD":"1","POS":"127","ANG":"{{ tilt_position }}","REPO":"0","LOCK":"0","CHN":"0","send":"clear"}
       0x02: *D20500
    0x14:
       0x30:
@@ -3448,7 +3448,7 @@
                    {% set ns = namespace() %}
                    {% for entity in device_entities(device_id(entity_id)) %}
                      {% if entity is search('config_valve_position',ignorecase=True) %}
-                       {% set ns.valve_Position_= (states(entity)|int(default=0)) %}
+                       {% set ns.valve_position = (states(entity)|int(default=0)) %}
                      {% elif entity is search('config_t_setpoint',ignorecase=True) %}
                        {% set ns.temperature_setpoint = ((states(entity)|int(default=0))*255/40)|int %}
                      {% elif entity is search('config_t_RCU',ignorecase=True) %}
@@ -3975,7 +3975,7 @@
                    {% set ns = namespace() %}
                    {% for entity in device_entities(device_id(entity_id)) %}
                      {% if entity is search('config_valve_position',ignorecase=True) %}
-                       {% set ns.valve_Position_= (states(entity)|int(default=0)) %}
+                       {% set ns.valve_position = (states(entity)|int(default=0)) %}
                      {% elif entity is search('config_temperature_setpoint',ignorecase=True) %}
                        {% set ns.temperature_setpoint = ((states(entity)|int(default=0))*2) %}
                      {% elif entity is search('config_temperature_RCU',ignorecase=True) %}
