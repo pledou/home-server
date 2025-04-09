@@ -4384,6 +4384,7 @@
                       {% endif %}
                     command_topic: "req"
                     command_template: >-
+                      {% set ns = namespace() %}
                       {% for entity in device_entities(device_id(entity_id)) %}
                         {% if entity is search('Plage horaire') %}
                           {% if is_state(entity, "on") %}{% set ns.plage = 1 %}{% else %}{% set ns.plage = 0 %}{% endif %}
@@ -4404,6 +4405,7 @@
                       {% if value_json.PLH == 1 %}ON{% else %}OFF{% endif %}
                     command_topic: "req"
                     command_template: >-
+                      {% set ns = namespace() %}
                       {% for entity in device_entities(device_id(entity_id)) %}
                         {% if entity is search('Bypass') %}
                           {% if is_state(entity, "on") %}{% set ns.bypass = 1 %}{% else %}{% set ns.bypass = 0 %}{% endif %}
@@ -4425,6 +4427,7 @@
                       {% if value_json.DEBF == 1 %}ON{% else %}OFF{% endif %}
                     command_topic: "req"
                     command_template: >-
+                      {% set ns = namespace() %}
                       {% for entity in device_entities(device_id(entity_id)) %}
                         {% if entity is search('Bypass') %}
                           {% if is_state(entity, "on") %}{% set ns.bypass = 1 %}{% else %}{% set ns.bypass = 0 %}{% endif %}
@@ -4446,6 +4449,7 @@
                       {% if value_json.SURV == 1 %}ON{% else %}OFF{% endif %}
                     command_topic: "req"
                     command_template: >-
+                      {% set ns = namespace() %}
                       {% for entity in device_entities(device_id(entity_id)) %}
                         {% if entity is search('Bypass') %}
                           {% if is_state(entity, "on") %}{% set ns.bypass = 1 %}{% else %}{% set ns.bypass = 0 %}{% endif %}
@@ -4486,7 +4490,7 @@
                   config:
                     state_topic: ""
                     value_template: >-
-                      {% value_json.MAJL %}
+                      {% if value_json.MAJL == 1 %}ON{% else %}OFF{% endif %}
                     icon: "mdi:download"
                 - component: "binary_sensor"
                   name: "Appairage"
@@ -4513,7 +4517,11 @@
                   name: "Saison"
                   config:
                     state_topic: ""
-                    value_template: "{% if value_json.SAI == 0 %}Ete{% elif value_json.SAI == 1 %}Hiver{% elif value_json.SAI == 2 %}Intermediaire{% endif %}"
+                    value_template: >-
+                      {% if value_json.SAI == 0 %}Ete
+                      {% elif value_json.SAI == 1 %}Hiver
+                      {% elif value_json.SAI == 2 %}Intermediaire
+                      {% endif %}
                     icon: "mdi:calendar-star"
                 - component: "sensor"
                   name: "Type_evt"
@@ -4539,7 +4547,7 @@
                   name: "Etat_systeme"
                   config:
                     state_topic: ""
-                    value_template: "{% if value_json.ETATS == 0 %}Mode Boost{% elif value_json.ETATS == 1 %}Mode Vacances{% elif value_json.ETATS == 2 %}Mode Standby{% elif value_json.ETATS == 3 %}Mode Debit Fixe{% elif value_json.ETATS == 4 %}Mode Normal{% endif %}"
+                    value_template: "{% if value_json.ETATS == 0 %}Boost{% elif value_json.ETATS == 1 %}Vacances{% elif value_json.ETATS == 2 %}Standby{% elif value_json.ETATS == 3 %}Debit Fixe{% elif value_json.ETATS == 4 %}Normal{% endif %}"
                     icon: "mdi:fan"
                 - component: "sensor"
                   name: "Consigne_vitesse_moteur"
@@ -4613,79 +4621,79 @@
                   config:
                     state_topic: ""
                     value_template: >
-                      {% switch value_json.CERR1 ~ value_json.CERR2 %}
-                        {% case 00 %}
-                        {% default %}
-                          0
-                        {% case 01 %} 
-                          'Panne résistance'
-                        {% case 02 %}
-                          'Trop froid pour chauffage'
-                        {% case 10 %}
-                          'Panne moteur'
-                        {% case 20 %}
-                          'Filtre à changer'
-                        {% case 30 %}
-                          'Panne d’un capteur QAI'
-                        {% case 31 %}
-                          'Panne capteur QAI n°1'
-                        {% case 32 %} 
-                          'Panne capteur QAI n°2'
-                        {% case 33 %} 
-                          'Panne capteur QAI n°3'
-                        {% case 34 %} 
-                          'Panne capteur QAI n°4'
-                        {% case 35 %} 
-                          'Panne capteur QAI n°5'
-                        {% case 36 %} 
-                          'Panne capteur QAI n°6'
-                        {% case 37 %} 
-                          'Panne capteur QAI n°7'
-                        {% case 38 %} 
-                          'Panne capteur QAI n°8'
-                        {% case 39 %} 
-                          'Panne capteur QAI n°9'
-                        {% case 3A %} 
-                          'Problème sur plusieurs capteurs QAI'
-                        {% case 3B %} 
-                          'Problème d’appairage d’un capteur QAI'
-                        {% case 40 %} 
-                          'Problème inconnu sur l’assistant'
-                        {% case 41 %} 
-                          'Erreur de Temperature_de l’assistant'
-                        {% case 42 %} 
-                          'Perte de communication de l’assistant'
-                        {% case 43 %} 
-                          'Piles faibles de l’assistant'
-                        {% case 44 %} 
-                          'Plusieurs pannes sur l’assistant'
-                        {% case 51 %} 
-                          'Panne sur la sonde en sortie des résistances'
-                        {% case 52 %} 
-                          'Panne sur la sonde en entrée de VMI®'
-                        {% case 53 %} 
-                          'Panne sur la sonde en sortie de HydroR®'
-                        {% case 55 %} 
-                          'Panne sur la sonde en sortie du Bypass'
-                        {% case 56 %} 
-                          'Panne sur la sonde côté air extérieur du Bypass'
-                        {% case 57 %} 
-                          'Panne sur la sonde côté comble du Bypass'
-                        {% case 5F %} 
-                          'Plusieurs pannes sondes'
-                        {% case 61 %} 
-                          'Erreur sur le Bypass'
-                        {% case 65 %} 
-                          'Erreur téléchargement logiciel'
-                        {% case 70 %} 
-                          'Multiples erreurs'
-                        {% case 81 %} 
-                          'Problème de communication ByPass'
-                        {% case 82 %} 
-                          'Problème de communication ByPass'
-                        {% case 83 %} 
-                          'Volet du ByPass ILE'
-                      {% endswitch %}
+                      {% if value_json.CERR1 ~ value_json.CERR2 == "00" %}
+                        0
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "01" %}
+                        'Panne résistance'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "02" %}
+                        'Trop froid pour chauffage'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "10" %}
+                        'Panne moteur'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "20" %}
+                        'Filtre à changer'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "30" %}
+                        'Panne d’un capteur QAI'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "31" %}
+                        'Panne capteur QAI n°1'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "32" %}
+                        'Panne capteur QAI n°2'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "33" %}
+                        'Panne capteur QAI n°3'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "34" %}
+                        'Panne capteur QAI n°4'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "35" %}
+                        'Panne capteur QAI n°5'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "36" %}
+                        'Panne capteur QAI n°6'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "37" %}
+                        'Panne capteur QAI n°7'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "38" %}
+                        'Panne capteur QAI n°8'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "39" %}
+                        'Panne capteur QAI n°9'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "3A" %}
+                        'Problème sur plusieurs capteurs QAI'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "3B" %}
+                        'Problème d’appairage d’un capteur QAI'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "40" %}
+                        'Problème inconnu sur l’assistant'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "41" %}
+                        'Erreur de Temperature_de l’assistant'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "42" %}
+                        'Perte de communication de l’assistant'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "43" %}
+                        'Piles faibles de l’assistant'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "44" %}
+                        'Plusieurs pannes sur l’assistant'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "51" %}
+                        'Panne sur la sonde en sortie des résistances'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "52" %}
+                        'Panne sur la sonde en entrée de VMI®'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "53" %}
+                        'Panne sur la sonde en sortie de HydroR®'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "55" %}
+                        'Panne sur la sonde en sortie du Bypass'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "56" %}
+                        'Panne sur la sonde côté air extérieur du Bypass'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "57" %}
+                        'Panne sur la sonde côté comble du Bypass'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "5F" %}
+                        'Plusieurs pannes sondes'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "61" %}
+                        'Erreur sur le Bypass'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "65" %}
+                        'Erreur téléchargement logiciel'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "70" %}
+                        'Multiples erreurs'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "81" %}
+                        'Problème de communication ByPass'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "82" %}
+                        'Problème de communication ByPass'
+                      {% elif value_json.CERR1 ~ value_json.CERR2 == "83" %}
+                        'Volet du ByPass ILE'
+                      {% else %}
+                        0
+                      {% endif %}
                     icon: "mdi:download"
                     class: "error"
                 - component: "sensor"
@@ -4720,7 +4728,7 @@
                   name: "Ouverture_vanne_HydroR"
                   config:
                     state_topic: ""
-                    value_template: "{{ value_json.OVHYDR }}"
+                    value_template: "{{ value_json.OUVHYDR }}"
                     unit_of_measurement: "%"
                     icon: "mdi:download"
                 - component: "sensor"
@@ -4733,7 +4741,11 @@
                   name: "Type_caisson"
                   config:
                     state_topic: ""
-                    value_template: "{{ value_json.TYPCAI }}"
+                    value_template: >-
+                      {% if value_json.TYCAIS == 1 %}Purevent
+                      {% elif value_json.TYCAIS == 2 %}Urban
+                      {% elif value_json.TYCAIS == 3 %}ERP
+                      {% endif %}
                     icon: "mdi:download"
                 - component: "binary_sensor"
                   name: "Bypass_amont"
@@ -4771,10 +4783,17 @@
                     unit_of_measurement: "%"
                     icon: "mdi:download"
                 - component: "sensor"
-                  name: "Type_bypass_1"
+                  name: "Position_bypass_1"
                   config:
                     state_topic: ""
-                    value_template: "{{ value_json.TYBY1 }}"
+                    value_template: >-
+                      {% if value_json.POSBY1 == 0 %}Inactif
+                      {% elif value_json.POSBY1 == 1 %}Source Chaude Autre
+                      {% elif value_json.POSBY1 == 2 %}Source Chaude Solaire
+                      {% elif value_json.POSBY1 == 3 %}Puit Climatique
+                      {% elif value_json.POSBY1 == 4 %}Manuel
+                      {% elif value_json.POSBY1 == 255 %}Unknown
+                      {% endif %}
                     icon: "mdi:download"
                 - component: "sensor"
                   name: "Ouverture_bypass_2"
@@ -4784,10 +4803,17 @@
                     unit_of_measurement: "%"
                     icon: "mdi:download"
                 - component: "sensor"
-                  name: "Type_bypass_2"
+                  name: "Position_bypass_2"
                   config:
                     state_topic: ""
-                    value_template: "{{ value_json.TYBY2 }}"
+                    value_template: >-
+                      {% if value_json.POSBY2 == 0 %}Inactif
+                      {% elif value_json.POSBY2 == 1 %}Source Chaude Autre
+                      {% elif value_json.POSBY2 == 2 %}Source Chaude Solaire
+                      {% elif value_json.POSBY2 == 3 %}Puit Climatique
+                      {% elif value_json.POSBY2 == 4 %}Manuel
+                      {% elif value_json.POSBY2 == 255 %}Unknown
+                      {% endif %}
                     icon: "mdi:download"                
                 - component: "sensor"
                   name: "Ouverture_bypass_3"
@@ -4797,16 +4823,30 @@
                     unit_of_measurement: "%"
                     icon: "mdi:download"
                 - component: "sensor"
-                  name: "Type_bypass_3"
+                  name: "Position_bypass_3"
                   config:
                     state_topic: ""
-                    value_template: "{{ value_json.TYBY3 }}"
+                    value_template: >-
+                      {% if value_json.POSBY3 == 0 %}Inactif
+                      {% elif value_json.POSBY3 == 1 %}Source Chaude Autre
+                      {% elif value_json.POSBY3 == 2 %}Source Chaude Solaire
+                      {% elif value_json.POSBY3 == 3 %}Puit Climatique
+                      {% elif value_json.POSBY3 == 4 %}Manuel
+                      {% elif value_json.POSBY3 == 255 %}Unknown
+                      {% endif %}
                     icon: "mdi:download"
                 - component: "sensor"
                   name: "Position_0"
                   config:
                     state_topic: ""
-                    value_template: "{{ value_json.POS0 }}"
+                    value_template: >-
+                      {% if value_json.POS0 == 0 %}Sortie des resistances
+                      {% elif value_json.POS0 == 1 %}Au niveau de l'entree d'air
+                      {% elif value_json.POS0 == 2 %}En sortie de la boucle d'eau
+                      {% elif value_json.POS0 == 3 %}Au niveau de l'entree d'air
+                      {% elif value_json.POS0 == 4 %}Sur le bypass
+                      {% elif value_json.POS0 == 255 %}Sonde absente
+                      {% endif %}
                     icon: "mdi:download"
                 - component: "sensor"
                   name: "Temperature_0"
@@ -4830,7 +4870,14 @@
                   name: "Position_1"
                   config:
                     state_topic: ""
-                    value_template: "{{ value_json.POS1 }}"
+                    value_template: >-
+                      {% if value_json.POS1 == 0 %}Sortie des resistances
+                      {% elif value_json.POS1 == 1 %}Au niveau de l'entree d'air
+                      {% elif value_json.POS1 == 2 %}En sortie de la boucle d'eau
+                      {% elif value_json.POS1 == 3 %}Au niveau de l'entree d'air
+                      {% elif value_json.POS1 == 4 %}Sur le bypass
+                      {% elif value_json.POS1 == 255 %}Sonde absente
+                      {% endif %}
                     icon: "mdi:download"
                 - component: "sensor"
                   name: "Temperature_1"
@@ -4854,7 +4901,14 @@
                   name: "Position_2"
                   config:
                     state_topic: ""
-                    value_template: "{{ value_json.POS2 }}"
+                    value_template: >-
+                      {% if value_json.POS2 == 0 %}Sortie des resistances
+                      {% elif value_json.POS2 == 1 %}Au niveau de l'entree d'air
+                      {% elif value_json.POS2 == 2 %}En sortie de la boucle d'eau
+                      {% elif value_json.POS2 == 3 %}Au niveau de l'entree d'air
+                      {% elif value_json.POS2 == 4 %}Sur le bypass
+                      {% elif value_json.POS2 == 255 %}Sonde absente
+                      {% endif %}
                     icon: "mdi:download"
                 - component: "sensor"
                   name: "Temperature_2"
@@ -4878,7 +4932,14 @@
                   name: "Position_3"
                   config:
                     state_topic: ""
-                    value_template: "{{ value_json.POS3 }}"
+                    value_template: >-
+                      {% if value_json.POS3 == 0 %}Sortie des resistances
+                      {% elif value_json.POS3 == 1 %}Au niveau de l'entree d'air
+                      {% elif value_json.POS3 == 2 %}En sortie de la boucle d'eau
+                      {% elif value_json.POS3 == 3 %}Au niveau de l'entree d'air
+                      {% elif value_json.POS3 == 4 %}Sur le bypass
+                      {% elif value_json.POS3 == 255 %}Sonde absente
+                      {% endif %}
                     icon: "mdi:download"
                 - component: "sensor"
                   name: "Temperature_3"
@@ -4902,7 +4963,14 @@
                   name: "Position_4"
                   config:
                     state_topic: ""
-                    value_template: "{{ value_json.POS4 }}"
+                    value_template: >-
+                      {% if value_json.POS4 == 0 %}Sortie des resistances
+                      {% elif value_json.POS4 == 1 %}Au niveau de l'entree d'air
+                      {% elif value_json.POS4 == 2 %}En sortie de la boucle d'eau
+                      {% elif value_json.POS4 == 3 %}Au niveau de l'entree d'air
+                      {% elif value_json.POS4 == 4 %}Sur le bypass
+                      {% elif value_json.POS4 == 255 %}Sonde absente
+                      {% endif %}
                     icon: "mdi:download"
                 - component: "sensor"
                   name: "Temperature_4"
@@ -4943,7 +5011,7 @@
                       {% elif value_json.MF == 3 %}Confort
                       {% endif %}
                 - component: "number"
-                  name: "Nombre_de_jours_Vacances"
+                  name: "Vacances"
                   config:
                     command_topic: "req"
                     command_template: >-
@@ -4952,7 +5020,7 @@
                     max: "200"
                     step: "1"
                     mode: "box"
-                    unit_of_measurement: ""
+                    unit_of_measurement: "jours"
                     icon: "mdi:calendar-star"
                     state_topic: ""
                     value_template: "{{ value_json.VAC }}"
