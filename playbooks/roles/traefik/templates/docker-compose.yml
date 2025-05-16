@@ -6,7 +6,7 @@ services:
     volumes:
       - /etc/watchtower/config/:/config/
       - /var/run/docker.sock:/var/run/docker.sock
-    command: --schedule "15 2 * * * *"
+    command: --schedule "15 2 * * 6 *"
 
   autoheal: # restart container when healthcheck is ko
     image: willfarrell/autoheal
@@ -71,7 +71,8 @@ services:
       host.docker.internal: host-gateway
 
     ports:
-      - 0.0.0.0:443:443/tcp
+      - "443:443/tcp"
+
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:rw
       - traefik-public-certificates:/certificates
@@ -91,13 +92,17 @@ services:
     restart: unless-stopped
 {% endif %}
 
-{% if duckdns_nonstatic %}
   updateDuckDNSIP:
-    # used to update duckdns
-    # if you have a static IP, you can comment this out
+    # used to update DuckDNS
+{% if duckdns_nonstatic %}
     command: /bin/sh -c "while true; do wget -O - 'https://www.duckdns.org/update?domains={{ duckdns_subdomain }}&token={{ traefik_duckdns_token }}&ip='; sleep 1200; done"
+{% else %}
+{% set ipv6_prefix = my_ipv6_network.split('::')[0] %}
+    command: /bin/sh -c "wget -O - 'https://www.duckdns.org/update?domains={{ duckdns_subdomain }}&token={{ traefik_duckdns_token }}&ip=&ipv6={{ ansible_all_ipv6_addresses | select('match', '^' ~ ipv6_prefix) | list | first }}'"
+{% endif %}
     image: alpine:latest
     network_mode: bridge
+{% if duckdns_nonstatic %}
     restart: unless-stopped
 {% endif %}
 

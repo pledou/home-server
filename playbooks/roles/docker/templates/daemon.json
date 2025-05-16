@@ -1,5 +1,7 @@
 {
   "metrics-addr": "0.0.0.0:9323",
   "log-driver": "json-file",
-  "log-opts": {"max-size": "10m", "max-file": "3"}
+  "log-opts": {"max-size": "10m", "max-file": "3"},
+  "ipv6": true,
+  "fixed-cidr-v6": "{{ my_ipv6_network.split('::')[0] }}:{{''.join(ansible_default_ipv6['macaddress'].split(':')[-2:])}}::/80"
 }

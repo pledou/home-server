@@ -72,6 +72,30 @@
   ansible.builtin.meta: flush_handlers
   when: unbound is defined and unbound
 
+# - name: Get IPv6 gateway
+#   ansible.builtin.shell: |
+#     set -o pipefail
+#     ip -6 route | grep default
+#   register: ipv6_gateway_output
+#   changed_when: false
+
+# - name: Extract IPv6 gateway
+#   ansible.builtin.set_fact:
+#     ipv6_gateway: "{{ ipv6_gateway_output.stdout.split(' ')[2] }}"
+
+# - name: Configure static IPv6 address
+#   become: true
+#   community.general.nmcli:
+#     conn_name: "{{ ansible_default_ipv4.alias }}"
+#     state: present
+#     type: ethernet
+#     ip6:
+#       - "{{ public_ipv6_address }}/64"
+#     gw6: "{{ ipv6_gateway }}"
+#     dns6:
+#       - "{% if unbound is defined and unbound %}::1{% else %}{{ ipv6_gateway }}{% endif %}"
+#       - "{{ ipv6_gateway }}"
+
 - name: Deploy stack from a compose file
   community.docker.docker_compose_v2:
     pull: "always"

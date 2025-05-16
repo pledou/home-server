@@ -9,12 +9,12 @@
 - name: Install apps & backup
   hosts: docker_server
   roles:
+    - gitlab
     - monitoring
     - authentik
     - ia
     - nextcloud
     - kresus
-    - gitlab
     - hassio
   post_tasks:
     - name: Docker prune

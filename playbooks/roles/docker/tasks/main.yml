@@ -58,6 +58,52 @@
     reboot_timeout: 60
   when: reboot_request.stat.exists
 
+- name: Ndppd_install
+  become: true
+  ansible.builtin.package:
+    name: ndppd
+    state: present
+
+- name: Configure Ndppd
+  become: true
+  ansible.builtin.template:
+    src: ndppd.conf
+    dest: /etc/ndppd.conf
+    mode: '0644'
+  register: ndppd_conf
+
+- name: Ndppd_restart
+  become: true
+  ansible.builtin.service:
+    name: ndppd
+    state: restarted
+    enabled: true
+  when: (ndppd_conf is defined) and (ndppd_conf.changed)
+
+- name: Ndppd_started
+  become: true
+  ansible.builtin.service:
+    name: ndppd
+    state: started
+    enabled: true
+  when: (ndppd_conf is not defined)
+
+- name: Docker_sysctl_fix_proxy
+  become: true
+  ansible.posix.sysctl:
+    sysctl_file: /etc/sysctl.d/99-docker-router.conf
+    name: net.ipv6.conf.eth0.proxy_ndp
+    value: "1"
+    sysctl_set: true
+
+- name: Docker_sysctl_fix_ra
+  become: true
+  ansible.posix.sysctl:
+    sysctl_file: /etc/sysctl.d/99-docker-router.conf
+    name: net.ipv6.conf.eth0.accept_ra
+    value: "2"
+    sysctl_set: true
+
 - name: Configure Docker daemon
   become: true
   ansible.builtin.template:
