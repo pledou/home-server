@@ -92,7 +92,7 @@
   become: true
   ansible.posix.sysctl:
     sysctl_file: /etc/sysctl.d/99-docker-router.conf
-    name: net.ipv6.conf.eth0.proxy_ndp
+    name: net.ipv6.conf.{{ ansible_default_ipv6.interface }}.proxy_ndp
     value: "1"
     sysctl_set: true
 
@@ -100,7 +100,7 @@
   become: true
   ansible.posix.sysctl:
     sysctl_file: /etc/sysctl.d/99-docker-router.conf
-    name: net.ipv6.conf.eth0.accept_ra
+    name: net.ipv6.conf.{{ ansible_default_ipv6.interface }}.accept_ra
     value: "2"
     sysctl_set: true
 
