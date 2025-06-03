@@ -20,7 +20,12 @@ services:
       OAUTH_CLIENT_SECRET: "{{ webui_oauth_client_secret }}"
       OAUTH_SCOPES: "openid profile email"
       OPENID_PROVIDER_URL: "https://auth.{{ app_domain_name }}/application/o/{{ webui_oauth_slug_name }}/.well-known/openid-configuration"
+      WEBUI_URL: "https://ia.{{ app_domain_name }}"
       ENABLE_OAUTH_SIGNUP: True
+      ENABLE_LOGIN_FORM: False
+      DEFAULT_LOCALE: "fr"
+      DEFAULT_MODELS: "mixtral-8x7b"
+      DEFAULT_USER_ROLE: "user"
       OAUTH_MERGE_ACCOUNTS_BY_EMAIL: True
 
       OPENAI_API_BASE_URL: "http://pipelines:9099/v1"
