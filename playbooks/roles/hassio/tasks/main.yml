@@ -41,11 +41,12 @@
     dest: "{{ docker_volumes_path }}/mosquitto/mosquitto.conf"
     mode: u=g=rwx,o=rx
     force: true
-- name: Passlib pip package install
+- name: Install passlib system package
   become: true
-  ansible.builtin.pip:
-    name: passlib
+  ansible.builtin.apt:
+    name: python3-passlib
     state: present
+    update_cache: true
 - name: Create mosquitto password file without mosquitto_passwd
   become: true
   ansible.builtin.copy:
@@ -99,6 +100,54 @@
         trusted_proxies:
           - 127.0.0.1
           - 172.0.0.0/8
+- name: Ufw_allow_HA on local network and traefik backend
+  become: true
+  community.general.ufw:
+    rule: allow
+    port: "8123"
+    proto: tcp
+    from_ip: "172.0.0.0/8"
+
+- name: Ufw_allow_mosquitto on local network
+  become: true
+  community.general.ufw:
+    rule: allow
+    port: "1883"
+    proto: tcp
+    from_ip: "{{ ansible_default_ipv4.network }}/24"
+
+- name: Ufw_allow_mosquitto on local network for websockets
+  become: true
+  community.general.ufw:
+    rule: allow
+    port: "8883"
+    proto: tcp
+    from_ip: "{{ ansible_default_ipv4.network }}/24"
+
+- name: Ufw_allow_esphome on local network
+  become: true
+  community.general.ufw:
+    rule: allow
+    port: "6052"
+    proto: tcp
+    from_ip: "172.0.0.0/8"
+
+- name: Ufw_allow_esphome_api on local network
+  become: true
+  community.general.ufw:
+    rule: allow
+    port: "6053"
+    proto: tcp
+    from_ip: "{{ ansible_default_ipv4.network }}/24"
+
+- name: Ufw_allow_CoIoT on local network
+  become: true
+  community.general.ufw:
+    rule: allow
+    port: "5683"
+    proto: udp
+    from_ip: "{{ ansible_default_ipv4.network }}/24"
+
 - name: Restore ha_enonceanmqtt git repo
   become: true
   ansible.builtin.git:

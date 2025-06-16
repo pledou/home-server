@@ -67,6 +67,7 @@
     state: stopped
     enabled: false
   when: unbound is defined and unbound
+  ignore_errors: true
 
 - name: Flush handlers
   ansible.builtin.meta: flush_handlers
@@ -95,6 +96,72 @@
 #     dns6:
 #       - "{% if unbound is defined and unbound %}::1{% else %}{{ ipv6_gateway }}{% endif %}"
 #       - "{{ ipv6_gateway }}"
+
+- name: Restore doh git repo
+  become: true
+  ansible.builtin.git:
+    repo: 'https://github.com/m13253/dns-over-https.git'
+    dest: "/home/{{ ansible_user }}/home-server/stacks/traefik/doh"
+    version: 'master'
+    single_branch: true
+  environment:
+    GIT_TERMINAL_PROMPT: 0 # reports "terminal prompts disabled" on missing password
+  when: unbound is defined and unbound
+
+- name: Docker_sysctl_fix_proxy
+  become: true
+  ansible.posix.sysctl:
+    sysctl_file: /etc/sysctl.d/99-docker-router.conf
+    name: net.ipv6.conf.{{ ansible_default_ipv4.alias }}.proxy_ndp
+    value: "1"
+    sysctl_set: true
+
+- name: Docker_sysctl_fix_ra
+  become: true
+  ansible.posix.sysctl:
+    sysctl_file: /etc/sysctl.d/99-docker-router.conf
+    name: net.ipv6.conf.{{ ansible_default_ipv4.alias }}.accept_ra
+    value: "2"
+    sysctl_set: true
+
+- name: Ufw_allow_ssh local subnet # ensure SSH is allowed before enabling UFW
+  become: true
+  community.general.ufw:
+    rule: allow
+    name: "OpenSSH"
+    port: "22"
+    from_ip: "{{ ansible_default_ipv4.network }}/24"
+    state: enabled
+
+- name: Ufw_allow_rdp local subnet
+  become: true
+  community.general.ufw:
+    rule: allow
+    port: "3389"
+    from_ip: "{{ ansible_default_ipv4.network }}/24"
+    state: enabled
+
+- name: Ufw_routing
+  become: true
+  community.general.ufw:
+    direction: routed
+    policy: allow
+    state: enabled
+
+- name: Ufw_allow_dns
+  become: true
+  community.general.ufw:
+    rule: allow
+    port: "53"
+    state: enabled
+  when: unbound is defined and unbound
+
+- name: Ufw_allow_https
+  become: true
+  community.general.ufw:
+    rule: allow
+    port: "443"
+    state: enabled
 
 - name: Deploy stack from a compose file
   community.docker.docker_compose_v2:

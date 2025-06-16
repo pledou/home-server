@@ -1,16 +1,17 @@
 # code: language=ansible
 ---
-- name: Install Docker Python library
+
+- name: Install python3 dependencies
   become: true
-  ansible.builtin.pip:
+  ansible.builtin.apt:
     name: "{{ item }}"
+    state: present
   loop:
-    - docker
-    - jsondiff
-    - pyyaml
-    - docker-compose
-    - jmespath
-    - passlib
+    - python3-docker
+    - python3-yaml
+    - python3-jsondiff
+    - python3-jmespath
+    - python3-passlib
 
 - name: Install Docker GPG key
   become: true
