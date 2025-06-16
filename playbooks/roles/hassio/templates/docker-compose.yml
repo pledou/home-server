@@ -146,7 +146,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
   
-  wyoming-piper:
+  wyoming-piper: # Text-to-Speech service at port 10200
     image: rhasspy/wyoming-piper
     restart: always
     ports:
@@ -155,7 +155,8 @@ services:
       - piper-data:/data
     command: [ "--voice", "fr_FR-upmc-medium" ]
 
-  faster-whisper:
+
+  faster-whisper: # Speech-to-Text service at port 10300
     image: lscr.io/linuxserver/faster-whisper:latest
     container_name: faster-whisper
     environment:
