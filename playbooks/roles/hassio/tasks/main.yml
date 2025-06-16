@@ -148,6 +148,17 @@
     proto: udp
     from_ip: "{{ ansible_default_ipv4.network }}/24"
 
+- name: Ufw_allow_wyoming on local network
+  become: true
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+    from_ip: "127.0.0.1/32"
+  loop:
+    - 10200
+    - 10300
+
 - name: Restore ha_enonceanmqtt git repo
   become: true
   ansible.builtin.git:

@@ -7,6 +7,8 @@ services:
       - /etc/watchtower/config/:/config/
       - /var/run/docker.sock:/var/run/docker.sock
     command: --schedule "15 2 * * 6 *"
+    networks:
+      backend:
 
   autoheal: # restart container when healthcheck is ko
     image: willfarrell/autoheal
@@ -16,7 +18,8 @@ services:
       AUTOHEAL_INTERVAL: 30   # check every 5 seconds
       AUTOHEAL_START_PERIOD: 120   # wait 0 seconds before first health check
       AUTOHEAL_DEFAULT_STOP_TIMEOUT: 60   # Docker waits max 10 seconds (the Docker default) for a container to stop before killing during restarts (container overridable via label, see below)
-
+    networks:
+      backend:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     
@@ -51,6 +54,7 @@ services:
       - --providers.docker.exposedByDefault=false
       - --entrypoints.https.address=:443
       - --entrypoints.https.http3
+      - --entrypoints.dot.address=:853
       - --certificatesresolvers.le.acme.email={{ traefik_email }}
       - --certificatesresolvers.le.acme.storage=/certificates/acme.json
       - --certificatesresolvers.le.acme.dnschallenge=true
@@ -72,6 +76,7 @@ services:
 
     ports:
       - "443:443/tcp"
+      - "853:853/tcp"
 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:rw
@@ -80,8 +85,16 @@ services:
   
 {% if unbound %}
   unbound:
-    # unbound DNS server
+    labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.dot.rule=HostSNI(`dns.{{ app_domain_name }}`)
+      - traefik.tcp.routers.dot.entrypoints=dot
+      - traefik.tcp.routers.dot.tls=true
+      - traefik.tcp.routers.dot.service=unbound-dot
+      - traefik.tcp.services.unbound-dot.loadbalancer.server.port=53
     image: mvance/unbound:latest
+    networks:
+      backend:
     expose:
       - 53
     ports:
@@ -89,6 +102,40 @@ services:
       - "53:53/udp"
     volumes:
       - unbound:/opt/unbound/etc/unbound
+    restart: unless-stopped
+  
+  doh-proxy:
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.doh.rule=Host(`dns.{{ app_domain_name }}`) && Path(`/dns-query`)
+      - traefik.http.routers.doh.entrypoints=https
+      - traefik.http.routers.doh.tls=true
+      - "traefik.http.middlewares.mw-doh-compression.compress=true"
+      - "traefik.http.routers.doh-server.tls=true"
+      - "traefik.http.middlewares.mw-doh-tls.headers.sslredirect=true"
+      - "traefik.http.middlewares.mw-doh-tls.headers.sslforcehost=true"
+      - "traefik.http.routers.doh-server.tls.certresolver=le"
+      # Protection from requests flood
+      - "traefik.http.middlewares.mw-doh-ratelimit.ratelimit.average=100"
+      - "traefik.http.middlewares.mw-doh-ratelimit.ratelimit.burst=50"
+      - "traefik.http.middlewares.mw-doh-ratelimit.ratelimit.period=10s"
+      - traefik.http.routers.doh.service=doh-svc
+      - traefik.http.services.doh-svc.loadbalancer.server.port=8053
+    build:
+      context: ./doh/
+      dockerfile: Dockerfile.server
+    environment:
+      - DEBUG="0"
+      - UPSTREAM_DNS_SERVER="udp:unbound:53"
+      - DOH_HTTP_PREFIX="/dns-query"
+      - DOH_SERVER_LISTEN=:8053
+      - DOH_SERVER_TIMEOUT=10
+      - DOH_SERVER_TRIES=3
+      - DOH_SERVER_VERBOSE=true
+    depends_on:
+      - unbound
+    networks:
+      - backend
     restart: unless-stopped
 {% endif %}
 
@@ -101,13 +148,15 @@ services:
     command: /bin/sh -c "wget -O - 'https://www.duckdns.org/update?domains={{ duckdns_subdomain }}&token={{ traefik_duckdns_token }}&ip=&ipv6={{ ansible_all_ipv6_addresses | select('match', '^' ~ ipv6_prefix) | list | first }}'"
 {% endif %}
     image: alpine:latest
-    network_mode: bridge
+    networks:
+      backend:
 {% if duckdns_nonstatic %}
     restart: unless-stopped
 {% endif %}
 
 networks:
   backend:
+    enable_ipv6: true
     attachable: true
 
 volumes:
