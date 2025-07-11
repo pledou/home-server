@@ -37,6 +37,10 @@
   when: unbound is defined and unbound
 
 - name: Create docker-compose stack file
+  vars:
+    mac: "{{ ansible_default_ipv6.macaddress.split(':') }}"
+    first_byte: "{{ '%02x' % ((mac[0]|int(base=16)) + 2 if (mac[0]|int(base=16)) < 0x80 else (mac[0]|int(base=16)) - 2) }}"
+    eui64: "{{ first_byte + mac[1] + ':' + mac[2] + 'ff:fe' + mac[3] + ':' + mac[4] + mac[5] }}"
   ansible.builtin.template:
     src: docker-compose.yml
     dest: /home/{{ ansible_user }}/home-server/stacks/traefik/docker-compose.yml
@@ -59,15 +63,6 @@
     replace: 'DNSStubListener=no'
   notify: Restart systemd-resolved
   when: unbound is defined and unbound
-
-- name: Disable named service
-  become: true
-  ansible.builtin.systemd:
-    name: named
-    state: stopped
-    enabled: false
-  when: unbound is defined and unbound
-  ignore_errors: true
 
 - name: Flush handlers
   ansible.builtin.meta: flush_handlers
@@ -105,7 +100,7 @@
     version: 'master'
     single_branch: true
   environment:
-    GIT_TERMINAL_PROMPT: 0 # reports "terminal prompts disabled" on missing password
+    GIT_TERMINAL_PROMPT: "0" # reports "terminal prompts disabled" on missing password
   when: unbound is defined and unbound
 
 - name: Docker_sysctl_fix_proxy

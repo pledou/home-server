@@ -144,15 +144,14 @@ services:
 {% if duckdns_nonstatic %}
     command: /bin/sh -c "while true; do wget -O - 'https://www.duckdns.org/update?domains={{ duckdns_subdomain }}&token={{ traefik_duckdns_token }}&ip='; sleep 1200; done"
 {% else %}
-{% set ipv6_prefix = my_ipv6_network.split('::')[0] %}
-    command: /bin/sh -c "wget -O - 'https://www.duckdns.org/update?domains={{ duckdns_subdomain }}&token={{ traefik_duckdns_token }}&ip=&ipv6={{ ansible_all_ipv6_addresses | select('match', '^' ~ ipv6_prefix) | list | first }}'"
+    command: /bin/sh -c "wget -O - 'https://www.duckdns.org/update?domains={{ duckdns_subdomain }}&token={{ traefik_duckdns_token }}&ip=&ipv6={{ my_ipv6_network.split('::')[0] }}:{{ eui64 }}'"
 {% endif %}
     image: alpine:latest
     networks:
       backend:
-{% if duckdns_nonstatic %}
+    {% if duckdns_nonstatic %}
     restart: unless-stopped
-{% endif %}
+    {% endif %}
 
 networks:
   backend:
