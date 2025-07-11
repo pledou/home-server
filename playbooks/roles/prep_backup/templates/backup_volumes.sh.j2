@@ -11,9 +11,9 @@ export AWS_SECRET_ACCESS_KEY="{{ aws_secret_access_key }}"
 set -e
 
 # unlock restic to keep automatic backups going
-restic unlock --cleanup-cache
+/usr/local/bin/restic unlock --cleanup-cache
 {% if aws_access_key_id and aws_secret_access_key %}
-restic unlock -r s3:{{ aws_bucket }} --cleanup-cache
+/usr/local/bin/restic unlock -r s3:{{ aws_bucket }} --cleanup-cache
 {% endif %}
 
 # TODO use dictionary of pg_dump to backup
@@ -28,13 +28,13 @@ trap "docker exec -u www-data nc-nextcloud-1 php occ maintenance:mode --off" EXI
 docker exec -u www-data nc-nextcloud-1 php occ maintenance:mode --on
 
 sudo docker exec nc-ncdb-1 pg_dumpall -c -U nextcloud -w > {{ docker_volumes_path }}/databases/db_dump_pgsql_nextcloud.sql
-restic backup --tag min --verbose {{ docker_volumes_path }}/nextcloud-turnserver-data
-restic backup --tag min --verbose {{ docker_volumes_path }}/nextcloud-www
-restic backup --tag min --verbose {{ docker_volumes_path }}/nextcloud-config
-restic backup --tag max --verbose {{ docker_volumes_path }}/nextcloud-data
+/usr/local/bin/restic backup --tag min --verbose {{ docker_volumes_path }}/nextcloud-turnserver-data
+/usr/local/bin/restic backup --tag min --verbose {{ docker_volumes_path }}/nextcloud-www
+/usr/local/bin/restic backup --tag min --verbose {{ docker_volumes_path }}/nextcloud-config
+/usr/local/bin/restic backup --tag max --verbose {{ docker_volumes_path }}/nextcloud-data
 {% if aws_access_key_id and aws_secret_access_key %}
-restic backup -r s3:{{ aws_bucket }} --verbose {{ docker_volumes_path }}/nextcloud-config
-restic backup -r s3:{{ aws_bucket }} --verbose {{ docker_volumes_path }}/nextcloud-data
+/usr/local/bin/restic backup -r s3:{{ aws_bucket }} --verbose {{ docker_volumes_path }}/nextcloud-config
+/usr/local/bin/restic backup -r s3:{{ aws_bucket }} --verbose {{ docker_volumes_path }}/nextcloud-data
 {% endif %}
 
 # end maintenance mode
@@ -45,23 +45,23 @@ trap "" EXIT
 
 # backup the data dir
 # TODO use dictionary of dirs to backup
-restic backup --tag min --verbose {{ docker_volumes_path }}/secrets
+/usr/local/bin/restic backup --tag min --verbose {{ docker_volumes_path }}/secrets
 
-restic backup --tag min --verbose {{ docker_volumes_path }}/homeassistant
+/usr/local/bin/restic backup --tag min --verbose {{ docker_volumes_path }}/homeassistant
 
-restic backup --tag min --verbose {{ docker_volumes_path }}/traefik-public-certificates
+/usr/local/bin/restic backup --tag min --verbose {{ docker_volumes_path }}/traefik-public-certificates
 
-restic backup --tag min --verbose {{ docker_volumes_path }}/databases
+/usr/local/bin/restic backup --tag min --verbose {{ docker_volumes_path }}/databases
 {% if aws_access_key_id and aws_secret_access_key %}
-restic backup -r s3:{{ aws_bucket }} --verbose {{ docker_volumes_path }}/databases
+ /usr/local/bin/restic backup -r s3:{{ aws_bucket }} --verbose {{ docker_volumes_path }}/databases
 {% endif %}
 
 # clean up backup dir
-restic forget --tag max --keep-daily 7 --keep-weekly 5 --keep-monthly 12 --keep-yearly 75
-restic forget --tag min --keep-daily 7 --keep-weekly 5
-restic prune
+/usr/local/bin/restic forget --tag max --keep-daily 7 --keep-weekly 5 --keep-monthly 12 --keep-yearly 75
+/usr/local/bin/restic forget --tag min --keep-daily 7 --keep-weekly 5
+/usr/local/bin/restic prune
 
 {% if aws_access_key_id and aws_secret_access_key %}
-restic forget -r s3:{{ aws_bucket }} --keep-daily 7 --keep-weekly 5
-restic prune -r s3:{{ aws_bucket }}
+ /usr/local/bin/restic forget -r s3:{{ aws_bucket }} --keep-daily 7 --keep-weekly 5
+ /usr/local/bin/restic prune -r s3:{{ aws_bucket }}
 {% endif %}

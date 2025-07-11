@@ -10,7 +10,7 @@
           - restic_backup_secret
     - name: Read repository
       become: true
-      ansible.builtin.command: 'restic snapshots --group-by path'
+      ansible.builtin.command: '/usr/local/bin/restic snapshots --group-by path'
       environment:
         RESTIC_REPOSITORY: "{{ restic_repo }}"
         RESTIC_PASSWORD: "{{ restic_backup_secret }}"
@@ -20,7 +20,7 @@
       ansible.builtin.debug:
         var: restic_repos
     - name: Read AWS repository
-      ansible.builtin.command: 'restic snapshots --group-by path'
+      ansible.builtin.command: '/usr/local/bin/restic snapshots --group-by path'
       environment:
         AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
         AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"

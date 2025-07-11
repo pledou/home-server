@@ -6,11 +6,26 @@
     url: https://api.github.com/repos/restic/restic/tags
   register: restic_tags
 
+- name: Set restic latest version fact
+  set_fact:
+    restic_latest_version: "{{ restic_tags.json[0].name | regex_replace('^v', '') }}"
+
+- name: Download restic binary from GitHub
+  ansible.builtin.get_url:
+    url: "https://github.com/restic/restic/releases/download/v{{ restic_latest_version }}/restic_{{ restic_latest_version }}_linux_amd64.bz2"
+    dest: "/tmp/restic_{{ restic_latest_version }}_linux_amd64.bz2"
+    mode: '0644'
+
+- name: Decompress restic binary
+  ansible.builtin.command:
+    cmd: "bunzip2 -f /tmp/restic_{{ restic_latest_version }}_linux_amd64.bz2"
+  args:
+    creates: "/tmp/restic_{{ restic_latest_version }}_linux_amd64"
+
 - name: Install restic binary
   become: true
-  ansible.builtin.apt:
-    pkg:
-      - restic
-    state: latest # noqa package-latest
-    force_apt_get: true
-    update_cache: true
+  ansible.builtin.copy:
+    src: "/tmp/restic_{{ restic_latest_version }}_linux_amd64"
+    dest: /usr/local/bin/restic
+    mode: '0755'
+    remote_src: yes
