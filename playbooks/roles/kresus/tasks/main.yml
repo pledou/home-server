@@ -12,21 +12,6 @@
       - k_db_password
       - k_db1_password
 
-# - name: upgrade db
-#   include_tasks: tasks/upgrade_postgres.yml
-#   vars:
-#     postgres_data_dir: "{{ docker_volumes_path }}/{{ item.path }}"
-#     postgres_password: "{{ item.password }}"
-#     postgres_container_name: "{{ item.container }}"
-#     postgres_db: "kresus"
-#     postgres_user: "kresus"
-#   loop:
-#     - path: kresus-database
-#       password: k_db_password
-#       container: kresus_k-db_1
-#     - path: kresus-database1
-#       password: k_db1_password
-#       container: kresus_k-db1_1
 
 - name: Create kresus provisionning directories
   become: true
@@ -43,9 +28,7 @@
     - name: kresus-database1
       group: 999
       owner: 999
-    - name: kresus-woob
-      group: 1001
-      owner: 1000
+
 - name: Create docker-compose stack file
   ansible.builtin.template:
     src: docker-compose.yml

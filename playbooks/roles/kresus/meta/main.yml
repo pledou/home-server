@@ -3,4 +3,5 @@
 dependencies:
   - docker
   - traefik
+  - authentik
 ...

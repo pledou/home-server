@@ -15,15 +15,6 @@
       - redis_secret
       - nc_elastic_secret
 
-# - name: upgrade db
-#   include_tasks: tasks/upgrade_postgres.yml
-#   vars:
-#     postgres_data_dir: "{{ docker_volumes_path }}/nextcloud-db"
-#     db_container_name: nc_ncdb_1
-#     postgres_password: "{{ database_user_secret }}"
-#     postgres_db: "nextcloud"
-#     postgres_user: "nextcloud"
-
 - name: Create nextcloud provisionning directories
   become: true
   ansible.builtin.file:

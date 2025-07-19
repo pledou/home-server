@@ -1,0 +1,44 @@
+- name: Upgrade Postgres Db data directories
+  hosts: docker_server
+  tasks:
+    - name: Retrive secret
+      ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
+      vars:
+        secrets:
+          - authentik_db_password
+          - k_db_password
+          - k_db1_password
+          - database_user_secret
+    # - name: Upgrade Kresus db
+    #   ansible.builtin.include_tasks: tasks/upgrade_postgres.yml
+    #   vars:
+    #     postgres_data_dir: "{{ docker_volumes_path }}/{{ item.path }}"
+    #     postgres_password: "{{ item.password }}"
+    #     postgres_container_name: "{{ item.container }}"
+    #     postgres_db: "kresus"
+    #     postgres_user: "kresus"
+    #     postgres_old_version: "15"
+    #     postgres_new_version: "16"
+    #   loop:
+    #     - path: kresus-database
+    #       password: k_db_password
+    #     - path: kresus-database1
+    #       password: k_db1_password
+    # - name: Upgrade nextcloud db
+    #   include_tasks: tasks/upgrade_postgres.yml
+    #   vars:
+    #     postgres_data_dir: "{{ docker_volumes_path }}/nextcloud-db"
+    #     postgres_password: "{{ database_user_secret }}"
+    #     postgres_db: "nextcloud"
+    #     postgres_user: "nextcloud"
+    #     postgres_old_version: "16"
+    #     postgres_new_version: "17"
+    - name: Upgrade authentik db
+      ansible.builtin.include_tasks: tasks/upgrade_postgres.yml
+      vars:
+        postgres_data_dir: "{{ docker_volumes_path }}/authentik-db"
+        postgres_password: "{{ authentik_db_password }}"
+        postgres_db: "authentik"
+        postgres_user: "authentik"
+        postgres_old_version: "16"
+        postgres_new_version: "17"

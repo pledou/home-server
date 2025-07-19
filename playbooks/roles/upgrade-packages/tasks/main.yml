@@ -21,6 +21,6 @@
 
 - name: Restic self update
   become: true
-  ansible.builtin.command: restic self-update
+  ansible.builtin.command: /usr/local/bin/restic self-update
   changed_when: true
 ...
