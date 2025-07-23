@@ -1,3 +1,5 @@
+nextcloud_postgres_version: "15"
+
 nextcloud_defaultapp_list:
   - viewer
   - recognize

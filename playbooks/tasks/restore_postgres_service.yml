@@ -1,0 +1,80 @@
+# code: language=ansible
+---
+# Reusable PostgreSQL restore task
+# This task restores the database after PostgreSQL upgrade
+#
+# Required variables:
+# - service_name: Name of the service (e.g., "authentik", "kresus", "nextcloud")
+# - pg_container_name: Name of the PostgreSQL container
+# - pg_database_name: Name of the database
+# - pg_username: PostgreSQL username
+# - pg_password: PostgreSQL password
+# - project_src: Path to docker-compose project directory
+# - pg_upgrade_needed: Boolean flag indicating if upgrade was needed
+
+- name: Restore database after PostgreSQL upgrade for {{ service_name }}
+  when: pg_upgrade_needed | default(false)
+  block:
+    - name: Wait for PostgreSQL to be ready for {{ service_name }}
+      ansible.builtin.command: >
+        docker exec {{ pg_container_name }} pg_isready
+        -h localhost
+        -p 5432
+        -U {{ pg_username }}
+      register: pg_ready_result
+      until: pg_ready_result.rc == 0
+      retries: 30
+      delay: 2
+      changed_when: false
+
+    - name: Find latest database dump for {{ service_name }}
+      ansible.builtin.find:
+        paths: "{{ docker_volumes_path }}/{{ service_name }}-db-backup"
+        patterns: "{{ service_name }}_dump_*.sql"
+        age: "-1d"
+      register: dump_files
+
+    - name: Get latest dump file for {{ service_name }}
+      ansible.builtin.set_fact:
+        latest_dump: "{{ dump_files.files | sort(attribute='mtime') | last }}"
+      when: dump_files.files | length > 0
+
+    - name: Restore database from dump for {{ service_name }}
+      ansible.builtin.shell: |
+        set -o pipefail
+        cat {{ latest_dump.path }} | docker exec -i {{ pg_container_name }} psql -U {{ pg_username }} -d {{ pg_database_name }}
+      environment:
+        PGPASSWORD: "{{ pg_password }}"
+      when: latest_dump is defined
+      changed_when: true
+      args:
+        executable: /bin/bash
+
+    - name: Restart postgres services after database restore {{ service_name }}
+      community.docker.docker_compose_v2:
+        state: restarted
+        project_src: "{{ project_src }}"
+      when: latest_dump is defined
+
+    - name: Display upgrade completion message for {{ service_name }}
+      ansible.builtin.debug:
+        msg: |
+          PostgreSQL upgrade completed successfully for {{ service_name }}!
+          - Upgraded from version: {{ current_pg_version }}
+          - Upgraded to version: {{ pg_target_version }}
+          - Database backup: {{ latest_dump.path if latest_dump is defined else 'No backup found' }}
+      when: latest_dump is defined
+
+    - name: Clean up old database backups for {{ service_name }}
+      ansible.builtin.find:
+        paths: "{{ docker_volumes_path }}/{{ service_name }}-db-backup"
+        patterns: "{{ service_name }}_dump_*.sql"
+        age: "{{ pg_backup_retention_days | default(7) }}d"
+      register: old_backups
+
+    - name: Remove old backup files for {{ service_name }}
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_backups.files }}"
+      when: old_backups.files | length > 0

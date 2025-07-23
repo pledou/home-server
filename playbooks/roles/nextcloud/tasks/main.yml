@@ -72,6 +72,18 @@
       dest: supervisord.conf
     - src: nextcloud/fulltextsearch.sh
       dest: fulltextsearch.sh
+- name: PostgreSQL upgrade check and backup for Nextcloud
+  ansible.builtin.include_tasks: "tasks/upgrade_postgres_service.yml"
+  vars:
+    service_name: "nextcloud"
+    pg_container_name: "nc-ncdb-1"
+    pg_database_name: "nextcloud"
+    pg_username: "nextcloud"
+    pg_password: "{{ database_user_secret }}"
+    pg_target_version: "{{ nextcloud_postgres_version | default('15') }}"
+    pg_data_dir: "{{ docker_volumes_path }}/nextcloud-database"
+    project_src: "/home/{{ ansible_user }}/home-server/stacks/nc"
+
 - name: Create docker-compose stack file
   ansible.builtin.template:
     src: docker-compose.yml
@@ -83,6 +95,18 @@
     build: "always"
     state: "{{ 'restarted' if (nginx1 is changed or nginx2 is changed) else 'present' }}"
     project_src: /home/{{ ansible_user }}/home-server/stacks/nc
+
+- name: PostgreSQL restore after upgrade for Nextcloud
+  ansible.builtin.include_tasks: "tasks/restore_postgres_service.yml"
+  vars:
+    service_name: "nextcloud"
+    pg_container_name: "nc-ncdb-1"
+    pg_database_name: "nextcloud"
+    pg_username: "nextcloud"
+    pg_password: "{{ database_user_secret }}"
+    project_src: "/home/{{ ansible_user }}/home-server/stacks/nc"
+    pg_backup_retention_days: "{{ postgres_backup_retention_days | default(7) }}"
+
 - name: Wait for nextcloud container to come up
   become: true
   ansible.builtin.wait_for:

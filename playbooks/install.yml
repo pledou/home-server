@@ -3,19 +3,19 @@
 - name: Upgrade server
   hosts: docker_server
   roles:
-    - upgrade-packages
     - prep_backup
+    - upgrade-packages
 
 - name: Install apps & backup
   hosts: docker_server
   roles:
-    - gitlab
-    - monitoring
+    # - gitlab
+    # - monitoring
     - authentik
     - ia
     - nextcloud
     - kresus
-    - hassio
+    # - hassio
   post_tasks:
     - name: Docker prune
       community.docker.docker_prune:

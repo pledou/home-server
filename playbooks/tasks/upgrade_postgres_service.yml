@@ -1,0 +1,118 @@
+# code: language=ansible
+---
+# Reusable PostgreSQL upgrade task
+# This task can be included by any role that needs PostgreSQL version management
+#
+# Required variables:
+# - service_name: Name of the service (e.g., "authentik", "kresus", "nextcloud")
+# - pg_container_name: Name of the PostgreSQL container
+# - pg_database_name: Name of the database
+# - pg_username: PostgreSQL username
+# - pg_password: PostgreSQL password
+# - pg_target_version: Target PostgreSQL version
+# - pg_data_dir: Path to the PostgreSQL data directory
+# - project_src: Path to docker-compose project directory
+
+- name: Check if PostgreSQL container exists
+  ansible.builtin.command: docker ps -a --filter "name={{ pg_container_name }}" --format "{{ '{{' }}.Names{{ '}}' }}"
+  register: existing_pg_container
+  changed_when: false
+  failed_when: false
+
+- name: Get current PostgreSQL version if container exists
+  ansible.builtin.command: docker inspect {{ pg_container_name }} --format "{{ '{{' }}index .Config.Image{{ '}}' }}"
+  register: current_pg_image
+  changed_when: false
+  failed_when: false
+  when: existing_pg_container.stdout != ""
+
+- name: Extract current PostgreSQL version
+  ansible.builtin.set_fact:
+    current_pg_version: "{{ current_pg_image.stdout.split(':')[1] if current_pg_image.stdout is defined else '' }}"
+  when: existing_pg_container.stdout != ""
+
+- name: Check if PostgreSQL version upgrade is needed
+  ansible.builtin.set_fact:
+    pg_upgrade_needed: "{{ existing_pg_container.stdout != '' and current_pg_version != pg_target_version }}"
+
+- name: Display upgrade status
+  ansible.builtin.debug:
+    msg: |
+      PostgreSQL upgrade check for {{ service_name }}:
+      - Container exists: {{ existing_pg_container.stdout != '' }}
+      - Current version: {{ current_pg_version | default('N/A') }}
+      - Target version: {{ pg_target_version }}
+      - Upgrade needed: {{ pg_upgrade_needed | default(false) }}
+
+- name: PostgreSQL upgrade process for {{ service_name }}
+  when: pg_upgrade_needed | default(false)
+  block:
+    - name: Create backup directory for {{ service_name }}
+      become: true
+      ansible.builtin.file:
+        path: "{{ docker_volumes_path }}/{{ service_name }}-db-backup"
+        state: directory
+        owner: 999
+        group: 999
+        mode: 'u=rwx,g=o='
+
+    - name: Dump existing PostgreSQL database for {{ service_name }}
+      ansible.builtin.command: >
+        docker exec {{ pg_container_name }} pg_dump
+        -U {{ pg_username }}
+        -d {{ pg_database_name }}
+        --no-password
+        --clean
+        --if-exists
+      environment:
+        PGPASSWORD: "{{ pg_password }}"
+      register: pg_dump_result
+      changed_when: true
+
+    - name: Save database dump to file
+      become: true
+      ansible.builtin.copy:
+        content: "{{ pg_dump_result.stdout }}"
+        dest: "{{ docker_volumes_path }}/{{ service_name }}-db-backup/{{ service_name }}_dump_{{ ansible_date_time.epoch }}.sql"
+        owner: 999
+        group: 999
+        mode: 'u=rw,g=o='
+
+    - name: Stop postgres services {{ service_name }}
+      community.docker.docker_compose_v2:
+        state: stopped
+        project_src: "{{ project_src }}"
+      failed_when: false
+
+    - name: Remove PostgreSQL container for {{ service_name }}
+      ansible.builtin.command: docker rm -f {{ pg_container_name }}
+      failed_when: false
+      changed_when: true
+
+    - name: Remove PostgreSQL volume for {{ service_name }}
+      ansible.builtin.command: docker volume rm {{ service_name }}_{{ pg_volume_name | default(pg_database_name + '-database') }}
+      failed_when: false
+      changed_when: true
+      when: pg_volume_name is defined or pg_database_name is defined
+
+    - name: Clean up old database directory for {{ service_name }}
+      become: true
+      ansible.builtin.file:
+        path: "{{ pg_data_dir }}"
+        state: absent
+      when: pg_data_dir is defined
+
+    - name: Recreate database directory for {{ service_name }}
+      become: true
+      ansible.builtin.file:
+        path: "{{ pg_data_dir }}"
+        state: directory
+        owner: 999
+        group: 999
+        mode: 'u=rwx,g=o='
+      when: pg_data_dir is defined
+
+    - name: Set upgrade completion flag
+      ansible.builtin.set_fact:
+        "{{ service_name }}_pg_upgrade_completed": true
+

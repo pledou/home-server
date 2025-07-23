@@ -1,0 +1,4 @@
+# code: language=ansible
+---
+# Default PostgreSQL version for Authentik
+authentik_postgres_version: "17"

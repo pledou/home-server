@@ -5,6 +5,7 @@
     path: "/home/{{ ansible_user }}/home-server/stacks/authentik"
     state: directory
     mode: u=g=rwx,o=rx
+
 - name: Create authentik provisionning directories
   become: true
   ansible.builtin.file:
@@ -41,15 +42,39 @@
     group: root
     mode: 'u=rw,g=o=r'
 
+- name: PostgreSQL upgrade check and backup for Authentik
+  ansible.builtin.include_tasks: "tasks/upgrade_postgres_service.yml"
+  vars:
+    service_name: "authentik"
+    pg_container_name: "authentik-postgresql-1"
+    pg_database_name: "authentik"
+    pg_username: "authentik"
+    pg_password: "{{ authentik_db_password }}"
+    pg_target_version: "{{ authentik_postgres_version | default('15') }}"
+    pg_data_dir: "{{ docker_volumes_path }}/authentik-db"
+    project_src: "/home/{{ ansible_user }}/home-server/stacks/authentik"
+
 - name: Create docker-compose file
   ansible.builtin.template:
     src: docker-compose.yml
     dest: /home/{{ ansible_user }}/home-server/stacks/authentik/docker-compose.yml
     mode: u=g=rwx,o=rx
+
 - name: Deploy compose from a compose file
   community.docker.docker_compose_v2:
     pull: "always"
     build: "always"
     state: present
     project_src: /home/{{ ansible_user }}/home-server/stacks/authentik
+
+- name: PostgreSQL restore after upgrade for Authentik
+  ansible.builtin.include_tasks: "tasks/restore_postgres_service.yml"
+  vars:
+    service_name: "authentik"
+    pg_container_name: "authentik-postgresql-1"
+    pg_database_name: "authentik"
+    pg_username: "authentik"
+    pg_password: "{{ authentik_db_password }}"
+    project_src: "/home/{{ ansible_user }}/home-server/stacks/authentik"
+    pg_backup_retention_days: "{{ postgres_backup_retention_days | default(7) }}"
 ...

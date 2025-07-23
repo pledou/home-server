@@ -1,0 +1,4 @@
+# code: language=ansible
+---
+# Default PostgreSQL version for Kresus
+kresus_postgres_version: "15"
