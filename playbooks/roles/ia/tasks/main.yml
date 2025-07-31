@@ -37,6 +37,61 @@
     state: present
     project_src: /home/{{ ansible_user }}/home-server/stacks/ia
 
+- name: Run Authentik setup tasks locally as a block
+  block:
+    - name: Wait for Authentik to be ready
+      ansible.builtin.uri:
+        url: "https://auth.{{ app_domain_name }}/api/v3/admin/version/"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: true
+      register: authentik_version
+      until: authentik_version.status == 200
+      retries: 10
+      delay: 30
+      when: authentik_api_token is defined
+
+    - name: Create OAuth2 provider for WebUI
+      ansible.builtin.uri:
+        url: "https://auth.{{ app_domain_name }}/api/v3/providers/oauth2/"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          name: "webui-oauth-provider"
+          authorization_flow: "default-provider-authorization-implicit-consent"
+          client_type: "confidential"
+          client_id: "{{ webui_oauth_client_id }}"
+          client_secret: "{{ webui_oauth_client_secret }}"
+          redirect_uris: "https://ia.{{ app_domain_name }}/oauth/callback"
+          sub_mode: "hashed_user_id"
+          include_claims_in_id_token: true
+          issuer_mode: "per_provider"
+        status_code: [201, 400]
+      register: webui_oauth_provider_result
+      when: authentik_api_token is defined
+
+    - name: Create Application for WebUI
+      ansible.builtin.uri:
+        url: "https://auth.{{ app_domain_name }}/api/v3/core/applications/"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          name: "WebUI"
+          slug: "{{ webui_oauth_slug_name }}"
+          provider: "{{ webui_oauth_provider_result.json.pk | default(omit) }}"
+          open_in_new_tab: true
+        status_code: [201, 400]
+      when: authentik_api_token is defined and webui_oauth_provider_result.json.pk is defined
+  delegate_to: localhost
+  become: false
+
 - name: Load speech models
   become: true # necessary to read docker_volumes_path content
   ansible.builtin.command:

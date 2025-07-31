@@ -110,15 +110,14 @@ services:
       - traefik.http.routers.doh.rule=Host(`dns.{{ app_domain_name }}`) && Path(`/dns-query`)
       - traefik.http.routers.doh.entrypoints=https
       - traefik.http.routers.doh.tls=true
-      - "traefik.http.middlewares.mw-doh-compression.compress=true"
-      - "traefik.http.routers.doh-server.tls=true"
-      - "traefik.http.middlewares.mw-doh-tls.headers.sslredirect=true"
-      - "traefik.http.middlewares.mw-doh-tls.headers.sslforcehost=true"
-      - "traefik.http.routers.doh-server.tls.certresolver=le"
+      - traefik.http.middlewares.doh-compression.compress=true
+      - traefik.http.middlewares.doh-tls.headers.sslredirect=true
+      - traefik.http.middlewares.doh-tls.headers.sslforcehost=true
+      - traefik.http.routers.doh.tls.certresolver=le
       # Protection from requests flood
-      - "traefik.http.middlewares.mw-doh-ratelimit.ratelimit.average=100"
-      - "traefik.http.middlewares.mw-doh-ratelimit.ratelimit.burst=50"
-      - "traefik.http.middlewares.mw-doh-ratelimit.ratelimit.period=10s"
+      - traefik.http.middlewares.doh-ratelimit.ratelimit.average=100
+      - traefik.http.middlewares.doh-ratelimit.ratelimit.burst=50
+      - traefik.http.middlewares.doh-ratelimit.ratelimit.period=10s
       - traefik.http.routers.doh.service=doh-svc
       - traefik.http.services.doh-svc.loadbalancer.server.port=8053
     build:

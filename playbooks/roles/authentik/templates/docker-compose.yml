@@ -71,6 +71,7 @@ services:
       AUTHENTIK_EMAIL__PASSWORD: "{{ authentik_mail_smtppwd }}"
       AUTHENTIK_EMAIL__USE_SSL: true
       AUTHENTIK_LOG_LEVEL: info
+      AUTHENTIK_HOST: "https://auth.{{ app_domain_name }}"
     depends_on:
       - postgresql
       - redis
@@ -92,6 +93,8 @@ services:
       AUTHENTIK_POSTGRESQL__NAME: authentik
       AUTHENTIK_POSTGRESQL__PASSWORD: "{{authentik_db_password}}"
       AUTHENTIK_SECRET_KEY: "{{authentik_secret}}"
+      AUTHENTIK_HOST: "https://auth.{{ app_domain_name }}"
+
     # `user: root` and the docker socket volume are optional.
     # See more for the docker socket integration here:
     # https://goauthentik.io/docs/outposts/integrations/docker

@@ -1,0 +1,78 @@
+# code: language=ansible
+---
+# Common Authentik API configuration tasks
+# This file contains reusable tasks for configuring Authentik providers and applications
+
+- name: Initialize provider PKs list for this role
+  ansible.builtin.set_fact:
+    authentik_provider_pks: []
+  when: authentik_api_token is defined
+
+- name: Wait for Authentik to be ready
+  ansible.builtin.uri:
+    url: "https://auth.{{ app_domain_name }}/api/v3/admin/version/"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    validate_certs: true
+  register: authentik_version
+  until: authentik_version.status == 200
+  retries: 10
+  delay: 30
+  when: authentik_api_token is defined
+
+- name: Get default authorization flow
+  ansible.builtin.uri:
+    url: "https://auth.{{ app_domain_name }}/api/v3/flows/instances/?slug=default-provider-authorization-implicit-consent"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    validate_certs: true
+  register: auth_flow_result
+  when: authentik_api_token is defined
+
+- name: Get default invalidation flow
+  ansible.builtin.uri:
+    url: "https://auth.{{ app_domain_name }}/api/v3/flows/instances/?slug=default-provider-invalidation-flow"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    validate_certs: true
+  register: invalidation_flow_result
+  when: authentik_api_token is defined
+
+- name: Create or update provider app couple
+  loop_control:
+    loop_var: provider_app
+  loop: "{{ provider_apps }}"
+  ansible.builtin.include_tasks: authentik_provider_application.yml
+  when: authentik_api_token is defined
+
+- name: Get embedded outpost
+  ansible.builtin.uri:
+    url: "https://auth.{{ app_domain_name }}/api/v3/outposts/instances/"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    validate_certs: true
+  register: existing_outposts
+  when:
+    - authentik_api_token is defined
+
+- name: Update embedded outpost to include providers
+  ansible.builtin.uri:
+    url: "https://auth.{{ app_domain_name }}/api/v3/outposts/instances/{{ item.pk }}/"
+    method: PATCH
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      providers: "{{ (item.providers + (authentik_provider_pks | default([]))) | unique }}"
+    status_code: [200, 400]
+  loop: "{{ existing_outposts.json.results | default([]) }}"
+  when:
+    - authentik_api_token is defined
+    - item.name == "authentik Embedded Outpost"
+    - authentik_provider_pks is defined
+    - authentik_provider_pks | length > 0

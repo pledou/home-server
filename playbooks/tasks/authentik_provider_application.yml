@@ -1,0 +1,67 @@
+# code: language=ansible
+---
+# Task file for creating/updating a single Authentik provider
+
+- name: "Create Forward Auth provider: {{ provider_app.provider.name }}"
+  ansible.builtin.uri:
+    url: "https://auth.{{ app_domain_name }}/api/v3/providers/proxy/"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      name: "{{ provider_app.provider.name }}"
+      authorization_flow: "{{ auth_flow_result.json.results[0].pk }}"
+      invalidation_flow: "{{ invalidation_flow_result.json.results[0].pk }}"
+      external_host: "{{ provider_app.provider.external_host }}"
+      mode: "forward_single"
+    status_code: [201, 400]
+  register: provider_result
+  failed_when:
+    - provider_result.status == 400
+    - '"already exists" not in (provider_result.json.name[0] | default(""))'
+  changed_when: provider_result.status == 201
+  when:
+    - authentik_api_token is defined
+
+- name: "Set provider PK: {{ provider_app.provider.name }}"
+  ansible.builtin.set_fact:
+    provider_pk: "{{ provider_result.json.pk }}"
+  when:
+    - authentik_api_token is defined
+    - (provider_result is succeeded and provider_result.json.pk is defined)
+  failed_when: provider_pk is not defined and authentik_api_token is defined
+
+- name: "Add provider PK to list: {{ provider_config.name }}"
+  ansible.builtin.set_fact:
+    authentik_provider_pks: "{{ authentik_provider_pks | default([]) + [provider_pk] }}"
+  when: provider_pk is defined
+
+- name: "Create application: {{ provider_app.app.name }}"
+  ansible.builtin.uri:
+    url: "https://auth.{{ app_domain_name }}/api/v3/core/applications/"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      name: "{{ provider_app.app.name }}"
+      slug: "{{ provider_app.app.slug }}"
+      provider: "{{ provider_pk | trim }}"
+      open_in_new_tab: true
+    status_code: [201, 400]
+  register: app_result
+  failed_when:
+    - app_result.status == 400
+    - >-
+      "already exists" not in (app_result.json.slug[0] | default("")) and
+      "Application with this provider already exists" not in (app_result.json.provider[0] | default(""))
+  changed_when: app_result.status == 201
+
+  when:
+    - authentik_api_token is defined
+    - provider_pk is defined
+
+

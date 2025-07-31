@@ -167,7 +167,7 @@
     version: 'jenocean'
     single_branch: true
   environment:
-    GIT_TERMINAL_PROMPT: 0 # reports "terminal prompts disabled" on missing password
+    GIT_TERMINAL_PROMPT: "0" # reports "terminal prompts disabled" on missing password
   when: enocean_device_id is defined
 
 - name: Deploy compose from a compose file
@@ -177,6 +177,29 @@
     build: "always"
     state: present
     project_src: /home/{{ ansible_user }}/home-server/stacks/hassio
+
+- name: Configure Authentik providers and applications for Home Assistant services
+  delegate_to: localhost
+  become: false
+  when: authentik_api_token is defined
+  block:
+    - name: Configure Authentik providers and applications for Home Assistant services
+      ansible.builtin.include_tasks: "tasks/authentik_common.yml"
+      vars:
+        provider_apps:
+          - provider:
+              name: "esphome-provider"
+              external_host: "https://esphome.{{ app_domain_name }}"
+            app:
+              name: "ESPHome"
+              slug: "esphome"
+          - provider:
+              name: "myelectricaldata-provider"
+              external_host: "https://myelectricaldata.{{ app_domain_name }}"
+            app:
+              name: "MyElectricalData"
+              slug: "myelectricaldata"
+
 # - name: Fix bluepy dependency
 #   community.docker.docker_container_exec:
 #     container: hassio_homeassistant_1

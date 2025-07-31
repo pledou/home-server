@@ -164,3 +164,19 @@
     build: "always"
     state: present
     project_src: /home/{{ ansible_user }}/home-server/stacks/traefik
+
+- name: Configure Authentik providers and applications for Home Assistant services
+  delegate_to: localhost
+  become: false
+  when: authentik_api_token is defined
+  block:
+    - name: Configure Authentik providers and applications for Traefik services
+      ansible.builtin.include_tasks: "tasks/authentik_common.yml"
+      vars:
+        provider_apps:
+          - provider:
+              name: "traefik-provider"
+              external_host: "https://traefik.{{ app_domain_name }}"
+            app:
+              name: "Traefik Dashboard"
+              slug: "traefik"

@@ -111,4 +111,27 @@
     build: "always"
     state: present
     project_src: /home/{{ ansible_user }}/home-server/stacks/monitoring
+
+- name: Configure Authentik providers and applications for Monitoring
+  delegate_to: localhost
+  become: false
+  when: authentik_api_token is defined
+  block:
+    - name: Configure Authentik providers and applications for Monitoring services
+      when: authentik_api_token is defined
+      ansible.builtin.include_tasks: "tasks/authentik_common.yml"
+      vars:
+        provider_apps:
+          - provider:
+              name: "alertmanager-provider"
+              external_host: "https://alertmanager.{{ app_domain_name }}"
+            app:
+              name: "Alertmanager"
+              slug: "alertmanager"
+          - provider:
+              name: "prometheus-provider"
+              external_host: "https://prometheus.{{ app_domain_name }}"
+            app:
+              name: "Prometheus"
+              slug: "prometheus"
 ...
