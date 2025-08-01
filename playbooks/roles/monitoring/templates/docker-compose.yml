@@ -107,8 +107,12 @@ services:
       GF_AUTH_GENERIC_OAUTH_TOKEN_URL: "https://auth.{{ app_domain_name }}/application/o/token/"
       GF_AUTH_GENERIC_OAUTH_API_URL: "https://auth.{{ app_domain_name }}/application/o/userinfo/"
       GF_AUTH_SIGNOUT_REDIRECT_URL: "https://auth.{{ app_domain_name }}/application/o/grafana-slug/end-session/"
-      # Optionally enable auto-login (bypasses Grafana login screen)
-      GF_AUTH_OAUTH_AUTO_LOGIN: "true"
+      # User creation and sync settings
+      GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: "true"
+      GF_AUTH_GENERIC_OAUTH_AUTO_LOGIN: "true"
+      GF_AUTH_GENERIC_OAUTH_EMAIL_ATTRIBUTE_NAME: "email"
+      GF_AUTH_GENERIC_OAUTH_NAME_ATTRIBUTE_PATH: "given_name"
+      GF_AUTH_GENERIC_OAUTH_LOGIN_ATTRIBUTE_PATH: "preferred_username"
       # Optionally map user groups to Grafana roles
       GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "contains(groups, 'Grafana Admins') && 'Admin' || contains(groups, 'Grafana Editors') && 'Editor' || 'Viewer'"
     networks:

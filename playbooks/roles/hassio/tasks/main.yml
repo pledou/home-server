@@ -199,6 +199,12 @@
             app:
               name: "MyElectricalData"
               slug: "myelectricaldata"
+          - provider:
+              name: "zigbee2mqtt-provider"
+              external_host: "https://zigbee2mqtt.{{ app_domain_name }}"
+            app:
+              name: "Zigbee2Mqtt"
+              slug: "zigbee2mqtt"
 
 # - name: Fix bluepy dependency
 #   community.docker.docker_container_exec:

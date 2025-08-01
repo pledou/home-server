@@ -134,4 +134,27 @@
             app:
               name: "Prometheus"
               slug: "prometheus"
+        oauth_apps:
+          - provider:
+              name: "grafana-oauth-provider"
+              client_id: "{{ grafana_oauth_client_id | default('grafana') }}"
+              client_secret: "{{ grafana_oauth_client_secret }}"
+              redirect_uris:
+                - url: "https://grafana.{{ app_domain_name }}/login/generic_oauth"
+                  matching_mode: "strict"
+              client_type: "confidential"
+              sub_mode: "user_email"
+              include_claims_in_id_token: true
+              issuer_mode: "per_provider"
+              access_code_validity: "minutes=1"
+              access_token_validity: "minutes=10"
+              refresh_token_validity: "days=30"
+              scopes: "openid profile email"
+            app:
+              name: "Grafana"
+              slug: "grafana-slug"
+              open_in_new_tab: true
+              meta_launch_url: "https://grafana.{{ app_domain_name }}"
+              meta_description: "Grafana monitoring and analytics platform"
+              meta_publisher: "Grafana"
 ...

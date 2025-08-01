@@ -1,7 +1,7 @@
 # code: language=ansible
 ---
 # Common Authentik API configuration tasks
-# This file contains reusable tasks for configuring Authentik providers and applications
+# This file contains reusable tasks for configuring both proxy and OAuth providers and applications
 
 - name: Initialize provider PKs list for this role
   ansible.builtin.set_fact:
@@ -41,12 +41,23 @@
   register: invalidation_flow_result
   when: authentik_api_token is defined
 
-- name: Create or update provider app couple
+- name: Create or update proxy provider app couples
   loop_control:
     loop_var: provider_app
-  loop: "{{ provider_apps }}"
+  loop: "{{ provider_apps | default([]) }}"
   ansible.builtin.include_tasks: authentik_provider_application.yml
-  when: authentik_api_token is defined
+  when:
+    - authentik_api_token is defined
+    - provider_apps is defined
+
+- name: Create or update OAuth provider app couples
+  loop_control:
+    loop_var: oauth_app
+  loop: "{{ oauth_apps | default([]) }}"
+  ansible.builtin.include_tasks: authentik_oauth_provider_application.yml
+  when:
+    - authentik_api_token is defined
+    - oauth_apps is defined
 
 - name: Get embedded outpost
   ansible.builtin.uri:
@@ -59,7 +70,7 @@
   when:
     - authentik_api_token is defined
 
-- name: Update embedded outpost to include providers
+- name: Update embedded outpost to include proxy providers
   ansible.builtin.uri:
     url: "https://auth.{{ app_domain_name }}/api/v3/outposts/instances/{{ item.pk }}/"
     method: PATCH

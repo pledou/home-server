@@ -1,0 +1,103 @@
+# code: language=ansible
+---
+# Task file for creating/updating a single Authentik OAuth2/OpenID Connect provider and application
+
+- name: "Debug redirect URIs format for: {{ oauth_app.provider.name }}"
+  ansible.builtin.debug:
+    var: oauth_app.provider.redirect_uris
+
+- name: "Prepare OAuth provider body for: {{ oauth_app.provider.name }}"
+  ansible.builtin.set_fact:
+    oauth_provider_body:
+      name: "{{ oauth_app.provider.name }}"
+      authorization_flow: "{{ auth_flow_result.json.results[0].pk }}"
+      invalidation_flow: "{{ invalidation_flow_result.json.results[0].pk }}"
+      client_type: "{{ oauth_app.provider.client_type | default('confidential') }}"
+      redirect_uris: "{{ oauth_app.provider.redirect_uris }}"
+      sub_mode: "{{ oauth_app.provider.sub_mode | default('hashed_user_id') }}"
+      include_claims_in_id_token: "{{ oauth_app.provider.include_claims_in_id_token | default(true) }}"
+      issuer_mode: "{{ oauth_app.provider.issuer_mode | default('per_provider') }}"
+      access_code_validity: "{{ oauth_app.provider.access_code_validity | default('minutes=1') }}"
+      access_token_validity: "{{ oauth_app.provider.access_token_validity | default('minutes=5') }}"
+      refresh_token_validity: "{{ oauth_app.provider.refresh_token_validity | default('days=30') }}"
+
+- name: "Add optional fields to OAuth provider body for: {{ oauth_app.provider.name }}"
+  ansible.builtin.set_fact:
+    oauth_provider_body: "{{ oauth_provider_body | combine({item.key: item.value}) }}"
+  loop:
+    - key: "client_id"
+      value: "{{ oauth_app.provider.client_id }}"
+    - key: "client_secret"
+      value: "{{ oauth_app.provider.client_secret }}"
+    - key: "signing_key"
+      value: "{{ oauth_app.provider.signing_key }}"
+    - key: "property_mappings"
+      value: "{{ oauth_app.provider.property_mappings }}"
+  when: item.value is defined
+
+- name: "Create OAuth2/OpenID Connect provider: {{ oauth_app.provider.name }}"
+  ansible.builtin.uri:
+    url: "https://auth.{{ app_domain_name }}/api/v3/providers/oauth2/"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body: "{{ oauth_provider_body }}"
+    status_code: [201, 400]
+  register: oauth_provider_result
+  failed_when:
+    - oauth_provider_result.status == 400
+    - '"already exists" not in (oauth_provider_result.json.name[0] | default(""))'
+  changed_when: oauth_provider_result.status == 201
+  when:
+    - authentik_api_token is defined
+    - oauth_app.provider is defined
+
+- name: "Set OAuth provider PK: {{ oauth_app.provider.name }}"
+  ansible.builtin.set_fact:
+    oauth_provider_pk: "{{ oauth_provider_result.json.pk }}"
+  when:
+    - authentik_api_token is defined
+    - oauth_app.provider is defined
+    - (oauth_provider_result.status == 201)
+
+- name: "Create application: {{ oauth_app.app.name }}"
+  ansible.builtin.uri:
+    url: "https://auth.{{ app_domain_name }}/api/v3/core/applications/"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      name: "{{ oauth_app.app.name }}"
+      slug: "{{ oauth_app.app.slug }}"
+      provider: "{{ oauth_provider_pk }}"
+      open_in_new_tab: "{{ oauth_app.app.open_in_new_tab | default(true) }}"
+      meta_launch_url: "{{ oauth_app.app.meta_launch_url | default(omit) }}"
+      meta_description: "{{ oauth_app.app.meta_description | default(omit) }}"
+      meta_publisher: "{{ oauth_app.app.meta_publisher | default(omit) }}"
+      policy_engine_mode: "{{ oauth_app.app.policy_engine_mode | default('any') }}"
+    status_code: [201, 400]
+  register: oauth_app_result
+  failed_when:
+    - oauth_app_result.status == 400
+    - >-
+      "already exists" not in (oauth_app_result.json.slug[0] | default("")) and
+      "Application with this provider already exists" not in (oauth_app_result.json.provider[0] | default(""))
+  changed_when: oauth_app_result.status == 201
+  when:
+    - authentik_api_token is defined
+    - oauth_provider_pk is defined
+    - oauth_app.app is defined
+
+- name: "Display OAuth provider details: {{ oauth_app.provider.name }}"
+  ansible.builtin.debug:
+    msg:
+      - "OAuth Provider PK: {{ oauth_provider_pk }}"
+      - "Client ID: {{ oauth_provider_result.json.client_id if oauth_provider_result.status == 201 else existing_oauth_provider.json.results[0].client_id }}"
+      - "Application created: {{ oauth_app_result.status == 201 if oauth_app_result is defined else 'Skipped' }}"
+  when:
+    - authentik_api_token is defined
+    - oauth_provider_pk is defined
