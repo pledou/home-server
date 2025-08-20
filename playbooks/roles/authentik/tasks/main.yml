@@ -22,12 +22,15 @@
       group: 999
       owner: 999
 
-- name: Retrive secret
+- name: Generate fresh Authentik secret at each deployment
+  ansible.builtin.set_fact:
+    authentik_secret: "{{ lookup('password', '/dev/null chars=ascii_letters,digits,!@#$%^&*()_+-= length=64') }}"
+
+- name: Retrieve database password
   ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
   vars:
     secrets:
       - authentik_db_password
-      - authentik_secret
 
 - name: Add a user to a password file and ensure permissions are set
   become: true
