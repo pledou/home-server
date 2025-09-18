@@ -11,6 +11,12 @@ services:
       - traefik.http.routers.ia-https.tls.certresolver=le
       - traefik.http.services.ia.loadbalancer.server.port=8080
     image: ghcr.io/open-webui/open-webui:main
+    # Dependencies for tools
+    command: >
+      bash -c "
+        pip install requests pydantic caldav icalendar &&
+        exec bash start.sh
+      "
     environment:
       OLLAMA_BASE_URL: http://ollama:11434
 
@@ -28,8 +34,6 @@ services:
       DEFAULT_USER_ROLE: "user"
       OAUTH_MERGE_ACCOUNTS_BY_EMAIL: True
 
-      OPENAI_API_BASE_URL: "http://pipelines:9099/v1"
-      OPENAI_API_KEY: "0p3n-w3bu!"
       AUDIO_OPENAI_API_BASE_URL: "http://speech:8000/v1"
       AUDIO_OPENAI_API_MODEL: "tts-1"
       AUDIO_OPENAI_API_SPEAKER: "upmc"
@@ -40,22 +44,13 @@ services:
     restart: always
     volumes:
       - open-webui:/app/backend/data
+      - ./install-tools.sh:/install-tools.sh:ro
     networks:
       - network
       - traefik_backend
     depends_on:
      - ollama
 
-  pipelines:
-    image: ghcr.io/open-webui/pipelines:main
-    container_name: pipelines
-    networks:
-      network:
-        aliases:
-          - pipelines
-    volumes:
-      - pipelines:/app/pipelines
-    restart: always
 
   {% if gpu != 'intel' -%}
   ollama:
