@@ -5,17 +5,18 @@
   roles:
     - prep_backup
     - upgrade-packages
+    - docker
 
 - name: Install apps & backup
   hosts: docker_server
   roles:
-    # - gitlab
-    # - monitoring
-    - authentik
+    - gitlab
+    - monitoring
+    - traefik
     - ia
     - nextcloud
     - kresus
-    # - hassio
+    - hassio
   post_tasks:
     - name: Docker prune
       community.docker.docker_prune:
@@ -25,6 +26,5 @@
           until: 24h
         volumes: true
         networks: true
-
   tags: docker-apps
 ...
