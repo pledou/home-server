@@ -2,4 +2,4 @@
 ---
 # Default PostgreSQL version for Authentik
 authentik_postgres_version: "17"
-authentik_tag: "2025.8"
+authentik_tag: "2025.10"
