@@ -137,14 +137,15 @@ services:
       traefik.http.routers.myelectricaldata-https.middlewares: authentik@docker
     image: m4dm4rtig4n/myelectricaldata:latest
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - myelectricaldata:/data:rw
     environment:
       TZ: Europe/Paris
     networks:
       - traefik_backend
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - backend
   
   wyoming-piper: # Text-to-Speech service at port 10200
     image: rhasspy/wyoming-piper
@@ -153,7 +154,7 @@ services:
       - "10200:10200"
     volumes:
       - piper-data:/data
-    command: [ "--voice", "fr_FR-upmc-medium" ]
+    command: [ "--voice", "fr_FR-upmc-medium", "--data-dir", "/data" ]
 
 
   faster-whisper: # Speech-to-Text service at port 10300

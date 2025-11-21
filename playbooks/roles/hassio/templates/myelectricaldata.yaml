@@ -47,7 +47,7 @@ influxdb:
     exponential_base: 2
 mqtt:
   enable: true
-  hostname: host.docker.internal
+  hostname: mqtt
   port: 1883
   username: {{ mqtt_user }}
   password: {{ mqtt_password }}

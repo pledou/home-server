@@ -3,7 +3,7 @@
   ansible.builtin.file:
     path: "/home/{{ ansible_user }}/home-server/stacks/hassio"
     state: directory
-    mode: u=g=rwx,o=rx
+    mode: u=rwx,go=
 - name: Retrive secret
   ansible.builtin.include_tasks: "retrieve_password.yml"
   vars:
