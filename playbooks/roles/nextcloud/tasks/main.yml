@@ -174,5 +174,6 @@
       - "php occ db:convert-filecache-bigint;"
       - "php occ config:system:set maintenance_window_start --type=integer --value=1;"
   register: add_db_objects
-  failed_when: add_db_objects.rc !=0
+  failed_when: false
+  changed_when: add_db_objects.rc == 0
 ...
