@@ -3,4 +3,5 @@ include:
 
 variables:
   BUILD_DISABLED: "true" # Actual runner is on the docker server
+  CONTAINER_SCANNING_DISABLED: "true" # No Docker image to scan (build disabled)
   # docker:dind failed with mount and AppArmor warnings and never exposed 2375/2376. Docker-in-Docker requires a runner configured with privileged mode on the Docker executor. Without it, the daemon cannot start.
