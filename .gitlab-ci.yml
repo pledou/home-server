@@ -1,3 +1,6 @@
 include:
   - template: Auto-DevOps.gitlab-ci.yml
 
+variables:
+  BUILD_DISABLED: "true" # Actual runner is on the docker server
+  # docker:dind failed with mount and AppArmor warnings and never exposed 2375/2376. Docker-in-Docker requires a runner configured with privileged mode on the Docker executor. Without it, the daemon cannot start.
