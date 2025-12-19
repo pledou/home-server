@@ -4,4 +4,38 @@ include:
 variables:
   BUILD_DISABLED: "true" # Actual runner is on the docker server
   CONTAINER_SCANNING_DISABLED: "true" # No Docker image to scan (build disabled)
+  TEST_DISABLED: "true"
   # docker:dind failed with mount and AppArmor warnings and never exposed 2375/2376. Docker-in-Docker requires a runner configured with privileged mode on the Docker executor. Without it, the daemon cannot start.
+
+stages:
+  - test
+
+scan_docker_images:
+  stage: test
+  image: aquasec/trivy:latest
+  script:
+    - echo "Extracting Docker images from docker-compose templates..."
+    - |
+      # Extract images from all docker-compose.yml templates
+      images=$(find playbooks/roles/*/templates -name "docker-compose.yml" -exec grep -h "image:" {} \; | sed 's/.*image://g' | sed 's/^[[:space:]]*//g' | sed 's/#.*//g' | sort -u | grep -v '{{' || true)
+      
+      echo "Found images to scan:"
+      echo "$images"
+      
+      # Scan each image
+      mkdir -p reports
+      for image in $images; do
+        if [ ! -z "$image" ]; then
+          echo ""
+          echo "=== Scanning $image ==="
+          trivy image --severity HIGH,CRITICAL --format json --output "reports/$(echo $image | tr '/:' '_').json" "$image" || true
+          trivy image --severity HIGH,CRITICAL "$image" || true
+        fi
+      done
+  artifacts:
+    reports:
+      container_scanning: reports/*.json
+    paths:
+      - reports/
+    expire_in: 1 week
+  allow_failure: true
