@@ -11,7 +11,6 @@
   vars:
     secrets:
       - k_db_password
-      - k_db1_password
 
 - name: Create kresus provisionning directories
   become: true
@@ -25,9 +24,6 @@
     - name: kresus-database
       group: 999
       owner: 999
-    - name: kresus-database1
-      group: 999
-      owner: 999
 
 - name: PostgreSQL upgrade check and backup for Kresus k-db
   ansible.builtin.include_tasks: "tasks/upgrade_postgres_service.yml"
@@ -39,18 +35,6 @@
     pg_password: "{{ k_db_password }}"
     pg_target_version: "{{ kresus_postgres_version | default('15') }}"
     pg_data_dir: "{{ docker_volumes_path }}/kresus-database"
-    project_src: "/home/{{ ansible_user }}/home-server/stacks/kresus"
-
-- name: PostgreSQL upgrade check and backup for Kresus k-db1
-  ansible.builtin.include_tasks: "tasks/upgrade_postgres_service.yml"
-  vars:
-    service_name: "kresus-k-db1"
-    pg_container_name: "kresus-k-db1-1"
-    pg_database_name: "kresus"
-    pg_username: "kresus"
-    pg_password: "{{ k_db1_password }}"
-    pg_target_version: "{{ kresus_postgres_version | default('15') }}"
-    pg_data_dir: "{{ docker_volumes_path }}/kresus-database1"
     project_src: "/home/{{ ansible_user }}/home-server/stacks/kresus"
 
 - name: Create docker-compose stack file
@@ -91,14 +75,13 @@
 - name: Configure Authentik providers and applications for Kresus
   delegate_to: localhost
   become: false
+  when: authentik_api_token is defined
   block:
     - name: Define Kresus providers
       ansible.builtin.set_fact:
         authentik_providers:
           - name: "kresus-provider"
             external_host: "https://kresus.{{ app_domain_name }}"
-          - name: "kresus1-provider"
-            external_host: "https://kresus1.{{ app_domain_name }}"
 
     - name: Configure Authentik providers and applications
       ansible.builtin.include_tasks: "tasks/authentik_common.yml"
@@ -109,10 +92,7 @@
           - name: "Kresus"
             slug: "kresus"
             provider_pk: "{{ authentik_provider_pks[0] }}"
-          - name: "Kresus1"
-            slug: "kresus1"
-            provider_pk: "{{ authentik_provider_pks[1] }}"
-      when: authentik_provider_pks is defined and authentik_provider_pks | length >= 2
+      when: authentik_provider_pks is defined and authentik_provider_pks | length >= 1
 
     - name: Create Kresus applications
       ansible.builtin.include_tasks: "tasks/authentik_application.yml"
@@ -120,5 +100,3 @@
       loop_control:
         loop_var: app_config
       when: authentik_applications is defined
-
-  when: authentik_api_token is defined
