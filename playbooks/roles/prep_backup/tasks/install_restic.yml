@@ -7,7 +7,7 @@
   register: restic_tags
 
 - name: Set restic latest version fact
-  set_fact:
+  ansible.builtin.set_fact:
     restic_latest_version: "{{ restic_tags.json[0].name | regex_replace('^v', '') }}"
 
 - name: Download restic binary from GitHub
@@ -28,4 +28,4 @@
     src: "/tmp/restic_{{ restic_latest_version }}_linux_amd64"
     dest: /usr/local/bin/restic
     mode: '0755'
-    remote_src: yes
+    remote_src: true

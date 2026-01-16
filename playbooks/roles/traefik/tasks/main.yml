@@ -119,44 +119,35 @@
     value: "2"
     sysctl_set: true
 
-- name: Ufw_allow_ssh local subnet # ensure SSH is allowed before enabling UFW
+- name: Configure UFW rules for Traefik services
   become: true
+  vars:
+    local_networks:
+      - "{{ (ansible_default_ipv4.address ~ '/' ~ ansible_default_ipv4.prefix) | ansible.utils.ipaddr('network/prefix') }}"
+      - "{{ (ansible_default_ipv6.address ~ '/' ~ ansible_default_ipv6.prefix) | ansible.utils.ipaddr('network/prefix') }}"
+    ufw_rules:
+      - name: "OpenSSH"
+        port: "22"
+        cidrs: "{{ local_networks }}"
+      - name: "RDP"
+        port: "3389"
+        cidrs: "{{ local_networks }}"
+      - name: "HTTPS"
+        port: "443"
+        cidrs: ["any"]
+      - name: "DNS"
+        port: "53"
+        cidrs: ["any"]
+        when: "{{ unbound is defined and unbound }}"
   community.general.ufw:
     rule: allow
-    name: "OpenSSH"
-    port: "22"
-    from_ip: "{{ ansible_default_ipv4.network }}/24"
-    state: enabled
-
-- name: Ufw_allow_rdp local subnet
-  become: true
-  community.general.ufw:
-    rule: allow
-    port: "3389"
-    from_ip: "{{ ansible_default_ipv4.network }}/24"
-    state: enabled
-
-- name: Ufw_routing
-  become: true
-  community.general.ufw:
-    direction: routed
-    policy: allow
-    state: enabled
-
-- name: Ufw_allow_dns
-  become: true
-  community.general.ufw:
-    rule: allow
-    port: "53"
-    state: enabled
-  when: unbound is defined and unbound
-
-- name: Ufw_allow_https
-  become: true
-  community.general.ufw:
-    rule: allow
-    port: "443"
-    state: enabled
+    port: "{{ item.0.port }}"
+    proto: "{{ item.0.proto | default('tcp') }}"
+    from_ip: "{{ item.1 if item.1 != 'any' else omit }}"
+    direction: "{{ item.0.direction | default(omit) }}"
+    comment: "{{ item.0.name }}"
+  loop: "{{ ufw_rules | subelements('cidrs') }}"
+  when: item.0.when is not defined or item.0.when
 
 - name: Deploy stack from a compose file
   community.docker.docker_compose_v2:
