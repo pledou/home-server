@@ -127,8 +127,8 @@ services:
   myelectricaldata:
     labels:
       traefik.enable: 'true'
-      # traefik.docker.network: traefik_backend
-      # traefik.constraint-label: traefik_backend
+      traefik.docker.network: traefik_backend
+      traefik.constraint-label: traefik_backend
       traefik.http.routers.myelectricaldata-https.rule: Host(`myelectricaldata.{{app_domain_name}}`)
       traefik.http.routers.myelectricaldata-https.entrypoints: https
       traefik.http.routers.myelectricaldata-https.tls: true

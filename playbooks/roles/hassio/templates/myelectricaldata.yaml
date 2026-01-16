@@ -7,7 +7,7 @@ wipe_influxdb: false # Work only with influxdb > 2.X
 # Exemple pour Postgres :
 #storage_uri: postgresql://myelectricaldata:myelectricaldata@postgres:5432/myelectricaldata
 tempo:
-  enable: true
+  enable: {{'true' if myelectricaldata_plan == "Tempo" else 'false'}}
 home_assistant: # WITH MQTT DISCOVERY
   enable: true
   discovery: true
@@ -16,7 +16,7 @@ home_assistant_ws: # FOR ENERGY TAB
   enable: {{'true' if HOME_ASSISTANT_TOKEN is defined else 'false'}}
   ssl: false
   token: {{HOME_ASSISTANT_TOKEN}} # HOME_ASSISTANT_TOKEN_GENERATE_IN_PROFILE_TABS_(BOTTOM)
-  url: homeassistant:8123
+  url: host.docker.internal:8123
   max_date: "2021-06-01"
   purge: false
 ssl:
@@ -62,10 +62,10 @@ mqtt:
 #  certfile: "/data/cert.pem"
 myelectricaldata:
   # Configuration de mon point de livraison (ne pas oublier d'adapter MON_PDL_1 avec votre numéro de PDL)
-  "MON_PDL_1":
+  "{{myelectricaldata_PDL}}":
     enable: 'true'
-    token: TOKEN_DE_MON_PDL_1
-    name: "Maison"
+    token: {{myelectricaldata_token}}
+    name: "{{myelectricaldata_name}}"
     addresses: 'true'
     cache: 'true'
     consumption: 'true'
@@ -82,7 +82,7 @@ myelectricaldata:
     offpeak_hours_4: 22H00-6H00               # VENDREDI
     offpeak_hours_5: 22H00-6H00;12H00-14H00   # SAMEDI
     offpeak_hours_6: 22H00-6H00;12H00-14H00   # DIMANCHE
-    plan: HC/HP
+    plan: {{myelectricaldata_plan}}
     production: 'false'
     production_detail: 'false'
     production_price: '0.0'
