@@ -13,9 +13,9 @@ home_assistant: # WITH MQTT DISCOVERY
   discovery: true
   discovery_prefix: homeassistant
 home_assistant_ws: # FOR ENERGY TAB
-  enable: false
+  enable: {{'true' if HOME_ASSISTANT_TOKEN is defined else 'false'}}
   ssl: false
-  token: HOME_ASSISTANT_TOKEN_GENERATE_IN_PROFILE_TABS_(BOTTOM)
+  token: {{HOME_ASSISTANT_TOKEN}} # HOME_ASSISTANT_TOKEN_GENERATE_IN_PROFILE_TABS_(BOTTOM)
   url: homeassistant:8123
   max_date: "2021-06-01"
   purge: false
