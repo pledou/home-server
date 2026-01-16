@@ -3,6 +3,7 @@
 - name: Upgrade server
   hosts: docker_server
   roles:
+    # - nut # TODO debug ansible scripting
     - prep_backup
     - upgrade-packages
     - docker

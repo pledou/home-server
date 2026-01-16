@@ -1,0 +1,106 @@
+# code: language=ansible
+---
+- name: Ensure NUT packages are installed
+  ansible.builtin.apt:
+    name:
+      - nut
+      - nut-client
+      - nut-server
+      - nut-scanner
+    state: present
+    update_cache: true
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Create NUT config directory
+  ansible.builtin.file:
+    path: /etc/nut
+    state: directory
+    mode: '0755'
+
+- name: Set mode in nut.conf
+  ansible.builtin.template:
+    src: nut.conf.j2
+    dest: /etc/nut/nut.conf
+    mode: '0644'
+  notify: Restart NUT services
+
+- name: Scan for UPS devices with nut-scanner
+  ansible.builtin.command: nut-scanner -U
+  register: nut_scan
+  changed_when: false
+  failed_when: false
+
+- name: Derive ups.conf from scanner output if available
+  ansible.builtin.set_fact:
+    nut_scanner_ups_conf: "{{ (nut_scan.stdout | regex_replace('^\[[^\]]+\]', '[' ~ nut_ups_name ~ ']')) if (nut_scan.stdout is search('^\[')) else '' }}"
+
+- name: Use scanned ups.conf when found
+  ansible.builtin.copy:
+    content: "{{ nut_scanner_ups_conf }}\n"
+    dest: /etc/nut/ups.conf
+    mode: '0644'
+  when: nut_scanner_ups_conf | length > 0
+  notify: Restart NUT services
+
+- name: Fallback to templated ups.conf
+  ansible.builtin.template:
+    src: ups.conf.j2
+    dest: /etc/nut/ups.conf
+    mode: '0644'
+  when: nut_scanner_ups_conf | length == 0
+  notify: Restart NUT services
+
+- name: Configure upsd.conf
+  ansible.builtin.template:
+    src: upsd.conf.j2
+    dest: /etc/nut/upsd.conf
+    mode: '0644'
+  notify: Restart NUT services
+
+- name: Configure upsd.users
+  ansible.builtin.template:
+    src: upsd.users.j2
+    dest: /etc/nut/upsd.users
+    mode: '0640'
+  notify: Restart NUT services
+
+- name: Configure upsmon.conf
+  ansible.builtin.template:
+    src: upsmon.conf.j2
+    dest: /etc/nut/upsmon.conf
+    mode: '0644'
+  notify: Restart NUT services
+
+- name: Enable and start NUT services (server)
+  ansible.builtin.service:
+    name: nut-server
+    state: started
+    enabled: true
+
+- name: Enable and start NUT services (client/monitor)
+  ansible.builtin.service:
+    name: nut-client
+    state: started
+    enabled: true
+
+- name: Verify UPS status via upsc
+  ansible.builtin.command: upsc {{ nut_ups_name }}@localhost
+  register: upsc_out
+  changed_when: false
+  failed_when: false
+
+- name: Show UPS variables
+  ansible.builtin.debug:
+    msg: "{{ upsc_out.stdout | default('No UPS data available') }}"
+
+handlers:
+  - name: Restart NUT services
+    ansible.builtin.service:
+      name: nut-server
+      state: restarted
+    listen: Restart NUT services
+  - name: Restart NUT monitor
+    ansible.builtin.service:
+      name: nut-client
+      state: restarted
+    listen: Restart NUT services

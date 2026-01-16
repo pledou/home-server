@@ -1,0 +1,6 @@
+# code: language=ansible
+---
+- name: install NUT for UPS management
+  hosts: docker_server
+  roles:
+    - nut

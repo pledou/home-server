@@ -1,0 +1,5 @@
+MONITOR {{ nut_ups_name }}@localhost 1 {{ nut_mon_user }} {{ nut_mon_password }} master
+MINSUPPLIES 1
+SHUTDOWNCMD "/sbin/shutdown -h now"
+POWERDOWNFLAG /etc/killpower
+RUN_AS_USER nut

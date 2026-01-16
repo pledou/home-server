@@ -1,0 +1,11 @@
+---
+# Default variables for NUT UPS role
+nut_mode: standalone
+nut_ups_name: ups
+# Consider overriding via Ansible Vault
+nut_mon_password: nutmonpass
+nut_adm_password: nutadmpass
+# Optional manual driver override if scanner fails
+nut_driver: usbhid-ups
+nut_port: auto
+nut_listen_ipv6: true
