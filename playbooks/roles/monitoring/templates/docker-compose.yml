@@ -100,8 +100,8 @@ services:
       # Generic OAuth
       GF_AUTH_GENERIC_OAUTH_ENABLED: "true"
       GF_AUTH_GENERIC_OAUTH_NAME: "authentik"
-      GF_AUTH_GENERIC_OAUTH_CLIENT_ID: "{{ grafana_oauth_client_id }}"
-      GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: "{{ grafana_oauth_client_secret }}"
+      GF_AUTH_GENERIC_OAUTH_CLIENT_ID: "{{ grafana_oauth_client_id }}" # TODO move to secret
+      GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: "{{ grafana_oauth_client_secret }}" # TODO move to secret
       GF_AUTH_GENERIC_OAUTH_SCOPES: "openid profile email"
       GF_AUTH_GENERIC_OAUTH_AUTH_URL: "https://auth.{{ app_domain_name }}/application/o/authorize/"
       GF_AUTH_GENERIC_OAUTH_TOKEN_URL: "https://auth.{{ app_domain_name }}/application/o/token/"

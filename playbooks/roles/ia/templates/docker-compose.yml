@@ -22,8 +22,8 @@ services:
 
       # Generic OAuth
       OAUTH_PROVIDER_NAME: "authentik"
-      OAUTH_CLIENT_ID: "{{ webui_oauth_client_id }}"
-      OAUTH_CLIENT_SECRET: "{{ webui_oauth_client_secret }}"
+      OAUTH_CLIENT_ID: "{{ webui_oauth_client_id }}" # TODO move to secret
+      OAUTH_CLIENT_SECRET: "{{ webui_oauth_client_secret }}" # TODO move to secret
       OAUTH_SCOPES: "openid profile email"
       OPENID_PROVIDER_URL: "https://auth.{{ app_domain_name }}/application/o/{{ webui_oauth_slug_name }}/.well-known/openid-configuration"
       WEBUI_URL: "https://ia.{{ app_domain_name }}"
