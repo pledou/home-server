@@ -167,14 +167,23 @@ services:
 
 volumes:
   ollama:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/ollama"
   open-webui:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/open-webui"
   voices:
    driver: local
    driver_opts:
      type: none
      o: bind
      device: "{{ docker_volumes_path }}/voices"
-  pipelines:
   speech_config:
     driver: local
     driver_opts:

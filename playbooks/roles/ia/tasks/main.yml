@@ -14,6 +14,8 @@
   loop:
     - speech
     - voices
+    - ollama
+    - open-webui
 
 - name: Copy speech configuration file
   become: true
