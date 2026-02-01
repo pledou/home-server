@@ -15,7 +15,7 @@
       authorization_flow: "{{ auth_flow_result.json.results[0].pk }}"
       invalidation_flow: "{{ invalidation_flow_result.json.results[0].pk }}"
       external_host: "{{ provider_app.provider.external_host }}"
-      mode: "forward_single"
+      mode: "{{ provider_app.provider.mode | default('forward_single') }}"
     status_code: [201, 400]
   register: provider_result
   failed_when:
@@ -63,5 +63,4 @@
   when:
     - authentik_api_token is defined
     - provider_pk is defined
-
 

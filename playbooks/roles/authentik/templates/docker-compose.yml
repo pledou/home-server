@@ -52,8 +52,10 @@ services:
     restart: unless-stopped
     command: server
     networks:
-      - backend
-      - traefik_backend
+      backend:
+      traefik_backend:
+        aliases:
+          - authentik-outpost
     volumes:
       - media:/media
       - custom-templates:/templates
