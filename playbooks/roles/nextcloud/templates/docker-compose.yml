@@ -32,7 +32,7 @@ services:
       
       traefik.http.routers.nginx-https.rule: Host(`{{ app_domain_name }}`)
       traefik.http.routers.nginx-https.entrypoints: https
-      traefik.http.routers.nginx-https.middlewares: nginx@docker
+      traefik.http.routers.nginx-https.middlewares: nginx@docker,real-ip@docker
       traefik.http.routers.nginx-https.tls: 'true'
       traefik.http.routers.nginx-https.tls.certresolver: le
 

@@ -43,6 +43,8 @@ services:
       - traefik.http.middlewares.authentik.forwardauth.trustForwardHeader=true
       - traefik.http.middlewares.authentik.forwardauth.authResponseHeaders=X-authentik-username,X-authentik-groups,X-authentik-entitlements,X-authentik-email,X-authentik-name,X-authentik-uid,X-authentik-jwt,X-authentik-meta-jwks,X-authentik-meta-outpost,X-authentik-meta-provider,X-authentik-meta-app,X-authentik-meta-version
 
+      - traefik.http.middlewares.real-ip.headers.customrequestheaders.X-Real-IP={{ app_domain_name }}
+
     environment:
       - DUCKDNS_TOKEN={{ traefik_duckdns_token }} #TODO protect this secret
     hostname: traefik
@@ -61,6 +63,7 @@ services:
       - --certificatesresolvers.le.acme.dnschallenge.provider=duckdns
       - --entrypoints.https.http.tls.domains[0].main={{ app_domain_name }}
       - --entrypoints.https.http.tls.domains[0].sans=*.{{ app_domain_name }}
+      - --entrypoints.https.forwardedheaders.insecure
       - --accesslog
       - --log
       - --log.level=INFO
