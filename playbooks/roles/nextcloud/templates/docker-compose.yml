@@ -50,6 +50,7 @@ services:
       - POSTGRES_DB=nextcloud
       - POSTGRES_USER=nextcloud
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      - NEXTCLOUD_URL=https://{{app_domain_name}}
     restart: always
     hostname: nc_nextcloud
     build:
@@ -59,6 +60,7 @@ services:
     networks:
       - backend
       - traefik_backend
+      - ia_network
     volumes:
       - nextcloud-www:/var/www/html:Z
       - nextcloud-config:/var/www/html/config:Z
@@ -116,10 +118,19 @@ services:
 
   turn_server:
     command:
-      - '-n --log-file=stdout --external-ip=$$(detect-external-ip) --listening-port=3478
-        --no-cli --fingerprint --use-auth-secret --static-auth-secret=jzstsfmh41l4wdhcyrqdjmiegc0b8i48
-        --realm={{ app_domain_name }} --total-quota=100 --bps-capacity=0 --stale-nonce
-        --no-multicast-peers'
+      - -n
+      - --log-file=stdout
+      - --external-ip=$$(detect-external-ip)
+      - --listening-port=3478
+      - --no-cli
+      - --fingerprint
+      - --use-auth-secret
+      - --static-auth-secret=jzstsfmh41l4wdhcyrqdjmiegc0b8i48
+      - --realm={{ app_domain_name }}
+      - --total-quota=100
+      - --bps-capacity=0
+      - --stale-nonce
+      - --no-multicast-peers
     entrypoint:
       - docker-entrypoint.sh
     image: instrumentisto/coturn:latest
@@ -132,9 +143,39 @@ services:
     volumes:
       - turnserver-data:/var/lib/coturn:rw
 
+  harp:
+    image: ghcr.io/nextcloud/nextcloud-appapi-harp:release
+    restart: always
+    environment:
+      HP_SHARED_KEY: "{{AppAPISecret}}"
+      NC_INSTANCE_URL: "https://{{ app_domain_name }}"
+      # HP_TRUSTED_PROXY_IPS: "127.0.0.1/32"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+    ports:
+      - 8780:8780
+      - 8782:8782
+    networks:
+      - backend
+      - traefik_backend
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: traefik_backend
+      traefik.http.routers.exapps.rule: "Host(`{{ app_domain_name }}`) && PathPrefix(`/exapps/`)"
+      traefik.http.routers.exapps.entrypoints: https
+      traefik.http.routers.exapps.tls: 'true'
+      traefik.http.routers.exapps.tls.certresolver: le
+      traefik.http.routers.exapps.priority: 50
+      traefik.http.routers.exapps.service: exapps-service
+      traefik.http.services.exapps-service.loadbalancer.server.port: 8780
+      # serversTransport is defined via Traefik file provider (harp.yml)
+      # traefik.http.services.exapps-service.serversTransport.forwardingTimeouts.responseHeaderTimeout: 1800s
+
 
 networks:
   traefik_backend:
+    external: true
+  ia_network:
     external: true
   backend:
 

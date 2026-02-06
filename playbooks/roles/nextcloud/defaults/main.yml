@@ -12,6 +12,12 @@ nextcloud_defaultapp_list:
   - previewgenerator
   - integration_openai
   - music
+  - notify_push
+  - notes
+  - deck
+  - calendar
+  - contacts
+  - mail
 
 nextcloud_system_config:
   - "overwrite.cli.url --value=https://{{ app_domain_name }}"

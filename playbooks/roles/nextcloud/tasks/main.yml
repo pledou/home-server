@@ -14,6 +14,7 @@
       - talk_secret
       - redis_secret
       - nc_elastic_secret
+      - AppAPISecret
 
 - name: Create nextcloud provisionning directories
   become: true
