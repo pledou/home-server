@@ -1,0 +1,41 @@
+# yaml-langage-server: $schema=https://frigate.{{ app_domain_name }}/api/config/schema.json
+auth:
+  enabled: False
+
+proxy:
+  separator: "|"
+  default_role: viewer
+  header_map:
+    user: x-forwarded-user
+    role: x-forwarded-groups
+
+mqtt:
+  user: "{{ mqtt_user }}"
+  password: "{{ mqtt_password }}"
+  host: mqtt
+  port: 1883
+
+{{ frigate_cameras }}
+
+record:
+    enabled: true
+    retain:
+      days: 7
+      mode: motion
+    alerts:
+      retain:
+        days: 30
+    detections:
+      retain:
+        days: 30
+snapshots:
+  enabled: true
+  retain:
+    default: 30
+
+genai:
+  enabled: true
+  provider: ollama
+  base_url: "http://ollama:11434"
+  #  Error initializing Ollama: model 'gpt-4o' not found
+  model: "ministral-3"

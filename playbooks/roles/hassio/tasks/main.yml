@@ -34,6 +34,11 @@
     - name: myelectricaldata
       mode: u=rwx,g=rx,o=
       group: 0998
+    - name: frigate_config
+      mode: u=rwx,g=rx,o=
+    - name: frigate_media
+      mode: u=rwx,g=rx,o=
+
 - name: Copy mosquitto config file
   become: true
   ansible.builtin.template:
@@ -90,6 +95,13 @@
     src: docker-compose.yml
     dest: /home/{{ ansible_user }}/home-server/stacks/hassio/docker-compose.yml
     mode: u=g=rwx,o=rx
+- name: Copy frigate config file
+  become: true
+  ansible.builtin.template:
+    src: frigate.yaml
+    dest: "{{ docker_volumes_path }}/frigate_config/config.yaml"
+    mode: u=g=rwx,o=rx
+    force: true
 - name: Configure homeassistant for proxy
   become: true
   ansible.builtin.blockinfile:
@@ -163,6 +175,9 @@
         port: "3702"
         proto: "udp"
         cidrs: "{{ local_networks }}"
+      - name: "RTSP for Frigate"
+        port: "8554"
+        cidrs: "{{ local_networks }}"
   community.general.ufw:
     rule: allow
     port: "{{ item.0.port | default(omit) }}"
@@ -172,16 +187,16 @@
     comment: "{{ item.0.name }}"
   loop: "{{ ufw_rules | subelements('cidrs') }}"
 
-- name: Restore ha_enonceanmqtt git repo
-  become: true
-  ansible.builtin.git:
-    repo: 'https://gitlab.leducd.duckdns.org/p.leduc/HA_enoceanmqtt.git'
-    dest: "/home/{{ ansible_user }}/home-server/stacks/hassio/ha_enonceanmqtt"
-    version: 'jenocean'
-    single_branch: true
-  environment:
-    GIT_TERMINAL_PROMPT: "0" # reports "terminal prompts disabled" on missing password
-  when: enocean_device_id is defined
+# - name: Restore ha_enonceanmqtt git repo
+#   become: true
+#   ansible.builtin.git:
+#     repo: 'https://gitlab.leducd.duckdns.org/p.leduc/HA_enoceanmqtt.git'
+#     dest: "/home/{{ ansible_user }}/home-server/stacks/hassio/ha_enonceanmqtt"
+#     version: 'jenocean'
+#     single_branch: true
+#   environment:
+#     GIT_TERMINAL_PROMPT: "0" # reports "terminal prompts disabled" on missing password
+#   when: enocean_device_id is defined
 
 - name: Deploy compose from a compose file
   become: true
@@ -218,6 +233,12 @@
             app:
               name: "Zigbee2Mqtt"
               slug: "zigbee2mqtt"
+          - provider:
+              name: "frigate-provider"
+              external_host: "https://frigate.{{ app_domain_name }}"
+            app:
+              name: "Frigate"
+              slug: "frigate"
 
 # - name: Fix bluepy dependency
 #   community.docker.docker_container_exec:
