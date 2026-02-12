@@ -1,0 +1,91 @@
+services:
+
+  k-db:
+    image: postgres:{{ kresus_postgres_version | default('15') }}
+    hostname: k-db
+    restart: always
+    environment:
+      - POSTGRES_USER=kresus
+      - POSTGRES_PASSWORD_FILE=/run/secrets/k_db_password
+      - POSTGRES_DB=kresus
+      - PGDATA=/usr/lib/postgresql/data
+    volumes:
+      - kresus-database:/usr/lib/postgresql/data:rw
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kresus -d kresus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    secrets:
+      - k_db_password
+      
+  apprise:
+    image: "caronc/apprise"
+    hostname: apprise
+    networks:
+      - backend
+    restart: always
+
+  kresus:
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.constraint-label=traefik_backend
+      - traefik.http.routers.kresus-https.rule=Host(`kresus.{{ app_domain_name }}`)
+      - traefik.http.routers.kresus-https.entrypoints=https
+      - traefik.http.routers.kresus-https.tls=true
+      - traefik.http.routers.kresus-https.tls.certresolver=le
+      - traefik.http.services.kresus.loadbalancer.server.port=9876
+      - traefik.http.routers.kresus-https.middlewares=authentik@docker
+      
+    image: "bnjbvr/kresus"
+    restart: always
+    networks:
+      - traefik_backend
+      - backend
+    environment:
+      # See
+      # https://framagit.org/kresusapp/kresus/-/blob/master/support/docker/config.example.ini
+      # for more configuration options
+      - LOCAL_USER_ID=1000
+      - KRESUS_DB_TYPE=postgres
+      - KRESUS_DB_HOST=k-db
+      - KRESUS_DB_PORT=5432
+      - KRESUS_DB_USERNAME=kresus
+      - KRESUS_DB_PASSWORD={{ k_db_password }}
+      - KRESUS_APPRISE_API_BASE_URL=http://apprise:8000
+      - KRESUS_SQLITE_PATH=
+      - KRESUS_EMAIL_TRANSPORT={{ kresus_email_transport }}
+      - KRESUS_EMAIL_FROM={{ kresus_email_from }}
+      - KRESUS_EMAIL_HOST={{ kresus_email_host }}
+      - KRESUS_EMAIL_PORT={{ kresus_email_port }}
+      - KRESUS_EMAIL_USER={{ kresus_email_user }}
+      - KRESUS_EMAIL_PASSWORD={{ kresus_email_password }}
+    depends_on:
+      - k-db
+      - apprise
+
+networks:
+  traefik_backend:
+    external: true
+  backend:
+
+secrets:
+  k_db_password:
+    file: "{{ docker_volumes_path }}/secrets//k_db_password"
+
+volumes:
+  kresus-database:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/kresus-database"
+  kresus-woob:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/kresus-woob"
