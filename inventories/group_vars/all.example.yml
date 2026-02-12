@@ -93,20 +93,7 @@ zigbee2mqtt_device_type: "zstack"
 # How to get device_id
 # ls -l /dev/serial/by-id/
 
-enocean_device_id: "usb-YOUR_ENOCEAN_DEVICE_ID"
-enocean_sensors: |-
-  [sensor_remote]
-  address         = 0x00000000
-  rorg            = 0xD1079
-  func            = 0x00
-  type            = 0x00
-
-  [sensor]
-  address         = 0x00000000
-  rorg            = 0xD1079
-  func            = 0x01
-  type            = 0x00
-  filter_destination = 0x01
+enocean_device_id: "usb-YOUR_ENOCEAN_DEVICE_ID" # How to get device_id # ls -l /dev/serial/by-id/
 
 # Frigate ONVIF / PTZ blocks for camera templates
 # Inserted as literal blocks so they can be placed directly into
