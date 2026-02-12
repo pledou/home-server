@@ -1,0 +1,139 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    name: Tests and Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install Ansible and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible ansible-lint yamllint
+      
+      - name: Install Ansible Galaxy dependencies
+        run: |
+          ansible-galaxy install -r requirements.yml
+      
+      - name: Run YAML Lint
+        run: |
+          yamllint -c .yamllint .
+        continue-on-error: true
+      
+      - name: Run Ansible Lint
+        run: |
+          ansible-lint playbooks/
+        continue-on-error: true
+      
+      - name: Syntax check playbooks
+        run: |
+          ansible-playbook --syntax-check playbooks/install.yml
+          ansible-playbook --syntax-check playbooks/upgrade-packages.yml
+          ansible-playbook --syntax-check playbooks/CheckBackup.yml
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner for misc config
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          severity: 'MEDIUM,HIGH,CRITICAL'
+          exit-code: '0'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+        if: always()
+      
+      - name: Run Trivy vulnerability scanner (table output)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          severity: 'MEDIUM,HIGH,CRITICAL'
+          exit-code: '0'
+          format: 'table'
+      
+      - name: Scan Dockerfiles with Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          recursive: true
+          ignore: DL3008,DL3009
+          failure-threshold: warning
+        continue-on-error: true
+      
+      - name: Check for secrets in code
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  ansible-test:
+    name: Ansible Playbook Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible
+      
+      - name: Validate playbook structure
+        run: |
+          # Check if example files exist
+          if [ ! -f "ansible.cfg.example" ]; then
+            echo "Error: ansible.cfg.example not found"
+            exit 1
+          fi
+          if [ ! -f "inventories/inventory.example.yml" ]; then
+            echo "Error: inventories/inventory.example.yml not found"
+            exit 1
+          fi
+          if [ ! -f "inventories/group_vars/all.example.yml" ]; then
+            echo "Error: inventories/group_vars/all.example.yml not found"
+            exit 1
+          fi
+          echo "All required example files are present"
+      
+      - name: Check for sensitive data patterns
+        run: |
+          # Check that example files don't contain real credentials
+          if grep -r "password:\s*[^{]" inventories/*.example.yml playbooks/roles/*/defaults/*.yml 2>/dev/null | grep -v "{{ " | grep -v "changeme" | grep -v "your_" | grep -v "example"; then
+            echo "Warning: Possible hardcoded credentials found"
+            exit 1
+          fi
+          echo "No hardcoded credentials detected"
