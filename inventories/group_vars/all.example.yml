@@ -1,0 +1,187 @@
+# code: language=ansible
+---
+admin_mail: "admin@example.com"
+
+ansible_become_method: sudo
+
+pg_backup_retention_days: 7
+
+duckdns_nonstatic: false # update duckdns ip binding
+duckdns_subdomain: your_subdomain
+app_domain_name: "{{ duckdns_subdomain }}.duckdns.org"
+docker_volumes_path: /opt
+docker_volume_device: /dev/disk/by-id/YOUR_DISK_ID
+
+traefik_duckdns_token: !vault |
+                       $ANSIBLE_VAULT;1.1;AES256
+                       YOUR_ENCRYPTED_DUCKDNS_TOKEN_HERE
+traefik_email: "{{ admin_mail }}"
+
+kresus_port: 9876
+kresus_email_transport: smtp
+kresus_email_from: your_email@example.com
+kresus_email_host: mail.example.com
+kresus_email_port: 587
+kresus_email_user: your_email@example.com
+kresus_email_password: !vault |
+                       $ANSIBLE_VAULT;1.1;AES256
+                       YOUR_ENCRYPTED_EMAIL_PASSWORD_HERE
+
+nextcloud_mail_from: "{{ kresus_email_from }}"
+nextcloud_mail_smtpmode: "{{ kresus_email_transport }}"
+nextcloud_mail_smtpauthtype: "LOGIN"
+nextcloud_mail_domain: "example.com"
+nextcloud_mail_smtpname: "{{ kresus_email_user }}"
+nextcloud_mail_smtpsecure: "ssl"
+nextcloud_mail_smtpauth: "true"
+nextcloud_mail_smtphost: "{{ kresus_email_host }}"
+nextcloud_mail_smtpport: 465
+nextcloud_mail_smtppwd: "{{ kresus_email_password }}"
+
+diun_mail_to: "{{ admin_mail }}"
+diun_mail_from: "{{ kresus_email_from }}"
+diun_mail_host: "{{ kresus_email_host }}"
+diun_mail_port: "{{ kresus_email_port }}"
+diun_mail_user: "{{ kresus_email_user }}"
+diun_mail_password: "{{ kresus_email_password }}"
+
+nextcloud_exporter_auth_token: !vault |
+                               $ANSIBLE_VAULT;1.1;AES256
+                               YOUR_ENCRYPTED_NEXTCLOUD_EXPORTER_TOKEN_HERE
+
+nextcloud_version: 32
+
+authentik_mail_from: "{{ kresus_email_from }}"
+authentik_mail_smtpname: "{{ kresus_email_user }}"
+authentik_mail_smtphost: "{{ kresus_email_host }}"
+authentik_mail_smtpport: 465
+authentik_mail_smtppwd: "{{ kresus_email_password }}"
+
+grafana_mail_from: "{{ kresus_email_from }}"
+grafana_mail_smtppwd: "{{ kresus_email_password }}"
+grafana_mail_smtpname: "{{ kresus_email_user }}"
+grafana_mail_smtpport: 465
+grafana_mail_smtphost: "{{ kresus_email_host }}"
+
+grafana_oauth_client_id: !vault |
+                         $ANSIBLE_VAULT;1.1;AES256
+                         YOUR_ENCRYPTED_GRAFANA_OAUTH_CLIENT_ID_HERE
+
+grafana_oauth_client_secret: !vault |
+                             $ANSIBLE_VAULT;1.1;AES256
+                             YOUR_ENCRYPTED_GRAFANA_OAUTH_CLIENT_SECRET_HERE
+
+webui_oauth_client_id: !vault |
+                       $ANSIBLE_VAULT;1.1;AES256
+                       YOUR_ENCRYPTED_WEBUI_OAUTH_CLIENT_ID_HERE
+
+webui_oauth_client_secret: !vault |
+                           $ANSIBLE_VAULT;1.1;AES256
+                           YOUR_ENCRYPTED_WEBUI_OAUTH_CLIENT_SECRET_HERE
+
+webui_oauth_slug_name: "webui"
+
+authentik_api_token: !vault |
+                     $ANSIBLE_VAULT;1.1;AES256
+                     YOUR_ENCRYPTED_AUTHENTIK_API_TOKEN_HERE
+
+gpu: "none" # "nvidia" or "intel" used for ollama service
+
+mqtt_user: "your_mqtt_user"
+zigbee2mqtt_device_id: "usb-YOUR_ZIGBEE_DEVICE_ID"
+zigbee2mqtt_device_type: "zstack"
+# How to get device_id
+# ls -l /dev/serial/by-id/
+
+enocean_device_id: "usb-YOUR_ENOCEAN_DEVICE_ID"
+enocean_sensors: |-
+  [sensor_remote]
+  address         = 0x00000000
+  rorg            = 0xD1079
+  func            = 0x00
+  type            = 0x00
+
+  [sensor]
+  address         = 0x00000000
+  rorg            = 0xD1079
+  func            = 0x01
+  type            = 0x00
+  filter_destination = 0x01
+
+# Frigate ONVIF / PTZ blocks for camera templates
+# Inserted as literal blocks so they can be placed directly into
+# the Frigate YAML template with the same indentation pattern as
+# other config snippets.
+frigate_cameras: |-
+  cameras:
+    camera_1:
+      ffmpeg:
+        inputs:
+          # Camera RTSP stream with ONVIF support
+          - path: rtsp://admin:PASSWORD@192.168.1.100:554/Streaming/Channels/102
+            roles:
+              - detect
+              - record
+      onvif:
+        host: 192.168.1.100
+        port: 80
+        user: admin
+        password: PASSWORD
+      record:
+        enabled: true
+  
+      zones:
+        zone_1:
+          coordinates: 0.5,0.5,0.8,0.1,0.7,0.6,0.5,0.6
+          loitering_time: 0
+        zone_2:
+          coordinates: 0.1,0.3,0.5,0.3,0.5,0.9,0.0,0.9
+          loitering_time: 0
+    camera_2:
+      ffmpeg:
+        inputs:
+          # Second camera RTSP stream with ONVIF support
+          - path: rtsp://admin:PASSWORD@192.168.1.101:554/Streaming/Channels/102
+            roles:
+              - detect
+              - record
+      onvif:
+        host: 192.168.1.101
+        port: 80
+        user: admin
+        password: PASSWORD
+      record:
+        enabled: true
+
+frigate_proxy_auth_secret: !vault |
+                           $ANSIBLE_VAULT;1.1;AES256
+                           YOUR_ENCRYPTED_FRIGATE_PROXY_AUTH_SECRET_HERE
+
+HOME_ASSISTANT_TOKEN: !vault |
+                      $ANSIBLE_VAULT;1.1;AES256
+                      YOUR_ENCRYPTED_HOME_ASSISTANT_TOKEN_HERE
+
+myelectricaldata_PDL: !vault |
+                      $ANSIBLE_VAULT;1.1;AES256
+                      YOUR_ENCRYPTED_PDL_HERE
+
+myelectricaldata_token: !vault |
+                        $ANSIBLE_VAULT;1.1;AES256
+                        YOUR_ENCRYPTED_MYELECTRICALDATA_TOKEN_HERE
+
+myelectricaldata_name: "Home"
+myelectricaldata_plan: "Base" # "Base" or "HC/HP" or "Tempo"
+
+unbound: true
+# unbound_forward_dns: 192.168.1.254 # DNS server to forward requests to
+
+#Configuration of NUT
+nut_mode: netserver
+nut_adm_password: !vault |
+                  $ANSIBLE_VAULT;1.1;AES256
+                  YOUR_ENCRYPTED_NUT_ADM_PASSWORD_HERE
+
+nut_mon_password: !vault |
+                  $ANSIBLE_VAULT;1.1;AES256
+                  YOUR_ENCRYPTED_NUT_MON_PASSWORD_HERE
+...

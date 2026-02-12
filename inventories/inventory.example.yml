@@ -1,0 +1,35 @@
+# code: language=ansible
+---
+all:
+    hosts:
+        homeserver:
+            ansible_connection: ssh
+            ansible_host: 192.168.1.100
+            ansible_user: your_username
+            ansible_ssh_pass: !vault |
+                              $ANSIBLE_VAULT;1.1;AES256
+                              YOUR_ENCRYPTED_SSH_PASSWORD_HERE
+            ansible_become_pass: !vault |
+                                 $ANSIBLE_VAULT;1.1;AES256
+                                 YOUR_ENCRYPTED_SUDO_PASSWORD_HERE
+    vars:
+        ansible-connection: ssh
+        my_ipv6_network: 2001:db8::/64
+
+docker_server:
+    hosts:
+        homeserver:
+
+backup:
+    hosts:
+        homeserver:
+            restic_repo: '/path/to/backup/destination'  # e.g. /var/nc-backup or /media/backup
+            backup_day: '*' # crontab settings for restic
+            backup_hour: 4
+            backup_minute: 0
+            aws_access_key_id: !vault |
+                               $ANSIBLE_VAULT;1.1;AES256
+                               YOUR_ENCRYPTED_AWS_ACCESS_KEY_ID_HERE
+            aws_secret_access_key: !vault |
+                                   $ANSIBLE_VAULT;1.1;AES256
+                                   YOUR_ENCRYPTED_AWS_SECRET_ACCESS_KEY_HERE
