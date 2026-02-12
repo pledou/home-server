@@ -90,9 +90,23 @@
     src: docker-compose.yml
     dest: /home/{{ ansible_user }}/home-server/stacks/nc/docker-compose.yml
     mode: u=rw,g=o=r
-- name: Deploy stack from a compose file
+
+- name: Try to pull latest images (continue on failure)
   community.docker.docker_compose_v2:
     pull: "always"
+    state: present
+    project_src: /home/{{ ansible_user }}/home-server/stacks/nc
+  ignore_errors: true
+  register: pull_result
+
+- name: Warning - using local images
+  ansible.builtin.debug:
+    msg: "WARNING: Could not pull latest images. Deploying with existing local images."
+  when: pull_result is failed
+
+- name: Deploy stack from a compose file
+  community.docker.docker_compose_v2:
+    pull: "never"
     build: "always"
     state: "{{ 'restarted' if (nginx1 is changed or nginx2 is changed) else 'present' }}"
     project_src: /home/{{ ansible_user }}/home-server/stacks/nc
