@@ -74,22 +74,6 @@
     mode: u=g=rwx,o=rx
     force: false
   when: zigbee2mqtt_device_id is defined
-- name: Copy enocean2mqtt config file
-  become: true
-  ansible.builtin.template:
-    src: templates/enocean2mqtt.conf
-    dest: "{{ docker_volumes_path }}/enocean2mqtt/enoceanmqtt.conf"
-    mode: u=g=rwx,o=rx
-    force: true
-  when: enocean_device_id is defined
-- name: Copy enocean custom mappig config file
-  become: true
-  ansible.builtin.copy:
-    src: mapping.yaml
-    dest: "{{ docker_volumes_path }}/enocean2mqtt/mapping.yaml"
-    mode: u=g=rwx,o=rx
-    force: true
-  when: enocean_device_id is defined
 - name: Create docker-compose file
   ansible.builtin.template:
     src: docker-compose.yml
@@ -101,6 +85,22 @@
     src: frigate.yaml
     dest: "{{ docker_volumes_path }}/frigate_config/config.yaml"
     mode: u=g=rwx,o=rx
+    force: false
+- name: Update frigate managed configuration (auth, proxy, mqtt)
+  become: true
+  ansible.builtin.blockinfile:
+    path: "{{ docker_volumes_path }}/frigate_config/config.yaml"
+    marker: "# ANSIBLE_MANAGED_{mark}"
+    marker_begin: "START - DO NOT EDIT BETWEEN MARKERS"
+    marker_end: "END"
+    block: "{{ lookup('template', 'frigate-managed-config.yaml') }}"
+    mode: u=g=rwx,o=rx
+- name: Copy frigate proxy trusted headers config
+  become: true
+  ansible.builtin.template:
+    src: proxy_trusted_headers.conf
+    dest: "{{ docker_volumes_path }}/frigate_config/proxy_trusted_headers.conf"
+    mode: u=g=r,o=r
     force: true
 - name: Configure homeassistant for proxy
   become: true
@@ -187,21 +187,24 @@
     comment: "{{ item.0.name }}"
   loop: "{{ ufw_rules | subelements('cidrs') }}"
 
-# - name: Restore ha_enonceanmqtt git repo
-#   become: true
-#   ansible.builtin.git:
-#     repo: 'https://gitlab.leducd.duckdns.org/p.leduc/HA_enoceanmqtt.git'
-#     dest: "/home/{{ ansible_user }}/home-server/stacks/hassio/ha_enonceanmqtt"
-#     version: 'jenocean'
-#     single_branch: true
-#   environment:
-#     GIT_TERMINAL_PROMPT: "0" # reports "terminal prompts disabled" on missing password
-#   when: enocean_device_id is defined
+- name: Try to pull latest images (continue on failure)
+  become: true
+  community.docker.docker_compose_v2:
+    pull: "always"
+    state: present
+    project_src: /home/{{ ansible_user }}/home-server/stacks/hassio
+  ignore_errors: true
+  register: pull_result
+
+- name: Warning - using local images
+  ansible.builtin.debug:
+    msg: "WARNING: Could not pull latest images. Deploying with existing local images."
+  when: pull_result is failed
 
 - name: Deploy compose from a compose file
   become: true
   community.docker.docker_compose_v2:
-    pull: "always"
+    pull: "never"
     build: "always"
     state: present
     project_src: /home/{{ ansible_user }}/home-server/stacks/hassio

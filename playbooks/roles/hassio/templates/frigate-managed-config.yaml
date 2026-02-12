@@ -1,0 +1,16 @@
+# yaml-langage-server: $schema=https://frigate.{{ app_domain_name }}/api/config/schema.json
+auth:
+  enabled: False
+
+proxy:
+  # See https://github.com/blakeblackshear/frigate/discussions/19950
+  auth_secret: "{{ frigate_proxy_auth_secret }}"
+  header_map:
+    user: x-authentik-username
+    role: x-frigate-role
+
+mqtt:
+  user: "{{ mqtt_user }}"
+  password: "{{ mqtt_password }}"
+  host: mqtt
+  port: 1883

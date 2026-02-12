@@ -1,19 +1,7 @@
 # yaml-langage-server: $schema=https://frigate.{{ app_domain_name }}/api/config/schema.json
-auth:
-  enabled: False
-
-proxy:
-  separator: "|"
-  default_role: viewer
-  header_map:
-    user: x-forwarded-user
-    role: x-forwarded-groups
-
-mqtt:
-  user: "{{ mqtt_user }}"
-  password: "{{ mqtt_password }}"
-  host: mqtt
-  port: 1883
+# ANSIBLE_MANAGED_START - DO NOT EDIT BETWEEN MARKERS
+# This section is managed by Ansible and will be updated automatically
+# ANSIBLE_MANAGED_END
 
 {{ frigate_cameras }}
 

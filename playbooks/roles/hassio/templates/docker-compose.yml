@@ -9,12 +9,16 @@ services:
       traefik.http.routers.home-https.entrypoints: https
       traefik.http.routers.home-https.tls: 'true'
       traefik.http.routers.home-https.tls.certresolver: le
-
+      traefik.http.routers.real-ip.middlewares: real-ip@docker
       traefik.http.services.home.loadbalancer.server.port: 8123
       traefik.http.services.home.loadbalancer.passHostHeader: 'true'
     entrypoint:
       - /init
     hostname: homeassistant
+{% if enocean_device_id is defined %}
+    devices:
+      - /dev/serial/by-id/{{enocean_device_id}}:/dev/enocean
+{% endif %}
     image: homeassistant/home-assistant:stable
     network_mode: host
     healthcheck:
@@ -34,25 +38,6 @@ services:
       - homeassistant:/config:rw
       - /etc/machine-id:/etc/machine-id:ro
     working_dir: /config
-
-{% if enocean_device_id is defined %}
-  enocean2mqtt:
-    build: 
-      context: ./ha_enonceanmqtt/
-      dockerfile: Dockerfile
-      # target: ha_enonceanmqtt
-    devices:
-      - /dev/serial/by-id/{{enocean_device_id}}:/dev/enocean
-    entrypoint: ["python", "/usr/local/bin/enoceanmqtt", "/enoceanmqtt-default.conf", "/config/enoceanmqtt.conf"]
-    # entrypoint: ["tail", "-f", "/dev/null"]
-    volumes:
-      - enocean2mqtt:/config
-    restart: always
-    environment:
-      TZ: Europe/Paris
-    networks:
-      - backend
-{% endif %}
 
 {% if zigbee2mqtt_device_id is defined %}
   zigbee2mqtt:
@@ -102,7 +87,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
 
   mosquitto:
-    image: eclipse-mosquitto
+    image: eclipse-mosquitto:{{mosquitto_version | default('latest')}}
     volumes:
       - mosquitto:/mosquitto/config:rw # rw for startup script to fix permissions
       - mosquitto-data:/mosquitto/data:rw
@@ -146,7 +131,52 @@ services:
     networks:
       - traefik_backend
       - backend
-  
+
+  frigate:
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: traefik_backend
+      traefik.constraint-label: traefik_backend
+      traefik.http.routers.frigate-https.rule: Host(`frigate.{{app_domain_name}}`)
+      traefik.http.routers.frigate-https.entrypoints: https
+      traefik.http.routers.frigate-https.tls: true
+      traefik.http.routers.frigate-https.tls.certresolver: le
+      traefik.http.services.frigate.loadbalancer.server.port: 8971
+      traefik.http.services.frigate.loadbalancer.passHostHeader: 'true'
+      traefik.http.routers.frigate-https.middlewares: authentik@docker
+    image: ghcr.io/blakeblackshear/frigate:stable
+    restart: unless-stopped
+    privileged: true
+    shm_size: '512mb'
+    group_add:
+      - "109" # render
+      - "110" # render
+      - "44"  # video
+      - "46"  # plugdev
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - frigate_config:/config:rw
+      - frigate_media:/media:rw
+      - /dev/bus/usb:/dev/bus/usb
+    ## Uncomment this block for nvidia gpu support
+    # deploy:
+    #       resources:
+    #           reservations:
+    #               devices:
+    #                   - driver: nvidia
+    #                     count: 1
+    #                     capabilities: [gpu]
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128 # for hardware acceleration
+    environment:
+      FRIGATE_RTSP_PASSWORD: "your_rtsp_password"
+    ports:
+      - 8554:8554/tcp  # RTSP
+    networks:
+      - backend
+      - ia_network
+      - traefik_backend
+
   wyoming-piper: # Text-to-Speech service at port 10200
     image: rhasspy/wyoming-piper
     restart: always
@@ -206,7 +236,24 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/myelectricaldata"
-
+  frigate_config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/frigate_config"
+  frigate_media:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/frigate_media"
+  ispy_media:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/ispyagentdvr"
   mosquitto:
     driver: local
     driver_opts:
@@ -219,6 +266,8 @@ volumes:
 networks:
   backend:
   traefik_backend:
+    external: true
+  ia_network:
     external: true
 
 
