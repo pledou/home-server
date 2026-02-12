@@ -15,6 +15,7 @@
       - redis_secret
       - nc_elastic_secret
       - AppAPISecret
+      - turn_secret
 
 - name: Create nextcloud provisionning directories
   become: true
@@ -61,14 +62,19 @@
     dest: "{{ docker_volumes_path }}/nextcloud-nginx-config"
     mode: u=rw,g=o=r
   register: nginx2
-- name: Copy docker files
+- name: Copy docker file
+  become: true
+  ansible.builtin.template:
+    src: "nextcloud/Dockerfile"
+    dest: "/home/{{ ansible_user }}/home-server/stacks/nc/nextcloud.Dockerfile"
+    mode: u=rw,g=o=r
+  register: nginx2
+- name: Copy associated docker files
   ansible.builtin.copy:
     src: "{{ item.src }}"
     dest: "/home/{{ ansible_user }}/home-server/stacks/nc/{{ item.dest }}"
     mode: u=rw,g=o=r
   loop:
-    - src: nextcloud/Dockerfile
-      dest: nextcloud.Dockerfile
     - src: nextcloud/supervisord.conf
       dest: supervisord.conf
     - src: nextcloud/fulltextsearch.sh

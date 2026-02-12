@@ -125,14 +125,18 @@ services:
       - --no-cli
       - --fingerprint
       - --use-auth-secret
-      - --static-auth-secret=jzstsfmh41l4wdhcyrqdjmiegc0b8i48
+      - --static-auth-secret=$$(cat /run/secrets/turn_secret)
       - --realm={{ app_domain_name }}
       - --total-quota=100
       - --bps-capacity=0
       - --stale-nonce
       - --no-multicast-peers
     entrypoint:
-      - docker-entrypoint.sh
+      - /bin/sh
+      - -c
+      - |
+        export TURN_SECRET=$$(cat /run/secrets/turn_secret)
+        exec docker-entrypoint.sh -n --log-file=stdout --external-ip=$$(detect-external-ip) --listening-port=3478 --no-cli --fingerprint --use-auth-secret --static-auth-secret=$$TURN_SECRET --realm={{ app_domain_name }} --total-quota=100 --bps-capacity=0 --stale-nonce --no-multicast-peers
     image: instrumentisto/coturn:latest
     restart: always
     networks:
@@ -142,6 +146,8 @@ services:
       - 0.0.0.0:3478:3478/udp
     volumes:
       - turnserver-data:/var/lib/coturn:rw
+    secrets:
+      - turn_secret
 
   harp:
     image: ghcr.io/nextcloud/nextcloud-appapi-harp:release
@@ -236,3 +242,5 @@ secrets:
     file: "{{ docker_volumes_path }}/secrets/database_user_secret"
   talk_password:
     file: "{{ docker_volumes_path }}/secrets/talk_secret"
+  turn_secret:
+    file: "{{ docker_volumes_path }}/secrets/turn_secret"
