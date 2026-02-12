@@ -1,0 +1,69 @@
+# code: language=ansible
+---
+- name: Ensure SSH is installed
+  ansible.builtin.apt:
+    name: openssh-server
+    state: present
+    update_cache: true
+  become: true
+
+- name: Create .ssh directory for ansible user
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}/.ssh"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0700'
+  become: true
+
+- name: Add authorized SSH keys for ansible user
+  ansible.builtin.authorized_key:
+    user: "{{ ansible_user }}"
+    state: present
+    key: "{{ item }}"
+    exclusive: false
+  loop: "{{ ssh_authorized_keys }}"
+  when: ssh_authorized_keys | length > 0
+  become: true
+
+- name: Backup original sshd_config
+  ansible.builtin.copy:
+    src: /etc/ssh/sshd_config
+    dest: /etc/ssh/sshd_config.backup.{{ ansible_date_time.iso8601_basic_short }}
+    remote_src: true
+    force: false
+  become: true
+
+- name: Deploy hardened sshd_config
+  ansible.builtin.template:
+    src: sshd_config.j2
+    dest: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: '0644'
+    validate: '/usr/sbin/sshd -t -f %s'
+  notify: Restart ssh
+  become: true
+
+- name: Ensure SSH service is enabled and started
+  ansible.builtin.systemd:
+    name: ssh
+    enabled: true
+    state: started
+  become: true
+
+- name: Display SSH key authentication reminder
+  ansible.builtin.debug:
+    msg:
+      - "======================================================"
+      - "IMPORTANT: SSH has been hardened!"
+      - ""
+      - "Make sure you have added your SSH public keys to the"
+      - "'ssh_authorized_keys' variable before disabling"
+      - "password authentication completely."
+      - ""
+      - "Test your SSH key authentication BEFORE closing this"
+      - "session to ensure you can still connect!"
+      - "======================================================"
+  when: ssh_password_authentication == "no"
+...

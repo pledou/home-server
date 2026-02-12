@@ -1,0 +1,54 @@
+# code: language=ansible
+---
+- name: Apply Security Hardening
+  hosts: docker_server
+  roles:
+    - security
+  
+  pre_tasks:
+    - name: Verify SSH keys are configured
+      ansible.builtin.assert:
+        that:
+          - ssh_authorized_keys is defined
+          - ssh_authorized_keys | length > 0
+        fail_msg: |
+          ERROR: No SSH keys configured!
+          
+          You must add your SSH public keys to the 'ssh_authorized_keys' variable
+          in your inventory or group_vars before running this playbook.
+          
+          Example in group_vars/all.yml:
+          ssh_authorized_keys:
+            - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACA... user@host"
+          
+          To generate a new SSH key pair:
+          ssh-keygen -t ed25519 -C "your_email@example.com"
+        success_msg: "SSH keys are configured. Proceeding with security hardening."
+      when: ssh_password_authentication == "no"
+      tags:
+        - always
+  
+  post_tasks:
+    - name: Final security status
+      ansible.builtin.debug:
+        msg:
+          - "======================================================"
+          - "Security hardening completed!"
+          - ""
+          - "SSH Configuration:"
+          - "  - Port: {{ ssh_port }}"
+          - "  - Password Authentication: {{ ssh_password_authentication }}"
+          - "  - Root Login: {{ ssh_permit_root_login }}"
+          - "  - Fail2ban: {{ 'Enabled' if fail2ban_enabled else 'Disabled' }}"
+          - ""
+          - "IMPORTANT NEXT STEPS:"
+          - "1. Test SSH key authentication in a NEW terminal:"
+          - "   ssh -i ~/.ssh/your_key {{ ansible_user }}@{{ ansible_host }}"
+          - ""
+          - "2. Only after confirming key auth works, update inventory.yml:"
+          - "   - Remove ansible_ssh_pass"
+          - "   - Add: ansible_ssh_private_key_file: ~/.ssh/your_key"
+          - ""
+          - "3. Keep this session open until you verify access!"
+          - "======================================================"
+...

@@ -1,0 +1,55 @@
+# code: language=ansible
+---
+# SSH Security Configuration
+ssh_port: 22
+ssh_permit_root_login: "no"
+ssh_password_authentication: "no"
+ssh_pubkey_authentication: "yes"
+ssh_challenge_response_authentication: "no"
+ssh_use_pam: "yes"
+ssh_x11_forwarding: "no"
+ssh_max_auth_tries: 3
+ssh_max_sessions: 10
+ssh_client_alive_interval: 300
+ssh_client_alive_count_max: 2
+
+# SSH Key Authentication
+ssh_authorized_keys: []  # List of public keys to add for the ansible user
+# Example:
+# ssh_authorized_keys:
+#   - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACA... user@host"
+
+# IP-based access restrictions (optional)
+ssh_allow_users: ""  # e.g., "username@192.168.1.0/24"
+ssh_allow_groups: ""
+ssh_deny_users: ""
+ssh_deny_groups: ""
+
+# Fail2ban configuration
+fail2ban_enabled: true
+fail2ban_bantime: "1h"
+fail2ban_findtime: "10m"
+fail2ban_maxretry: 5
+fail2ban_destemail: "root@localhost"
+fail2ban_sender: "fail2ban@{{ ansible_fqdn }}"
+fail2ban_action: "action_mw"  # action_mw = mail with whois report
+
+# Additional SSH hardening
+ssh_protocol: 2
+ssh_log_level: "VERBOSE"
+ssh_strict_modes: "yes"
+ssh_ignore_rhosts: "yes"
+ssh_hostbased_authentication: "no"
+ssh_permit_empty_passwords: "no"
+ssh_permit_user_environment: "no"
+ssh_compression: "no"
+
+# Allowed key types (disable weak algorithms)
+ssh_pubkey_accepted_key_types: "ssh-ed25519,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,rsa-sha2-512,rsa-sha2-256"
+ssh_host_key_algorithms: "ssh-ed25519,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,rsa-sha2-512,rsa-sha2-256"
+
+# Ciphers and MACs (strong algorithms only)
+ssh_ciphers: "chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr"
+ssh_macs: "hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512,hmac-sha2-256"
+ssh_kex_algorithms: "curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256"
+...
