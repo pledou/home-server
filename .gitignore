@@ -16,3 +16,6 @@ inventories/group_vars/all.yml
 
 # Added by ggshield
 .cache_ggshield
+
+# Ignore pycache
+**/__pycache__/**
