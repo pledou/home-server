@@ -13,3 +13,6 @@ inventories/group_vars/all.yml
 # Backup files
 *.bak
 *~
+
+# Added by ggshield
+.cache_ggshield
