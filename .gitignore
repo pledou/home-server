@@ -1,3 +1,15 @@
+
+# Sensitive inventory data (use .example.yml as template)
 vault-pass.txt
-pleduc_opc
-playbooks/roles/hassio/filter_plugins/__pycache__/*
+inventories/inventory.yml
+inventories/group_vars/all.yml
+
+# Local overrides and personal configurations
+*.local.yml
+*.local.yaml
+*-local.yml
+*-local.yaml
+
+# Backup files
+*.bak
+*~
