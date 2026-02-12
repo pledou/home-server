@@ -18,6 +18,7 @@ nextcloud_defaultapp_list:
   - calendar
   - contacts
   - mail
+  - oidc # Used to log in on authentik based on nextcloud user
 
 nextcloud_system_config:
   - "overwrite.cli.url --value=https://{{ app_domain_name }}"
