@@ -2,6 +2,9 @@
 auth:
   enabled: False
 
+tls:
+  enabled: False
+
 proxy:
   # See https://github.com/blakeblackshear/frigate/discussions/19950
   auth_secret: "{{ frigate_proxy_auth_secret }}"
