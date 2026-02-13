@@ -83,9 +83,14 @@ When using this project, we recommend:
 
 2. **SSH Access**
    - Use SSH key authentication (disable password auth)
-   - Use strong SSH key passphrases
-   - Limit SSH access by IP when possible
+   - Use ED25519 keys for better security: `ssh-keygen -t ed25519`
+   - Protect SSH keys with strong passphrases
+   - Use ssh-agent to securely manage key passphrases
+   - Configure Ansible with `ansible_ssh_private_key_file` in inventory
+   - Limit SSH access by IP when possible (via firewall rules)
+   - Disable password authentication after confirming key auth works
    - Consider using fail2ban for brute-force protection
+   - Regularly audit authorized_keys files
 
 3. **Firewall Configuration**
    - Review UFW rules configured by the playbooks
@@ -121,8 +126,13 @@ When using this project, we recommend:
 2. **Service Accounts**
    - Use unique passwords for each service
    - Store all secrets in Ansible Vault
+   - Use Docker secrets for sensitive data in containers (e.g., database passwords, API keys)
+   - Never hardcode secrets in docker-compose.yml templates
+   - Generate strong random secrets: `openssl rand -hex 32`
+   - Store Docker secret files with restrictive permissions (600)
    - Rotate credentials periodically
    - Use token-based authentication when available
+   - Document secret file locations without exposing values
 
 3. **Database Security**
    - PostgreSQL containers are not exposed externally

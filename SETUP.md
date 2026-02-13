@@ -60,6 +60,99 @@ sudo systemctl start ssh
 
 4. **Network Access**: Ensure your control machine can reach the server via SSH
 
+### 4. Set Up SSH Key Authentication (Recommended)
+
+For security and convenience, use SSH key authentication instead of passwords:
+
+#### Generate SSH Key Pair
+
+On your control machine:
+
+```bash
+# Generate a strong ED25519 key pair
+ssh-keygen -t ed25519 -C "your_email@example.com" -f ~/.ssh/homeserver_ed25519
+
+# Use a strong passphrase to protect your private key
+```
+
+**Important Security Notes:**
+- Use a **strong passphrase** to protect your private key
+- Keep your private key secure (`~/.ssh/homeserver_ed25519`)
+- Never share or commit your private key
+- Back up your keys securely
+
+#### Copy Public Key to Server
+
+```bash
+# Option 1: Using ssh-copy-id (easiest)
+ssh-copy-id -i ~/.ssh/homeserver_ed25519.pub username@server-ip
+
+# Option 2: Manual copy
+cat ~/.ssh/homeserver_ed25519.pub
+# Copy the output, then on the server:
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+echo "ssh-ed25519 AAAA..." >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+```
+
+#### Test SSH Key Authentication
+
+```bash
+# Test connection with your key
+ssh -i ~/.ssh/homeserver_ed25519 username@server-ip
+
+# If successful, you should be able to log in without entering the server password
+```
+
+#### Use ssh-agent for Convenience
+
+To avoid entering your key passphrase repeatedly:
+
+```bash
+# Start ssh-agent and add your key
+eval $(ssh-agent)
+ssh-add ~/.ssh/homeserver_ed25519
+# Enter your key passphrase once
+
+# Now SSH and Ansible will use the key without prompting
+```
+
+#### Configure Ansible to Use Your SSH Key
+
+In your `inventories/inventory.yml`, specify the key file:
+
+```yaml
+all:
+  hosts:
+    homeserver:
+      ansible_connection: ssh
+      ansible_host: 192.168.1.100
+      ansible_user: your-username
+      ansible_ssh_private_key_file: ~/.ssh/homeserver_ed25519
+      # No ansible_ssh_pass needed with key authentication
+      ansible_become_pass: !vault |  # Only if sudo requires password
+        $ANSIBLE_VAULT;1.1;AES256
+        ...encrypted...
+```
+
+#### Disable Password Authentication (Optional but Recommended)
+
+After confirming SSH key authentication works:
+
+```bash
+# On the server, edit SSH config
+sudo nano /etc/ssh/sshd_config
+
+# Set these values:
+# PasswordAuthentication no
+# PubkeyAuthentication yes
+# ChallengeResponseAuthentication no
+
+# Restart SSH service
+sudo systemctl restart sshd
+```
+
 ## Initial Setup
 
 ### 1. Clone the Repository
@@ -135,6 +228,17 @@ chmod 600 vault-pass.txt
 
 # IMPORTANT: Back this up securely (password manager, encrypted backup, etc.)
 ```
+
+**Configure ansible.cfg to use vault password file:**
+
+Edit `ansible.cfg` and ensure it contains:
+
+```ini
+[defaults]
+vault_password_file = vault-pass.txt
+```
+
+This allows Ansible to automatically read the vault password without prompting. If you prefer to enter the password manually each time, you can omit this configuration and use `--ask-vault-pass` with each ansible-playbook command.
 
 ### 4. Configure Inventory
 
@@ -250,9 +354,16 @@ grafana_oauth_client_secret: !vault |
 
 ### 6. Test Ansible Connection
 
+Before testing, ensure your authentication is set up:
+- SSH key added to ssh-agent (if using key authentication): `ssh-add ~/.ssh/homeserver_ed25519`
+- Vault password file configured in `ansible.cfg`, or be ready to use `--ask-vault-pass`
+
 ```bash
 # Test connectivity
 ansible all -m ping
+
+# If you didn't configure vault_password_file in ansible.cfg:
+ansible all -m ping --ask-vault-pass
 
 # Expected output:
 # homeserver | SUCCESS => {
@@ -300,6 +411,22 @@ nextcloud_mail_smtpport: 465
 nextcloud_mail_smtpname: "{{ kresus_email_user }}"
 nextcloud_mail_smtppwd: "{{ kresus_email_password }}"
 ```
+
+**TURN Server Secret** (for Nextcloud Talk):
+
+The TURN server requires a secret for authentication. This is stored as a Docker secret file and must be created before deployment:
+
+```bash
+# Generate a secure random secret (64 characters recommended)
+openssl rand -hex 32
+
+# On the target server, create the secret file
+# Replace {{ docker_volumes_path }} with your actual path (e.g., /opt)
+echo -n 'YOUR_GENERATED_SECRET' > {{ docker_volumes_path }}/secrets/turn_secret
+chmod 600 {{ docker_volumes_path }}/secrets/turn_secret
+```
+
+**Important**: Never commit the TURN secret to your repository. The secret is referenced in the docker-compose template but stored securely on the server.
 
 ### Home Assistant
 
@@ -352,11 +479,69 @@ aws_secret_access_key: !vault | ...
 
 ## First Deployment
 
+### 0. Prepare Authentication
+
+Before running any Ansible playbooks, set up your authentication:
+
+#### SSH Key Passphrase (if using SSH keys)
+
+If your SSH key is password-protected, add it to ssh-agent to avoid entering the passphrase multiple times:
+
+```bash
+# Start ssh-agent
+eval $(ssh-agent)
+
+# Add your SSH key (will prompt for passphrase once)
+ssh-add ~/.ssh/homeserver_ed25519
+# Enter passphrase for /home/user/.ssh/homeserver_ed25519: ****
+
+# Verify key is loaded
+ssh-add -l
+```
+
+Now all Ansible commands will use your key without prompting for the passphrase.
+
+#### Ansible Vault Password
+
+You have two options for providing the vault password:
+
+**Option 1: Use vault password file (recommended)**
+
+If you configured `vault_password_file` in your `ansible.cfg`:
+
+```ini
+[defaults]
+vault_password_file = vault-pass.txt
+```
+
+Ansible will automatically read the password from this file. No additional flags needed:
+
+```bash
+ansible-playbook playbooks/install.yml
+```
+
+**Option 2: Prompt for vault password**
+
+If you don't have a vault password file configured, use the `--ask-vault-pass` flag:
+
+```bash
+ansible-playbook playbooks/install.yml --ask-vault-pass
+# Vault password: ****
+```
+
+**Security Note**: The vault password file (`vault-pass.txt`) should:
+- Have restrictive permissions: `chmod 600 vault-pass.txt`
+- Be listed in `.gitignore` (never commit it!)
+- Be backed up securely (password manager, encrypted backup)
+
 ### 1. Dry Run (Check Mode)
 
 ```bash
 # See what would change without making changes
 ansible-playbook playbooks/install.yml --check --diff
+
+# Or with vault password prompt (if not using vault-pass.txt)
+ansible-playbook playbooks/install.yml --check --diff --ask-vault-pass
 ```
 
 ### 2. Deploy Core Services First
@@ -370,6 +555,11 @@ ansible-playbook playbooks/install.yml --tags traefik
 
 # Verify Traefik is working
 # Check: https://traefik.yourdomain.com
+```
+
+**Note**: If using `--ask-vault-pass`, add it to each command:
+```bash
+ansible-playbook playbooks/install.yml --tags docker --ask-vault-pass
 ```
 
 ### 3. Deploy Additional Services

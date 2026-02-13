@@ -103,9 +103,14 @@ all:
       ansible_connection: ssh
       ansible_host: YOUR_SERVER_IP
       ansible_user: YOUR_SSH_USER
-      ansible_ssh_pass: !vault |
-        # Encrypt with: ansible-vault encrypt_string 'your-password' --name 'ansible_ssh_pass'
+      # Recommended: SSH key authentication
+      ansible_ssh_private_key_file: ~/.ssh/your_server_key
+      # Or use password (less secure, must be encrypted):
+      # ansible_ssh_pass: !vault |
+      #   # Encrypt with: ansible-vault encrypt_string 'your-password' --name 'ansible_ssh_pass'
 ```
+
+**Security Note**: SSH key authentication is strongly recommended. See [SETUP.md](SETUP.md#4-set-up-ssh-key-authentication-recommended) for detailed SSH key setup instructions.
 
 ### 4. Configure Variables
 
@@ -139,12 +144,35 @@ If you need custom network settings, edit these template files:
 
 ## 🚀 Usage
 
+### Before Running Playbooks
+
+**Authentication Setup:**
+
+1. **SSH Key** (if using key authentication):
+   ```bash
+   eval $(ssh-agent)
+   ssh-add ~/.ssh/your_server_key
+   ```
+
+2. **Vault Password**: Either configure `vault_password_file` in `ansible.cfg`:
+   ```ini
+   [defaults]
+   vault_password_file = vault-pass.txt
+   ```
+   
+   Or use `--ask-vault-pass` flag with each command.
+
+See [SETUP.md](SETUP.md) for detailed authentication configuration.
+
 ### Full Installation
 
 Deploy all services:
 
 ```bash
 ansible-playbook playbooks/install.yml
+
+# Or with vault password prompt (if vault_password_file not configured):
+ansible-playbook playbooks/install.yml --ask-vault-pass
 ```
 
 ### Selective Deployment
