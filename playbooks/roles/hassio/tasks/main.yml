@@ -242,11 +242,3 @@
             app:
               name: "Frigate"
               slug: "frigate"
-
-# - name: Fix bluepy dependency
-#   community.docker.docker_container_exec:
-#     container: hassio_homeassistant_1
-#     argv:
-#       - /bin/bash
-#       - "-c"
-#       - "pip install --find-links $WHEELS_LINKS bluepy"

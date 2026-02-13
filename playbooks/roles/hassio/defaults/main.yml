@@ -1,0 +1,11 @@
+# code: language=ansible
+---
+# Docker image versions for Home Assistant role
+homeassistant_version: "stable"
+zigbee2mqtt_version: "1.36.0"
+mosquitto_version: "2.0"
+myelectricaldata_version: "latest"
+faster_whisper_version: "latest"
+esphome_version: "2024.2"
+frigate_version: "stable"
+piper_version: "latest"

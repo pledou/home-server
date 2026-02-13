@@ -52,7 +52,7 @@ services:
       traefik.http.services.zigbee2mqtt.loadbalancer.server.port: 8080
       traefik.http.services.zigbee2mqtt.loadbalancer.server.scheme: http
       traefik.http.routers.zigbee2mqtt-https.middlewares: authentik@docker
-    image: koenkk/zigbee2mqtt:latest
+    image: koenkk/zigbee2mqtt:{{ zigbee2mqtt_version }}
     restart: always
     volumes:
       - zigbee2mqtt:/app/data:rw
@@ -87,7 +87,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
 
   mosquitto:
-    image: eclipse-mosquitto:{{mosquitto_version | default('latest')}}
+    image: eclipse-mosquitto:{{ mosquitto_version }}
     volumes:
       - mosquitto:/mosquitto/config:rw # rw for startup script to fix permissions
       - mosquitto-data:/mosquitto/data:rw
@@ -120,7 +120,7 @@ services:
       traefik.http.routers.myelectricaldata-https.tls.certresolver: le
       traefik.http.services.myelectricaldata.loadbalancer.server.port: 5000
       traefik.http.routers.myelectricaldata-https.middlewares: authentik@docker
-    image: m4dm4rtig4n/myelectricaldata:latest
+    image: m4dm4rtig4n/myelectricaldata:{{ myelectricaldata_version }}
     restart: always
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -192,7 +192,7 @@ services:
 
 
   faster-whisper: # Speech-to-Text service at port 10300
-    image: lscr.io/linuxserver/faster-whisper:latest
+    image: lscr.io/linuxserver/faster-whisper:{{ faster_whisper_version }}
     container_name: faster-whisper
     environment:
       - PUID=1000

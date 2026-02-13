@@ -10,7 +10,7 @@ services:
       - traefik.http.routers.prometheus-https.tls.certresolver=le
       - traefik.http.services.prometheus.loadbalancer.server.port=9090
       - traefik.http.routers.prometheus-https.middlewares=authentik@docker
-    image: prom/prometheus:latest
+    image: prom/prometheus:{{ prometheus_version }}
     volumes:
       - prometheus-conf:/etc/prometheus
       - prometheus-data:/prometheus
@@ -39,7 +39,7 @@ services:
       - traefik.http.routers.alertmanager-https.tls.certresolver=le
       - traefik.http.services.alertmanager.loadbalancer.server.port=9090
       - traefik.http.routers.alertmanager-https.middlewares=authentik@docker
-    image: prom/alertmanager:latest
+    image: prom/alertmanager:{{ alertmanager_version }}
     container_name: alertmanager
     volumes:
       - alertmanager-conf:/etc/alertmanager
@@ -52,7 +52,7 @@ services:
       - traefik_backend
 
   node-exporter:
-    image: quay.io/prometheus/node-exporter:latest
+    image: quay.io/prometheus/node-exporter:{{ node_exporter_version }}
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -81,7 +81,7 @@ services:
       - traefik.http.routers.grafana-https.tls=true
       - traefik.http.routers.grafana-https.tls.certresolver=le
       - traefik.http.services.grafana.loadbalancer.server.port=3000
-    image: grafana/grafana:latest
+    image: grafana/grafana:{{ grafana_version }}
     volumes:
       - grafana-data:/var/lib/grafana
       - grafana-provisioning:/etc/grafana/provisioning
@@ -121,7 +121,7 @@ services:
     restart: unless-stopped
 
   loki:
-    image: grafana/loki:latest
+    image: grafana/loki:{{ loki_version }}
     volumes:
       - loki-data:/loki
       - loki-config:/etc/loki
@@ -132,7 +132,7 @@ services:
     restart: unless-stopped
 
   promtail:
-    image: grafana/promtail:latest
+    image: grafana/promtail:{{ promtail_version }}
     volumes:
       - "/var/log:/var/log:ro"
       - "/var/lib/docker/containers:/var/lib/docker/containers:ro"

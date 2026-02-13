@@ -25,7 +25,7 @@ services:
           - traefik.http.routers.pages-g-https.tls.certresolver=le
           - traefik.http.routers.pages-g-https.service=pages-g
           - traefik.http.services.pages-g.loadbalancer.server.port=5201
-    image: gitlab/gitlab-ce:latest
+    image: gitlab/gitlab-ce:{{ gitlab_version }}
     hostname: gitlab.{{app_domain_name}}
     restart: always
     # I had problems with the health check. Sometimes it reported unhealthyness and therefore Traefik removed

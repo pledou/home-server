@@ -1,6 +1,6 @@
 services:
   diun: # Docker image update notifier with mail notifications
-    image: crazymax/diun:latest
+    image: crazymax/diun:{{ diun_version }}
     container_name: diun
     restart: always
     environment:
@@ -64,7 +64,7 @@ services:
     environment:
       - DUCKDNS_TOKEN={{ traefik_duckdns_token }} #TODO protect this secret
     hostname: traefik
-    image: traefik:latest
+    image: traefik:{{ traefik_version }}
     restart: always    
     command:
       - --providers.docker
@@ -111,7 +111,7 @@ services:
       - traefik.tcp.routers.dot.tls=true
       - traefik.tcp.routers.dot.service=unbound-dot
       - traefik.tcp.services.unbound-dot.loadbalancer.server.port=53
-    image: mvance/unbound:latest
+    image: mvance/unbound:{{ unbound_version }}
     networks:
       backend:
     expose:
@@ -164,7 +164,7 @@ services:
 {% else %}
     command: /bin/sh -c "wget -O - 'https://www.duckdns.org/update?domains={{ duckdns_subdomain }}&token={{ traefik_duckdns_token }}&ip=&ipv6={{ my_ipv6_network.split('::')[0] }}:{{ eui64 }}'"
 {% endif %}
-    image: alpine:latest
+    image: alpine:{{ alpine_version }}
     networks:
       backend:
     {% if duckdns_nonstatic %}

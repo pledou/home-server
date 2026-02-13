@@ -1,0 +1,9 @@
+# Default variables for IA role
+---
+# Docker image versions
+webui_version: "main"
+ollama_version: "latest"
+ollama_intel_version: "latest"
+speech_version: "latest"
+
+webui_secret_key: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"

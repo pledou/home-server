@@ -10,7 +10,7 @@ services:
       - traefik.http.routers.ia-https.tls=true
       - traefik.http.routers.ia-https.tls.certresolver=le
       - traefik.http.services.ia.loadbalancer.server.port=8080
-    image: ghcr.io/open-webui/open-webui:main
+    image: ghcr.io/open-webui/open-webui:{{ webui_version }}
     # Dependencies for tools
     command: >
       bash -c "
@@ -91,7 +91,7 @@ services:
   {% else -%}
   ollama:
     user: root
-    image: intelanalytics/ipex-llm-inference-cpp-xpu:latest
+    image: intelanalytics/ipex-llm-inference-cpp-xpu:{{ ollama_intel_version }}
     mem_limit: "32G"
     shm_size: "16g" 
     pull_policy: always
@@ -135,7 +135,7 @@ services:
   {%- endif %}
 
   speech:
-    image: ghcr.io/matatonic/openedai-speech
+    image: ghcr.io/matatonic/openedai-speech:{{ speech_version }}
     environment:
       - TTS_HOME=voices
       - HF_HOME=voices

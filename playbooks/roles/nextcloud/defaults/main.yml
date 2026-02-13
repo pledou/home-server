@@ -1,4 +1,11 @@
+---
 nextcloud_postgres_version: "15"
+
+# Docker image versions
+coturn_version: "4.6"
+elasticsearch_version: "8.12.0"
+redis_alpine_version: "alpine"
+harp_version: "release"
 
 nextcloud_defaultapp_list:
   - viewer

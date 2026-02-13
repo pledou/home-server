@@ -93,7 +93,7 @@ services:
     working_dir: /data
 
   elasticsearch:   
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:{{ elasticsearch_version }}
     networks:
       - backend
     restart: always
@@ -137,7 +137,7 @@ services:
       - |
         export TURN_SECRET=$$(cat /run/secrets/turn_secret)
         exec docker-entrypoint.sh -n --log-file=stdout --external-ip=$$(detect-external-ip) --listening-port=3478 --no-cli --fingerprint --use-auth-secret --static-auth-secret=$$TURN_SECRET --realm={{ app_domain_name }} --total-quota=100 --bps-capacity=0 --stale-nonce --no-multicast-peers
-    image: instrumentisto/coturn:latest
+    image: instrumentisto/coturn:{{ coturn_version }}
     restart: always
     networks:
       - backend
