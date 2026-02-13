@@ -149,11 +149,13 @@
           --database-user nextcloud --database-pass {{ database_user_secret }}
           --admin-user admin --admin-pass {{ nextcloud_admin_password }}
           --data-dir {{ docker_volumes_path }}/nextcloud-data
+      changed_when: true
 
     - name: Set nextcloud system config.php values
       ansible.builtin.command:
         cmd: 'docker exec --user www-data nc-nextcloud-1 php occ config:system:set {{ item }}'
       loop: '{{ nextcloud_system_config }}'
+      changed_when: true
 
 - name: Install apps
   become: true # necessary to read docker_volumes_path content
