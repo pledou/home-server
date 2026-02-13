@@ -3,21 +3,34 @@
 - name: Upgrade server
   hosts: docker_server
   roles:
-    # - nut # TODO debug ansible scripting
-    - prep_backup
-    - upgrade-packages
-    - docker
+    # - role: nut # TODO debug ansible scripting
+    #   tags: nut
+    - role: prep_backup
+      tags: prep_backup
+    - role: upgrade-packages
+      tags: upgrade-packages
+    - role: docker
+      tags: docker
 
 - name: Install apps & backup
   hosts: docker_server
   roles:
-    - gitlab
-    - monitoring
-    - traefik
-    - ia
-    - nextcloud
-    - kresus
-    - hassio
+    - role: traefik
+      tags: ['traefik', 'docker-apps']
+    - role: authentik
+      tags: ['authentik', 'docker-apps']
+    - role: monitoring
+      tags: ['monitoring', 'docker-apps']
+    - role: gitlab
+      tags: ['gitlab', 'docker-apps']
+    - role: nextcloud
+      tags: ['nextcloud', 'docker-apps']
+    - role: kresus
+      tags: ['kresus', 'docker-apps']
+    - role: ia
+      tags: ['ia', 'docker-apps']
+    - role: hassio
+      tags: ['hassio', 'docker-apps']
   post_tasks:
     - name: Docker prune
       community.docker.docker_prune:
@@ -27,5 +40,5 @@
           until: 24h
         volumes: true
         networks: true
-  tags: docker-apps
+      tags: ['always', 'docker-apps']
 ...
