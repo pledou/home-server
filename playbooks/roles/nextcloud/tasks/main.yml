@@ -142,25 +142,17 @@
   when: ( not config_php.stat.exists )
   block:
     - name: First setup nextcloud
-      community.docker.docker_container_exec:
-        container: nc-nextcloud-1
-        user: www-data
-        argv:
-          - /bin/bash
-          - "-c"
-          - "php occ  maintenance:install"
-          - --database psql --database-host nc-db --database-name nextcloud
-          - --database-user nextcloud --database-pass {{ database_user_secret }}
-          - --admin-user admin --admin-pass {{ nextcloud_admin_password }} --data-dir {{ docker_volumes_path }}/nextcloud-data
+      ansible.builtin.command:
+        cmd: >
+          docker exec --user www-data nc-nextcloud-1 php occ maintenance:install
+          --database psql --database-host nc-db --database-name nextcloud
+          --database-user nextcloud --database-pass {{ database_user_secret }}
+          --admin-user admin --admin-pass {{ nextcloud_admin_password }}
+          --data-dir {{ docker_volumes_path }}/nextcloud-data
 
     - name: Set nextcloud system config.php values
-      community.docker.docker_container_exec:
-        container: nc-nextcloud-1
-        user: www-data
-        argv:
-          - /bin/bash
-          - "-c"
-          - "php occ config:system:set {{ item }}"
+      ansible.builtin.command:
+        cmd: 'docker exec --user www-data nc-nextcloud-1 php occ config:system:set {{ item }}'
       loop: '{{ nextcloud_system_config }}'
 
 - name: Install apps
@@ -172,28 +164,23 @@
   loop: "{{ nextcloud_defaultapp_list }}"
 
 - name: Configure apps config values
-  community.docker.docker_container_exec:
-    container: nc-nextcloud-1
-    user: www-data
-    argv:
-      - /bin/bash
-      - "-c"
-      - "php occ config:app:set {{ item }}"
+  ansible.builtin.command:
+    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ config:app:set {{ item }}'
   loop: '{{ nextcloud_apps_config }}'
+  register: configure_app
+  changed_when: "'set to' in configure_app.stdout or 'Config value' in configure_app.stdout"
+  failed_when: false
 
 - name: Update apps & Add missing db objects
-  community.docker.docker_container_exec:
-    container: nc-nextcloud-1
-    user: www-data
-    argv:
-      - /bin/bash
-      - "-c"
-      - "php occ app:update --all;"
-      - "php occ db:add-missing-indices ;"
-      - "php occ db:add-missing-columns ;"
-      - "php occ db:add-missing-primary-keys;"
-      - "php occ db:convert-filecache-bigint;"
-      - "php occ config:system:set maintenance_window_start --type=integer --value=1;"
+  ansible.builtin.command:
+    cmd: >
+      docker exec --user www-data nc-nextcloud-1 /bin/bash -c
+      "php occ app:update --all;
+      php occ db:add-missing-indices;
+      php occ db:add-missing-columns;
+      php occ db:add-missing-primary-keys;
+      php occ db:convert-filecache-bigint;
+      php occ config:system:set maintenance_window_start --type=integer --value=1;"
   register: add_db_objects
   failed_when: false
   changed_when: add_db_objects.rc == 0
