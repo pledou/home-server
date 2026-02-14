@@ -8,3 +8,14 @@ grafana_version: "10.3.3"
 loki_version: "2.9.4"
 promtail_version: "2.9.4"
 cadvisor_version: "v0.49.1"
+
+# Alerting configuration
+# These should be overridden in group_vars or host_vars
+# alertmanager_nextcloud_conversation_token: ""  # Optional: Nextcloud Talk conversation token (auto-generates secret)
+# alertmanager_email_to: "CHANGE_ME"
+# alertmanager_smtp_host: "CHANGE_ME"
+# alertmanager_smtp_port: "CHANGE_ME"
+# alertmanager_smtp_from: "CHANGE_ME"
+# alertmanager_smtp_user: "CHANGE_ME"
+# alertmanager_smtp_password: "CHANGE_ME"
+# alertmanager_smtp_require_tls: true

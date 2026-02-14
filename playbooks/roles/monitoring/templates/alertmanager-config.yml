@@ -1,0 +1,108 @@
+# Alertmanager configuration
+global:
+  resolve_timeout: 5m
+{% if alertmanager_smtp_host is defined and alertmanager_smtp_host %}
+  smtp_smarthost: '{{ alertmanager_smtp_host }}:{{ alertmanager_smtp_port | default(587) }}'
+  smtp_from: '{{ alertmanager_smtp_from }}'
+  smtp_auth_username: '{{ alertmanager_smtp_user }}'
+  smtp_auth_password: '{{ alertmanager_smtp_password }}'
+  smtp_require_tls: {{ alertmanager_smtp_require_tls | default(true) | lower }}
+{% endif %}
+
+# The root route on which each incoming alert enters.
+route:
+  # Default receiver when none of the sub-routes match
+  receiver: 'default-receiver'
+  
+  # Group alerts by alertname and severity to avoid notification storms
+  group_by: ['alertname', 'severity']
+  
+  # Wait this long before sending a notification about new alerts
+  group_wait: 10s
+  
+  # Wait this long before sending notification about new alerts added to a group
+  group_interval: 10s
+  
+  # Wait this long before sending a notification again (after successfully sent)
+  repeat_interval: 3h
+  
+  routes:
+    # Route critical alerts with higher priority
+    - match:
+        severity: critical
+      receiver: 'critical-receiver'
+      group_wait: 5s
+      repeat_interval: 1h
+    
+    # Route page-level alerts
+    - match:
+        severity: page
+      receiver: 'default-receiver'
+      group_wait: 10s
+
+# Inhibition rules allow to mute a set of alerts given that another alert is firing.
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
+
+receivers:
+  # Default receiver tries Nextcloud Talk bot first, then falls back to email
+  - name: 'default-receiver'
+{% if alertmanager_nextcloud_conversation_token is defined and alertmanager_nextcloud_conversation_token %}
+    webhook_configs:
+      - url: 'http://nextcloud-talk-bot:81/send_message'
+        send_resolved: true
+        http_config:
+          follow_redirects: true
+        max_alerts: 0
+{% endif %}
+{% if alertmanager_email_to is defined and alertmanager_email_to %}
+    email_configs:
+      - to: '{{ alertmanager_email_to }}'
+        send_resolved: true
+        headers:
+          Subject: '[{{ "{{ .Status | toUpper }}" }}{{ "{{ if eq .Status \"firing\" }}" }}:{{ "{{ .Alerts.Firing | len }}" }}{{ "{{ end }}" }}] {{ "{{ .GroupLabels.alertname }}" }}'
+        html: |
+          {{ "{{ range .Alerts }}" }}
+          <h3>Alert: {{ "{{ .Labels.alertname }}" }}</h3>
+          <p><strong>Status:</strong> {{ "{{ .Status }}" }}</p>
+          <p><strong>Severity:</strong> {{ "{{ .Labels.severity }}" }}</p>
+          <p><strong>Summary:</strong> {{ "{{ .Annotations.summary }}" }}</p>
+          <p><strong>Description:</strong> {{ "{{ .Annotations.description }}" }}</p>
+          <p><strong>Instance:</strong> {{ "{{ .Labels.instance }}" }}</p>
+          <p><strong>Job:</strong> {{ "{{ .Labels.job }}" }}</p>
+          <hr>
+          {{ "{{ end }}" }}
+{% endif %}
+  
+  # Critical receiver - only email for reliability
+  - name: 'critical-receiver'
+{% if alertmanager_email_to is defined and alertmanager_email_to %}
+    email_configs:
+      - to: '{{ alertmanager_email_to }}'
+        send_resolved: true
+        headers:
+          Subject: '[CRITICAL] [{{ "{{ .Status | toUpper }}" }}] {{ "{{ .GroupLabels.alertname }}" }}'
+        html: |
+          <h2 style="color: red;">CRITICAL ALERT</h2>
+          {{ "{{ range .Alerts }}" }}
+          <h3>Alert: {{ "{{ .Labels.alertname }}" }}</h3>
+          <p><strong>Status:</strong> {{ "{{ .Status }}" }}</p>
+          <p><strong>Severity:</strong> {{ "{{ .Labels.severity }}" }}</p>
+          <p><strong>Summary:</strong> {{ "{{ .Annotations.summary }}" }}</p>
+          <p><strong>Description:</strong> {{ "{{ .Annotations.description }}" }}</p>
+          <p><strong>Instance:</strong> {{ "{{ .Labels.instance }}" }}</p>
+          <p><strong>Job:</strong> {{ "{{ .Labels.job }}" }}</p>
+          <hr>
+          {{ "{{ end }}" }}
+{% endif %}
+{% if alertmanager_nextcloud_conversation_token is defined and alertmanager_nextcloud_conversation_token %}
+    webhook_configs:
+      - url: 'http://nextcloud-talk-bot:81/send_message'
+        send_resolved: true
+        http_config:
+          follow_redirects: true
+{% endif %}

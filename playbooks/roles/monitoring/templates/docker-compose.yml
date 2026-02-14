@@ -64,9 +64,19 @@ services:
       - '--path.sysfs=/host/sys'
       - --collector.filesystem.ignored-mount-points
       - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+      # Enable only essential collectors
+      - '--collector.disable-defaults'
+      - '--collector.cpu'
+      - '--collector.loadavg'
+      - '--collector.meminfo'
+      - '--collector.diskstats'
+      - '--collector.filesystem'
+      - '--collector.netdev'
+      - '--collector.time'
+      - '--collector.uname'
+      - '--collector.thermal_zone'
     networks:
       - backend
-      - traefik_backend
     restart: always
     deploy:
       mode: global
@@ -171,6 +181,21 @@ services:
       backend:
         aliases:
           - nextcloud-exporter
+
+{% if alertmanager_nextcloud_conversation_token is defined and alertmanager_nextcloud_conversation_token %}
+  nextcloud-talk-bot:
+    build:
+      context: ./nextcloud-talk-bot
+      dockerfile: Dockerfile
+    container_name: nextcloud-talk-bot
+    restart: unless-stopped
+    environment:
+      NC_URL: "https://{{ app_domain_name }}"
+      TOKEN: "{{ alertmanager_nextcloud_conversation_token }}"
+      SECRET: "{{ alertmanager_nextcloud_bot_secret }}"
+    networks:
+      - backend
+{% endif %}
 
 networks:
   traefik_backend:

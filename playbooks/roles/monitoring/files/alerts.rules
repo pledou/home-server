@@ -12,11 +12,56 @@ groups:
       summary: "Instance {{ $labels.instance }} down"
       description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 2 minutes."
 
-  - alert: high_load
-    expr: node_load1 > 0.5
-    for: 2m
+  - alert: high_load_warning
+    expr: node_load5 / on(instance) group_left count(node_cpu_seconds_total{mode="idle"}) by (instance) > 0.7
+    for: 10m
     labels:
-      severity: page
+      severity: warning
     annotations:
       summary: "Instance {{ $labels.instance }} under high load"
-      description: "{{ $labels.instance }} of job {{ $labels.job }} is under high load."
+      description: "{{ $labels.instance }} load average is at {{ $value | humanizePercentage }} of CPU capacity for more than 10 minutes."
+
+  - alert: high_load_critical
+    expr: node_load5 / on(instance) group_left count(node_cpu_seconds_total{mode="idle"}) by (instance) > 1.0
+    for: 10m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Instance {{ $labels.instance }} critically overloaded"
+      description: "{{ $labels.instance }} load average is at {{ $value | humanizePercentage }} of CPU capacity (exceeding 100%) for more than 10 minutes. System may be unresponsive."
+
+  - alert: high_temperature_warning
+    expr: node_thermal_zone_temp > 70
+    for: 1h
+    labels:
+      severity: warning
+    annotations:
+      summary: "High temperature on {{ $labels.instance }}"
+      description: "Thermal zone {{ $labels.zone }} on {{ $labels.instance }} has been above 70°C for more than 1 hour (current: {{ $value }}°C). Consider cleaning fans/heatsinks."
+
+  - alert: high_temperature_critical
+    expr: node_thermal_zone_temp > 85
+    for: 10m
+    labels:
+      severity: critical
+    annotations:
+      summary: "CRITICAL temperature on {{ $labels.instance }}"
+      description: "Thermal zone {{ $labels.zone }} on {{ $labels.instance }} has been above 80°C for more than 10 minutes (current: {{ $value }}°C). Immediate attention required!"
+
+  - alert: filesystem_full_warning
+    expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs|vfat"} / node_filesystem_size_bytes) < 0.2
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Filesystem {{ $labels.mountpoint }} nearly full on {{ $labels.instance }}"
+      description: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} is 80% full ({{ $value | humanizePercentage }} available). Consider cleaning up disk space."
+
+  - alert: filesystem_full_critical
+    expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs|vfat"} / node_filesystem_size_bytes) < 0.1
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Filesystem {{ $labels.mountpoint }} critically full on {{ $labels.instance }}"
+      description: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} is 90% full ({{ $value | humanizePercentage }} available). Immediate action required!"

@@ -33,6 +33,8 @@
   vars:
     secrets:
       - grafana_admin_password
+      - name: alertmanager_nextcloud_bot_secret
+        length: 64
 
 - name: Ensure destination directory exists
   ansible.builtin.file:
@@ -68,6 +70,8 @@
       group: "{{ ansible_user }}"
     - file: nextcloud-exporter-conf.yml
       dest: nextcloud-exporter-conf/config.yml
+    - file: alertmanager-config.yml
+      dest: alertmanager-conf/config.yml
   loop_control:
     label: "{{ item.file }} -> {{ item.dest }}"
 
@@ -80,8 +84,6 @@
   loop:
     - file: alerts.rules
       dest: prometheus-conf/alerts.rules
-    - file: alertmanager/config.yml
-      dest: alertmanager-conf/config.yml
   loop_control:
     label: "{{ item.file }} -> {{ item.dest }}"
 
@@ -98,6 +100,14 @@
   ansible.builtin.getent:
     database: passwd
     key: "{{ ansible_user }}"
+
+- name: Clone Nextcloud Talk webhook bot repository
+  ansible.builtin.git:
+    repo: https://github.com/weichwaren-schmiede/nextcloud-talk-webhook-bot.git
+    dest: /home/{{ ansible_user }}/home-server/stacks/monitoring/nextcloud-talk-bot
+    version: main
+    force: true
+  when: alertmanager_nextcloud_conversation_token is defined and alertmanager_nextcloud_conversation_token
 
 - name: Create docker-compose stack file
   ansible.builtin.template:
@@ -124,6 +134,83 @@
     build: "always"
     state: present
     project_src: /home/{{ ansible_user }}/home-server/stacks/monitoring
+
+- name: Check if Nextcloud container exists
+  ansible.builtin.shell:
+    cmd: docker ps -a --filter "name=nc-nextcloud-1" --format "{{ '{{' }}.Names{{ '}}' }}"
+  register: nextcloud_container_check
+  changed_when: false
+  failed_when: false
+
+- name: Set nextcloud container exists fact
+  ansible.builtin.set_fact:
+    nextcloud_container:
+      exists: "{{ 'nc-nextcloud-1' in nextcloud_container_check.stdout }}"
+
+- name: Install Nextcloud Talk bot for alerts
+  when:
+    - nextcloud_container.exists | default(false)
+    - alertmanager_nextcloud_conversation_token is defined
+    - alertmanager_nextcloud_conversation_token | length > 0
+  block:
+    - name: Check if bot already exists
+      ansible.builtin.command:
+        cmd: docker exec nc-nextcloud-1 php occ talk:bot:list
+      register: bot_list
+      changed_when: false
+      failed_when: false
+
+    - name: Install Prometheus Alerts bot
+      ansible.builtin.command:
+        argv:
+          - docker
+          - exec
+          - nc-nextcloud-1
+          - php
+          - occ
+          - talk:bot:install
+          - "Prometheus Alerts"
+          - "{{ alertmanager_nextcloud_bot_secret }}"
+          - "https://prometheus.{{ app_domain_name }}"
+      when: "'Prometheus Alerts' not in bot_list.stdout"
+      register: bot_install
+      changed_when: bot_install.rc == 0
+      failed_when:
+        - bot_install.rc != 0
+        - "'already exists' not in bot_install.stderr"
+
+    - name: Get bot list to extract ID
+      ansible.builtin.command:
+        cmd: docker exec nc-nextcloud-1 php occ talk:bot:list
+      register: bot_list_output
+      changed_when: false
+
+    - name: Extract Prometheus Alerts bot ID
+      ansible.builtin.set_fact:
+        prometheus_bot_id: "{{ bot_list_output.stdout | regex_search('\\|\\s+(\\d+)\\s+\\|\\s+Prometheus Alerts', '\\1') | first }}"
+
+    - name: Add bot to conversation
+      ansible.builtin.command:
+        argv:
+          - docker
+          - exec
+          - nc-nextcloud-1
+          - php
+          - occ
+          - talk:bot:setup
+          - "{{ prometheus_bot_id }}"
+          - "{{ alertmanager_nextcloud_conversation_token }}"
+      register: bot_setup
+      changed_when: bot_setup.rc == 0
+      failed_when:
+        - bot_setup.rc != 0
+        - "'already' not in bot_setup.stdout and 'already' not in bot_setup.stderr"
+
+    - name: Display bot configuration result
+      ansible.builtin.debug:
+        msg: |
+          Nextcloud Talk bot 'Prometheus Alerts' is fully configured and added to conversation {{ alertmanager_nextcloud_conversation_token }}.
+          Alerts will now be sent to your Nextcloud Talk conversation!
 
 - name: Configure Authentik providers and applications for Monitoring
   delegate_to: localhost

@@ -63,6 +63,22 @@ grafana_mail_smtpname: "{{ kresus_email_user }}"
 grafana_mail_smtpport: 465
 grafana_mail_smtphost: "{{ kresus_email_host }}"
 
+# Alertmanager configuration for Prometheus alerting
+# Primary: Nextcloud Talk webhook (optional)
+# Fallback: Email notifications
+alertmanager_email_to: "{{ admin_mail }}"
+alertmanager_smtp_host: "{{ kresus_email_host }}"
+alertmanager_smtp_port: 587
+alertmanager_smtp_from: "{{ kresus_email_from }}"
+alertmanager_smtp_user: "{{ kresus_email_user }}"
+alertmanager_smtp_password: "{{ kresus_email_password }}"
+alertmanager_smtp_require_tls: true
+# Optional: Enable Nextcloud Talk bot notifications (secret auto-generated!)
+# Step 1: Deploy playbook (bot will be auto-installed with auto-generated secret)
+# Step 2: Get conversation token from Nextcloud Talk URL: /call/TOKEN_HERE
+# Step 3: Set token below and redeploy (bot will be automatically added to conversation)
+# alertmanager_nextcloud_conversation_token: "xhevvhbo"  # Conversation token from Talk URL
+
 grafana_oauth_client_id: !vault |
                          $ANSIBLE_VAULT;1.1;AES256
                          YOUR_ENCRYPTED_GRAFANA_OAUTH_CLIENT_ID_HERE
