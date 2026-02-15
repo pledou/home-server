@@ -1,6 +1,6 @@
 # code: language=ansible
 ---
 # Docker image versions for Traefik role
-traefik_version: "v3.0"
-unbound_version: "1.19"
+traefik_version: "v3.6"
+unbound_version: "latest"
 alpine_version: "3.19"
