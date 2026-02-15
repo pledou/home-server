@@ -50,13 +50,22 @@ groups:
       description: "Thermal zone {{ $labels.zone }} on {{ $labels.instance }} has been above 70°C for more than 1 hour (current: {{ $value }}°C). Consider cleaning fans/heatsinks."
 
   - alert: high_temperature_critical
-    expr: node_thermal_zone_temp > 85
+    expr: node_thermal_zone_temp > 90
     for: 10m
     labels:
       severity: critical
     annotations:
       summary: "CRITICAL temperature on {{ $labels.instance }}"
-      description: "Thermal zone {{ $labels.zone }} on {{ $labels.instance }} has been above 80°C for more than 10 minutes (current: {{ $value }}°C). Immediate attention required!"
+      description: "Thermal zone {{ $labels.zone }} on {{ $labels.instance }} has been above 90°C for more than 10 minutes (current: {{ $value }}°C). Immediate attention required!"
+
+  - alert: cpu_sustained_high
+    expr: (1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 0.9
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Sustained high CPU on {{ $labels.instance }}"
+      description: "CPU usage on {{ $labels.instance }} has been above 90% for more than 10 minutes. Consider throttling AI workloads to prevent overheating."
 
   - alert: filesystem_full_warning
     expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs|vfat",mountpoint!~"/media/.*"} / node_filesystem_size_bytes) < 0.2
