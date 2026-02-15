@@ -1,46 +1,7 @@
 services:
-  diun: # Docker image update notifier with mail notifications
-    image: crazymax/diun:{{ diun_version }}
-    container_name: diun
-    restart: always
-    environment:
-      - DIUN_LOG_LEVEL=info
-      - DIUN_PROVIDERS_DOCKER=true
-      - DIUN_PROVIDERS_DOCKER_WATCHBYDEFAULT=true
-      - DIUN_WATCH_WORKERS=10
-      - DIUN_WATCH_SCHEDULE=0 */6 * * *
-      - DIUN_PERSISTENCE=filesystem
-      - DIUN_PERSISTENCE_PATH=/data
-
-      # Mail notification settings (override via role/playbook vars)
-      - DIUN_NOTIF_MAIL_TO={{ diun_mail_to | default('you@example.com') }}
-      - DIUN_NOTIF_MAIL_FROM={{ diun_mail_from | default('diun@' + app_domain_name) }}
-      - DIUN_NOTIF_MAIL_HOST={{ diun_mail_host | default('smtp.example.com') }}
-      - DIUN_NOTIF_MAIL_PORT={{ diun_mail_port | default(587) }}
-      - DIUN_NOTIF_MAIL_USERNAME={{ diun_mail_user | default('') }}
-      - DIUN_NOTIF_MAIL_PASSWORD={{ diun_mail_password | default('') }}
-
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - diun-data:/data
-    networks:
-      - backend
-
-  autoheal: # restart container when healthcheck is ko
-    image: willfarrell/autoheal
-    restart: always
-    environment:
-      AUTOHEAL_CONTAINER_LABEL: all
-      AUTOHEAL_INTERVAL: 30   # check every 5 seconds
-      AUTOHEAL_START_PERIOD: 120   # wait 0 seconds before first health check
-      AUTOHEAL_DEFAULT_STOP_TIMEOUT: 60   # Docker waits max 10 seconds (the Docker default) for a container to stop before killing during restarts (container overridable via label, see below)
-    networks:
-      backend:
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    
   traefik:
     labels:
+      - com.centurylinklabs.watchtower.enable=true
       - traefik.enable=true
       - traefik.docker.network=traefik_backend
       - traefik.http.routers.traefik-public-https.rule=Host(`traefik.{{ app_domain_name }}`)
@@ -105,6 +66,7 @@ services:
 {% if unbound %}
   unbound:
     labels:
+      - com.centurylinklabs.watchtower.enable=true
       - traefik.enable=true
       - traefik.tcp.routers.dot.rule=HostSNI(`dns.{{ app_domain_name }}`)
       - traefik.tcp.routers.dot.entrypoints=dot
@@ -125,6 +87,7 @@ services:
   
   doh-proxy:
     labels:
+      - com.centurylinklabs.watchtower.enable=false
       - traefik.enable=true
       - traefik.http.routers.doh.rule=Host(`dns.{{ app_domain_name }}`) && Path(`/dns-query`)
       - traefik.http.routers.doh.entrypoints=https
@@ -158,6 +121,8 @@ services:
 {% endif %}
 
   updateDuckDNSIP:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     # used to update DuckDNS
 {% if duckdns_nonstatic %}
     command: /bin/sh -c "while true; do wget -O - 'https://www.duckdns.org/update?domains={{ duckdns_subdomain }}&token={{ traefik_duckdns_token }}&ip='; sleep 1200; done"
@@ -177,7 +142,6 @@ networks:
     attachable: true
 
 volumes:
-  diun-data:
   unbound:
     driver: local
     driver_opts:

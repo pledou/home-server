@@ -2,3 +2,5 @@
 ---
 # Default PostgreSQL version for Kresus
 kresus_postgres_version: "15"
+apprise_version: "1.3"
+kresus_version: "0.23.5"

@@ -24,28 +24,29 @@ services:
       retries: 5
   nextcloud:
     labels:
-      com.centurylinklabs.watchtower.local-image: 'true'
+      - com.centurylinklabs.watchtower.enable=true
+      - com.centurylinklabs.watchtower.local-image=true
 
-      traefik.enable: 'true'
-      traefik.docker.network: traefik_backend
-      traefik.constraint-label: traefik_backend
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.constraint-label=traefik_backend
       
-      traefik.http.routers.nginx-https.rule: Host(`{{ app_domain_name }}`)
-      traefik.http.routers.nginx-https.entrypoints: https
-      traefik.http.routers.nginx-https.middlewares: nginx@docker,real-ip@docker
-      traefik.http.routers.nginx-https.tls: 'true'
-      traefik.http.routers.nginx-https.tls.certresolver: le
+      - traefik.http.routers.nginx-https.rule=Host(`{{ app_domain_name }}`)
+      - traefik.http.routers.nginx-https.entrypoints=https
+      - traefik.http.routers.nginx-https.middlewares=nginx@docker,real-ip@docker
+      - traefik.http.routers.nginx-https.tls=true
+      - traefik.http.routers.nginx-https.tls.certresolver=le
 
-      traefik.http.services.nginx.loadbalancer.server.port: 80
+      - traefik.http.services.nginx.loadbalancer.server.port=80
 
-      traefik.http.middlewares.nginx.headers.STSIncludeSubdomains: 'true'
-      traefik.http.middlewares.nginx.headers.STSPreload: 'true'
-      traefik.http.middlewares.nginx.headers.STSSeconds: 315360000
-      traefik.http.middlewares.nginx.headers.browserXSSFilter: 'true'
-      traefik.http.middlewares.nginx.headers.contentTypeNosniff: 'true'
-      traefik.http.middlewares.nginx.headers.customFrameOptionsValue: SAMEORIGIN
-      traefik.http.middlewares.nginx.headers.forceSTSHeader: 'true'
-      traefik.http.middlewares.nginx.headers.referrerPolicy: no-referrer
+      - traefik.http.middlewares.nginx.headers.STSIncludeSubdomains=true
+      - traefik.http.middlewares.nginx.headers.STSPreload=true
+      - traefik.http.middlewares.nginx.headers.STSSeconds=315360000
+      - traefik.http.middlewares.nginx.headers.browserXSSFilter=true
+      - traefik.http.middlewares.nginx.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.nginx.headers.customFrameOptionsValue=SAMEORIGIN
+      - traefik.http.middlewares.nginx.headers.forceSTSHeader=true
+      - traefik.http.middlewares.nginx.headers.referrerPolicy=no-referrer
     environment:
       - POSTGRES_DB=nextcloud
       - POSTGRES_USER=nextcloud
@@ -77,8 +78,10 @@ services:
       - postgres_password
 
   redis:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     command: redis-server --requirepass {{ redis_secret }}
-    image: redis:alpine
+    image: redis:{{ redis_version }}
     healthcheck:
       test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
       start_period: 20s
@@ -92,7 +95,9 @@ services:
       - redis-data:/data:rw
     working_dir: /data
 
-  elasticsearch:   
+  elasticsearch:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     image: docker.elastic.co/elasticsearch/elasticsearch:{{ elasticsearch_version }}
     networks:
       - backend
@@ -117,6 +122,8 @@ services:
       - elastic_data:/usr/share/elasticsearch/data:rw
 
   turn_server:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     command:
       - -n
       - --log-file=stdout
@@ -165,18 +172,18 @@ services:
       - backend
       - traefik_backend
     labels:
-      traefik.enable: 'true'
-      traefik.docker.network: traefik_backend
-      traefik.http.routers.exapps.rule: "Host(`{{ app_domain_name }}`) && PathPrefix(`/exapps/`)"
-      traefik.http.routers.exapps.entrypoints: https
-      traefik.http.routers.exapps.tls: 'true'
-      traefik.http.routers.exapps.tls.certresolver: le
-      traefik.http.routers.exapps.priority: 50
-      traefik.http.routers.exapps.service: exapps-service
-      traefik.http.services.exapps-service.loadbalancer.server.port: 8780
+      - com.centurylinklabs.watchtower.enable=false
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.http.routers.exapps.rule="Host(`{{ app_domain_name }}`) && PathPrefix(`/exapps/`)"
+      - traefik.http.routers.exapps.entrypoints=https
+      - traefik.http.routers.exapps.tls=true
+      - traefik.http.routers.exapps.tls.certresolver=le
+      - traefik.http.routers.exapps.priority=50
+      - traefik.http.routers.exapps.service=exapps-service
+      - traefik.http.services.exapps-service.loadbalancer.server.port=8780
       # serversTransport is defined via Traefik file provider (harp.yml)
       # traefik.http.services.exapps-service.serversTransport.forwardingTimeouts.responseHeaderTimeout: 1800s
-
 
 networks:
   traefik_backend:

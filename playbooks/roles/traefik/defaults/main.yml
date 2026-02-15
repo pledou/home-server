@@ -2,6 +2,5 @@
 ---
 # Docker image versions for Traefik role
 traefik_version: "v3.0"
-diun_version: "4.28"
 unbound_version: "1.19"
 alpine_version: "3.19"

@@ -1,6 +1,8 @@
 services:
 
   k-db:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     image: postgres:{{ kresus_postgres_version | default('15') }}
     hostname: k-db
     restart: always
@@ -22,7 +24,9 @@ services:
       - k_db_password
       
   apprise:
-    image: "caronc/apprise"
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    image: "caronc/apprise:{{ apprise_version }}"
     hostname: apprise
     networks:
       - backend
@@ -30,6 +34,7 @@ services:
 
   kresus:
     labels:
+      - com.centurylinklabs.watchtower.enable={{ 'true' if kresus_version != 'latest' else 'false' }}
       - traefik.enable=true
       - traefik.docker.network=traefik_backend
       - traefik.constraint-label=traefik_backend
@@ -40,7 +45,7 @@ services:
       - traefik.http.services.kresus.loadbalancer.server.port=9876
       - traefik.http.routers.kresus-https.middlewares=authentik@docker
       
-    image: "bnjbvr/kresus"
+    image: "bnjbvr/kresus:{{ kresus_version }}"
     restart: always
     networks:
       - traefik_backend

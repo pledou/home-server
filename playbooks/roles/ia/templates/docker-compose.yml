@@ -2,6 +2,7 @@ services:
 
   webui:
     labels:
+      - com.centurylinklabs.watchtower.enable=true
       - traefik.enable=true
       - traefik.docker.network=traefik_backend
       - traefik.constraint-label=traefik_backend
@@ -54,7 +55,9 @@ services:
 
   {% if gpu != 'intel' -%}
   ollama:
-    image: ollama/ollama
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    image: ollama/ollama:{{ ollama_version }}
     expose:
      - 11434/tcp
     ports:
@@ -90,6 +93,8 @@ services:
     {%- endif %}
   {% else -%}
   ollama:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     user: root
     image: intelanalytics/ipex-llm-inference-cpp-xpu:{{ ollama_intel_version }}
     mem_limit: "32G"
@@ -135,6 +140,8 @@ services:
   {%- endif %}
 
   speech:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     image: ghcr.io/matatonic/openedai-speech:{{ speech_version }}
     environment:
       - TTS_HOME=voices

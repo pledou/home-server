@@ -1,17 +1,18 @@
 services:
   homeassistant:
     labels:
-      traefik.enable: 'true'
+      - com.centurylinklabs.watchtower.enable=true
+      - traefik.enable=true
       # traefik.docker.network: traefik_backend
       # traefik.constraint-label: traefik_backend
   
-      traefik.http.routers.home-https.rule: Host(`home.{{app_domain_name}}`)
-      traefik.http.routers.home-https.entrypoints: https
-      traefik.http.routers.home-https.tls: 'true'
-      traefik.http.routers.home-https.tls.certresolver: le
-      traefik.http.routers.real-ip.middlewares: real-ip@docker
-      traefik.http.services.home.loadbalancer.server.port: 8123
-      traefik.http.services.home.loadbalancer.passHostHeader: 'true'
+      - traefik.http.routers.home-https.rule=Host(`home.{{app_domain_name}}`)
+      - traefik.http.routers.home-https.entrypoints=https
+      - traefik.http.routers.home-https.tls=true
+      - traefik.http.routers.home-https.tls.certresolver=le
+      - traefik.http.routers.real-ip.middlewares=real-ip@docker
+      - traefik.http.services.home.loadbalancer.server.port=8123
+      - traefik.http.services.home.loadbalancer.passHostHeader=true
     entrypoint:
       - /init
     hostname: homeassistant
@@ -42,16 +43,17 @@ services:
 {% if zigbee2mqtt_device_id is defined %}
   zigbee2mqtt:
     labels:
-      traefik.enable: 'true'
-      traefik.docker.network: traefik_backend
-      traefik.constraint-label: traefik_backend
-      traefik.http.routers.zigbee2mqtt-https.rule: Host(`zigbee2mqtt.{{app_domain_name}}`)
-      traefik.http.routers.zigbee2mqtt-https.entrypoints: https
-      traefik.http.routers.zigbee2mqtt-https.tls: true
-      traefik.http.routers.zigbee2mqtt-https.tls.certresolver: le
-      traefik.http.services.zigbee2mqtt.loadbalancer.server.port: 8080
-      traefik.http.services.zigbee2mqtt.loadbalancer.server.scheme: http
-      traefik.http.routers.zigbee2mqtt-https.middlewares: authentik@docker
+      - com.centurylinklabs.watchtower.enable=true
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.constraint-label=traefik_backend
+      - traefik.http.routers.zigbee2mqtt-https.rule=Host(`zigbee2mqtt.{{app_domain_name}}`)
+      - traefik.http.routers.zigbee2mqtt-https.entrypoints=https
+      - traefik.http.routers.zigbee2mqtt-https.tls=true
+      - traefik.http.routers.zigbee2mqtt-https.tls.certresolver=le
+      - traefik.http.services.zigbee2mqtt.loadbalancer.server.port=8080
+      - traefik.http.services.zigbee2mqtt.loadbalancer.server.scheme=http
+      - traefik.http.routers.zigbee2mqtt-https.middlewares=authentik@docker
     image: koenkk/zigbee2mqtt:{{ zigbee2mqtt_version }}
     restart: always
     volumes:
@@ -71,15 +73,16 @@ services:
 
   esphome:
     labels:
-      traefik.enable: 'true'
-      traefik.http.routers.esphome-https.rule: Host(`esphome.{{app_domain_name}}`)
-      traefik.http.routers.esphome-https.entrypoints: https
-      traefik.http.routers.esphome-https.tls: true
-      traefik.http.routers.esphome-https.tls.certresolver: le
-      traefik.http.services.esphome.loadbalancer.server.port: 6052
-      traefik.http.routers.esphome-https.middlewares: authentik@docker
+      - com.centurylinklabs.watchtower.enable=true
+      - traefik.enable=true
+      - traefik.http.routers.esphome-https.rule=Host(`esphome.{{app_domain_name}}`)
+      - traefik.http.routers.esphome-https.entrypoints=https
+      - traefik.http.routers.esphome-https.tls=true
+      - traefik.http.routers.esphome-https.tls.certresolver=le
+      - traefik.http.services.esphome.loadbalancer.server.port=6052
+      - traefik.http.routers.esphome-https.middlewares=authentik@docker
     restart: always
-    image: esphome/esphome
+    image: esphome/esphome:{{ esphome_version }}
     privileged: true
     network_mode: host
     volumes:
@@ -87,6 +90,8 @@ services:
       - /etc/localtime:/etc/localtime:ro
 
   mosquitto:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     image: eclipse-mosquitto:{{ mosquitto_version }}
     volumes:
       - mosquitto:/mosquitto/config:rw # rw for startup script to fix permissions
@@ -111,6 +116,7 @@ services:
 
   myelectricaldata:
     labels:
+      com.centurylinklabs.watchtower.enable: 'true'
       traefik.enable: 'true'
       traefik.docker.network: traefik_backend
       traefik.constraint-label: traefik_backend
@@ -134,6 +140,7 @@ services:
 
   frigate:
     labels:
+      com.centurylinklabs.watchtower.enable: 'true'
       traefik.enable: 'true'
       traefik.docker.network: traefik_backend
       traefik.constraint-label: traefik_backend
@@ -183,6 +190,8 @@ services:
 
   wyoming-piper: # Text-to-Speech service at port 10200
     image: rhasspy/wyoming-piper
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
     restart: always
     ports:
       - "10200:10200"
@@ -194,6 +203,8 @@ services:
   faster-whisper: # Speech-to-Text service at port 10300
     image: lscr.io/linuxserver/faster-whisper:{{ faster_whisper_version }}
     container_name: faster-whisper
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
     environment:
       - PUID=1000
       - PGID=1000

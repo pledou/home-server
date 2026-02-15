@@ -1,6 +1,7 @@
 services:
   prometheus:
     labels:
+      - com.centurylinklabs.watchtower.enable=true
       - traefik.enable=true
       - traefik.docker.network=traefik_backend
       - traefik.constraint-label=traefik_backend
@@ -30,6 +31,7 @@ services:
 
   alertmanager:
     labels:
+      - com.centurylinklabs.watchtower.enable=true
       - traefik.enable=true
       - traefik.docker.network=traefik_backend
       - traefik.constraint-label=traefik_backend
@@ -52,6 +54,8 @@ services:
       - traefik_backend
 
   node-exporter:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     image: quay.io/prometheus/node-exporter:{{ node_exporter_version }}
     volumes:
       - /proc:/host/proc:ro
@@ -83,6 +87,7 @@ services:
 
   grafana:
     labels:
+      - com.centurylinklabs.watchtower.enable=true
       - traefik.enable=true
       - traefik.docker.network=traefik_backend
       - traefik.constraint-label=traefik_backend
@@ -131,6 +136,8 @@ services:
     restart: unless-stopped
 
   loki:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     image: grafana/loki:{{ loki_version }}
     volumes:
       - loki-data:/loki
@@ -142,6 +149,8 @@ services:
     restart: unless-stopped
 
   promtail:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     image: grafana/promtail:{{ promtail_version }}
     volumes:
       - "/var/log:/var/log:ro"
@@ -155,7 +164,9 @@ services:
     restart: unless-stopped
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    image: gcr.io/cadvisor/cadvisor:{{ cadvisor_version }}
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
@@ -169,8 +180,10 @@ services:
       mode: global
 
   nextcloud-exporter:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     container_name: nextcloud-exporter
-    image: "xperimental/nextcloud-exporter"
+    image: "xperimental/nextcloud-exporter:{{ nextcloud_exporter_version }}"
     security_opt:
       - no-new-privileges:true
     command: nextcloud-exporter -c /conf/config.yml 
@@ -197,12 +210,75 @@ services:
       - backend
 {% endif %}
 
+  diun: # Docker image update notifier with mail notifications
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    image: crazymax/diun:{{ diun_version }}
+    container_name: diun
+    restart: always
+    environment:
+      - DIUN_LOG_LEVEL=info
+      - DIUN_PROVIDERS_DOCKER=true
+      - DIUN_PROVIDERS_DOCKER_WATCHBYDEFAULT=true
+      - DIUN_WATCH_WORKERS=10
+      - DIUN_WATCH_SCHEDULE={{ diun_schedule | default('0 0 6 * * *') }}  # Daily at 6am by default
+      - DIUN_PERSISTENCE=filesystem
+      - DIUN_PERSISTENCE_PATH=/data
+
+      # Mail notification settings (override via role/playbook vars)
+      - DIUN_NOTIF_MAIL_TO={{ diun_mail_to | default('you@example.com') }}
+      - DIUN_NOTIF_MAIL_FROM={{ diun_mail_from | default('diun@' + app_domain_name) }}
+      - DIUN_NOTIF_MAIL_HOST={{ diun_mail_host | default('smtp.example.com') }}
+      - DIUN_NOTIF_MAIL_PORT={{ diun_mail_port | default(587) }}
+      - DIUN_NOTIF_MAIL_USERNAME={{ diun_mail_user | default('') }}
+      - DIUN_NOTIF_MAIL_PASSWORD={{ diun_mail_password | default('') }}
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - diun-data:/data
+    networks:
+      - backend
+
+  autoheal: # restart container when healthcheck is ko
+    labels:
+      - com.centurylinklabs.watchtower.enable={{ 'true' if autoheal_version != 'latest' else 'false' }}
+    image: willfarrell/autoheal:{{ autoheal_version }}
+    restart: always
+    environment:
+      AUTOHEAL_CONTAINER_LABEL: all
+      AUTOHEAL_INTERVAL: 30   # check every 30 seconds
+      AUTOHEAL_START_PERIOD: 120   # wait 120 seconds before first health check
+      AUTOHEAL_DEFAULT_STOP_TIMEOUT: 60   # Docker waits max 60 seconds for a container to stop before killing during restarts
+    networks:
+      - backend
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+  
+  watchtower:
+    labels:
+      - com.centurylinklabs.watchtower.enable={{ 'true' if watchtower_version != 'latest' else 'false' }}
+    image: containrrr/watchtower:{{ watchtower_version }}
+    container_name: watchtower
+    restart: always
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_INCLUDE_RESTARTING=true
+      - WATCHTOWER_SCHEDULE=0 0 4 * * *  # Daily at 4am
+      - TZ=Europe/Paris
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - backend
+    command: --label-enable
+
 networks:
   traefik_backend:
     external: true
   backend:
 
 volumes:
+  diun-data:
   loki-config:
     driver: local
     driver_opts:
