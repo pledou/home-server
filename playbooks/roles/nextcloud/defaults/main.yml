@@ -1,11 +1,18 @@
 ---
+nextcloud_postgres_image: "postgres"
 nextcloud_postgres_version: "15"
 
 # Docker image versions
+coturn_image: "instrumentisto/coturn"
 coturn_version: "4.6"
+elasticsearch_image: "docker.elastic.co/elasticsearch/elasticsearch"
 elasticsearch_version: "8.12.0"
+harp_image: "ghcr.io/nextcloud/nextcloud-appapi-harp"
 harp_version: "release"
+redis_image: "redis"
 redis_version: "8-alpine"
+nextcloud_image: "nextcloud"
+nextcloud_version: "32"
 
 nextcloud_defaultapp_list:
   - viewer

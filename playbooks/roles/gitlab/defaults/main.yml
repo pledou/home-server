@@ -1,5 +1,7 @@
 # code: language=ansible
 ---
 # Docker image versions for GitLab role
+gitlab_image: "gitlab/gitlab-ce"
 gitlab_version: "16.8.1-ce.0"
+gitlab_runner_image: "gitlab/gitlab-runner"
 gitlab_runner_version: "latest"

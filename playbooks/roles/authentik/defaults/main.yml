@@ -1,5 +1,9 @@
 # code: language=ansible
 ---
 # Default PostgreSQL version for Authentik
+authentik_postgres_image: "postgres"
 authentik_postgres_version: "17"
-authentik_tag: "2025.12"
+authentik_redis_image: "redis"
+authentik_redis_version: "alpine"
+authentik_image: "ghcr.io/goauthentik/server"
+authentik_version: "2025.12"

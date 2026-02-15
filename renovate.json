@@ -5,5 +5,83 @@
   ],
   "schedule": [
     "before 5am on Monday"
+  ],
+  "regexManagers": [
+    {
+      "description": "Update Docker image versions in Ansible roles",
+      "fileMatch": [
+        "^playbooks/roles/.+/defaults/main\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "(?<depName>[a-z0-9_]+)_image:\\s*[\"']?(?<packageName>[^\"'\\n]+)[\"']?\\s*\\n\\s*\\1_version:\\s*[\"']?(?<currentValue>[^\"'\\n]+)[\"']?"
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Group all monitoring role updates",
+      "matchFileNames": [
+        "playbooks/roles/monitoring/**"
+      ],
+      "groupName": "monitoring services"
+    },
+    {
+      "description": "Group all Home Assistant role updates",
+      "matchFileNames": [
+        "playbooks/roles/hassio/**"
+      ],
+      "groupName": "home assistant services"
+    },
+    {
+      "description": "Group all Authentik updates",
+      "matchFileNames": [
+        "playbooks/roles/authentik/**"
+      ],
+      "groupName": "authentik services"
+    },
+    {
+      "description": "Group all GitLab updates",
+      "matchFileNames": [
+        "playbooks/roles/gitlab/**"
+      ],
+      "groupName": "gitlab services"
+    },
+    {
+      "description": "Group all Nextcloud updates",
+      "matchFileNames": [
+        "playbooks/roles/nextcloud/**"
+      ],
+      "groupName": "nextcloud services"
+    },
+    {
+      "description": "Group all Traefik updates",
+      "matchFileNames": [
+        "playbooks/roles/traefik/**"
+      ],
+      "groupName": "traefik services"
+    },
+    {
+      "description": "Group all Kresus updates",
+      "matchFileNames": [
+        "playbooks/roles/kresus/**"
+      ],
+      "groupName": "kresus services"
+    },
+    {
+      "description": "Group all IA role updates",
+      "matchFileNames": [
+        "playbooks/roles/ia/**"
+      ],
+      "groupName": "ai services"
+    },
+    {
+      "description": "Separate major updates",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "dependencyDashboardApproval": true
+    }
   ]
 }

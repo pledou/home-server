@@ -11,7 +11,7 @@ services:
       - traefik.http.routers.ia-https.tls=true
       - traefik.http.routers.ia-https.tls.certresolver=le
       - traefik.http.services.ia.loadbalancer.server.port=8080
-    image: ghcr.io/open-webui/open-webui:{{ webui_version }}
+    image: "{{ webui_image }}:{{ webui_version }}"
     # Dependencies for tools
     command: >
       bash -c "
@@ -57,7 +57,7 @@ services:
   ollama:
     labels:
       - com.centurylinklabs.watchtower.enable=true
-    image: ollama/ollama:{{ ollama_version }}
+    image: "{{ ollama_image }}:{{ ollama_version }}"
     expose:
      - 11434/tcp
     ports:
@@ -96,7 +96,7 @@ services:
     labels:
       - com.centurylinklabs.watchtower.enable=true
     user: root
-    image: intelanalytics/ipex-llm-inference-cpp-xpu:{{ ollama_intel_version }}
+    image: "{{ ollama_intel_image }}:{{ ollama_intel_version }}"
     mem_limit: "32G"
     shm_size: "16g" 
     pull_policy: always
@@ -142,7 +142,7 @@ services:
   speech:
     labels:
       - com.centurylinklabs.watchtower.enable=true
-    image: ghcr.io/matatonic/openedai-speech:{{ speech_version }}
+    image: "{{ speech_image }}:{{ speech_version }}"
     environment:
       - TTS_HOME=voices
       - HF_HOME=voices

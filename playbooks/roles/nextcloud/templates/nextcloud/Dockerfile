@@ -1,4 +1,4 @@
-FROM nextcloud:{{ nextcloud_version | default('stable') }}-fpm AS nc_nextcloud
+FROM "{{ nextcloud_image }}:{{ nextcloud_version | default('stable') }}-fpm" AS nc_nextcloud
 
 RUN set -ex; \
     \

@@ -3,7 +3,7 @@ services:
   postgresql:
     labels:
       - com.centurylinklabs.watchtower.enable=true
-    image: postgres:{{ authentik_postgres_version | default('15') }}
+    image: "{{ authentik_postgres_image }}:{{ authentik_postgres_version | default('15') }}"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d authentik -U authentik"]
@@ -25,7 +25,7 @@ services:
     labels:
       - com.centurylinklabs.watchtower.enable=false
       - traefik.enable=false
-    image: redis:alpine
+    image: "{{ authentik_redis_image }}:{{ authentik_redis_version }}"
     command: --save 60 1 --loglevel warning
     restart: unless-stopped
     healthcheck:
@@ -52,7 +52,7 @@ services:
       - traefik.http.routers.authentik-https.tls=true
       - traefik.http.routers.authentik-https.tls.certresolver=le
       - traefik.http.services.authentik.loadbalancer.server.port=9000
-    image: ghcr.io/goauthentik/server:{{authentik_tag}}
+    image: "{{ authentik_image }}:{{ authentik_version }}"
     restart: unless-stopped
     command: server
     networks:
@@ -78,13 +78,14 @@ services:
       AUTHENTIK_EMAIL__USE_SSL: true
       AUTHENTIK_LOG_LEVEL: info
       AUTHENTIK_HOST: "https://auth.{{ app_domain_name }}"
+      AUTHENTIK_LISTEN__METRICS: "0.0.0.0:9300"
     depends_on:
       - postgresql
       - redis
   worker:
     labels:
       - com.centurylinklabs.watchtower.enable=true
-    image: ghcr.io/goauthentik/server:{{authentik_tag}}
+    image: "{{ authentik_image }}:{{ authentik_version }}"
     restart: unless-stopped
     command: worker
     environment:

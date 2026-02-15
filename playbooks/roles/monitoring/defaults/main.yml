@@ -1,17 +1,28 @@
 # code: language=ansible
 ---
 # Docker image versions for Monitoring role
+prometheus_image: "prom/prometheus"
 prometheus_version: "v2.50.1"
+alertmanager_image: "prom/alertmanager"
 alertmanager_version: "v0.27.0"
+node_exporter_image: "quay.io/prometheus/node-exporter"
 node_exporter_version: "v1.7.0"
+grafana_image: "grafana/grafana"
 grafana_version: "10.3.3"
+loki_image: "grafana/loki"
 loki_version: "2.9.4"
+promtail_image: "grafana/promtail"
 promtail_version: "2.9.4"
+cadvisor_image: "gcr.io/cadvisor/cadvisor"
 cadvisor_version: "v0.49.1"
+diun_image: "crazymax/diun"
 diun_version: "4.28"
+autoheal_image: "willfarrell/autoheal"
 autoheal_version: "latest"
+nextcloud_exporter_image: "xperimental/nextcloud-exporter"
 nextcloud_exporter_version: "0.9.0"
-watchtower_version: "latest"
+watchtower_image: "percona/watchtower"
+watchtower_version: "3"
 
 # Alerting configuration
 # These should be overridden in group_vars or host_vars

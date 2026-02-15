@@ -20,7 +20,7 @@ services:
     devices:
       - /dev/serial/by-id/{{enocean_device_id}}:/dev/enocean
 {% endif %}
-    image: homeassistant/home-assistant:stable
+    image: "{{ homeassistant_image }}:{{ homeassistant_version }}"
     network_mode: host
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8123"]
@@ -54,7 +54,7 @@ services:
       - traefik.http.services.zigbee2mqtt.loadbalancer.server.port=8080
       - traefik.http.services.zigbee2mqtt.loadbalancer.server.scheme=http
       - traefik.http.routers.zigbee2mqtt-https.middlewares=authentik@docker
-    image: koenkk/zigbee2mqtt:{{ zigbee2mqtt_version }}
+    image: "{{ zigbee2mqtt_image }}:{{ zigbee2mqtt_version }}"
     restart: always
     volumes:
       - zigbee2mqtt:/app/data:rw
@@ -82,7 +82,7 @@ services:
       - traefik.http.services.esphome.loadbalancer.server.port=6052
       - traefik.http.routers.esphome-https.middlewares=authentik@docker
     restart: always
-    image: esphome/esphome:{{ esphome_version }}
+    image: "{{ esphome_image }}:{{ esphome_version }}"
     privileged: true
     network_mode: host
     volumes:
@@ -92,7 +92,7 @@ services:
   mosquitto:
     labels:
       - com.centurylinklabs.watchtower.enable=true
-    image: eclipse-mosquitto:{{ mosquitto_version }}
+    image: "{{ mosquitto_image }}:{{ mosquitto_version }}"
     volumes:
       - mosquitto:/mosquitto/config:rw # rw for startup script to fix permissions
       - mosquitto-data:/mosquitto/data:rw
@@ -126,7 +126,7 @@ services:
       traefik.http.routers.myelectricaldata-https.tls.certresolver: le
       traefik.http.services.myelectricaldata.loadbalancer.server.port: 5000
       traefik.http.routers.myelectricaldata-https.middlewares: authentik@docker
-    image: m4dm4rtig4n/myelectricaldata:{{ myelectricaldata_version }}
+    image: "{{ myelectricaldata_image }}:{{ myelectricaldata_version }}"
     restart: always
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -152,7 +152,7 @@ services:
       traefik.http.services.frigate.loadbalancer.server.scheme: http
       traefik.http.services.frigate.loadbalancer.passHostHeader: 'true'
       traefik.http.routers.frigate-https.middlewares: authentik@docker
-    image: ghcr.io/blakeblackshear/frigate:stable
+    image: "{{ frigate_image }}:{{ frigate_version }}"
     restart: unless-stopped
     privileged: true
     shm_size: '512mb'
@@ -189,7 +189,7 @@ services:
       - traefik_backend
 
   wyoming-piper: # Text-to-Speech service at port 10200
-    image: rhasspy/wyoming-piper
+    image: "{{ piper_image }}:{{ piper_version }}"
     labels:
       com.centurylinklabs.watchtower.enable: 'true'
     restart: always
@@ -201,7 +201,7 @@ services:
 
 
   faster-whisper: # Speech-to-Text service at port 10300
-    image: lscr.io/linuxserver/faster-whisper:{{ faster_whisper_version }}
+    image: "{{ faster_whisper_image }}:{{ faster_whisper_version }}"
     container_name: faster-whisper
     labels:
       com.centurylinklabs.watchtower.enable: 'true'

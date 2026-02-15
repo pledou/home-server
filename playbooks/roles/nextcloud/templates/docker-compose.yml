@@ -8,7 +8,7 @@ services:
       - POSTGRES_USER=nextcloud
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
       - PGDATA=/var/lib/postgresql/data
-    image: postgres:{{ nextcloud_postgres_version | default('15') }}
+    image: "{{ nextcloud_postgres_image }}:{{ nextcloud_postgres_version | default('15') }}"
     restart: always
     networks:
       - backend
@@ -81,7 +81,7 @@ services:
     labels:
       - com.centurylinklabs.watchtower.enable=true
     command: redis-server --requirepass {{ redis_secret }}
-    image: redis:{{ redis_version }}
+    image: "{{ redis_image }}:{{ redis_version }}"
     healthcheck:
       test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
       start_period: 20s
@@ -98,7 +98,7 @@ services:
   elasticsearch:
     labels:
       - com.centurylinklabs.watchtower.enable=true
-    image: docker.elastic.co/elasticsearch/elasticsearch:{{ elasticsearch_version }}
+    image: "{{ elasticsearch_image }}:{{ elasticsearch_version }}"
     networks:
       - backend
     restart: always
@@ -144,7 +144,7 @@ services:
       - |
         export TURN_SECRET=$$(cat /run/secrets/turn_secret)
         exec docker-entrypoint.sh -n --log-file=stdout --external-ip=$$(detect-external-ip) --listening-port=3478 --no-cli --fingerprint --use-auth-secret --static-auth-secret=$$TURN_SECRET --realm={{ app_domain_name }} --total-quota=100 --bps-capacity=0 --stale-nonce --no-multicast-peers
-    image: instrumentisto/coturn:{{ coturn_version }}
+    image: "{{ coturn_image }}:{{ coturn_version }}"
     restart: always
     networks:
       - backend
@@ -157,7 +157,7 @@ services:
       - turn_secret
 
   harp:
-    image: ghcr.io/nextcloud/nextcloud-appapi-harp:release
+    image: "{{ harp_image }}:{{ harp_version }}"
     restart: always
     environment:
       HP_SHARED_KEY: "{{AppAPISecret}}"

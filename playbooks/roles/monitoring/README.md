@@ -14,9 +14,11 @@ This role deploys a comprehensive monitoring stack using Docker Compose, includi
 
 This role requires the following roles to be executed first:
 - **traefik** - Provides reverse proxy and SSL certificate management for Grafana
+- **authentik** - Provides SSO authentication for Grafana and Alertmanager, dependency to authentik_backend network to request metrics from authentik
 
 When running the full installation, ensure roles are executed in the correct order in your playbook:
 ```yaml
+- role: authentik
 - role: traefik
 - role: monitoring
 ```

@@ -11,7 +11,7 @@ services:
       - traefik.http.routers.prometheus-https.tls.certresolver=le
       - traefik.http.services.prometheus.loadbalancer.server.port=9090
       - traefik.http.routers.prometheus-https.middlewares=authentik@docker
-    image: prom/prometheus:{{ prometheus_version }}
+    image: "{{ prometheus_image }}:{{ prometheus_version }}"
     volumes:
       - prometheus-conf:/etc/prometheus
       - prometheus-data:/prometheus
@@ -25,6 +25,7 @@ services:
     networks:
       - backend
       - traefik_backend
+      - authentik_backend
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
@@ -41,7 +42,7 @@ services:
       - traefik.http.routers.alertmanager-https.tls.certresolver=le
       - traefik.http.services.alertmanager.loadbalancer.server.port=9090
       - traefik.http.routers.alertmanager-https.middlewares=authentik@docker
-    image: prom/alertmanager:{{ alertmanager_version }}
+    image: "{{ alertmanager_image }}:{{ alertmanager_version }}"
     container_name: alertmanager
     volumes:
       - alertmanager-conf:/etc/alertmanager
@@ -56,7 +57,7 @@ services:
   node-exporter:
     labels:
       - com.centurylinklabs.watchtower.enable=true
-    image: quay.io/prometheus/node-exporter:{{ node_exporter_version }}
+    image: "{{ node_exporter_image }}:{{ node_exporter_version }}"
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -96,7 +97,7 @@ services:
       - traefik.http.routers.grafana-https.tls=true
       - traefik.http.routers.grafana-https.tls.certresolver=le
       - traefik.http.services.grafana.loadbalancer.server.port=3000
-    image: grafana/grafana:{{ grafana_version }}
+    image: "{{ grafana_image }}:{{ grafana_version }}"
     volumes:
       - grafana-data:/var/lib/grafana
       - grafana-provisioning:/etc/grafana/provisioning
@@ -138,7 +139,7 @@ services:
   loki:
     labels:
       - com.centurylinklabs.watchtower.enable=true
-    image: grafana/loki:{{ loki_version }}
+    image: "{{ loki_image }}:{{ loki_version }}"
     volumes:
       - loki-data:/loki
       - loki-config:/etc/loki
@@ -151,7 +152,7 @@ services:
   promtail:
     labels:
       - com.centurylinklabs.watchtower.enable=true
-    image: grafana/promtail:{{ promtail_version }}
+    image: "{{ promtail_image }}:{{ promtail_version }}"
     volumes:
       - "/var/log:/var/log:ro"
       - "/var/lib/docker/containers:/var/lib/docker/containers:ro"
@@ -166,7 +167,7 @@ services:
   cadvisor:
     labels:
       - com.centurylinklabs.watchtower.enable=true
-    image: gcr.io/cadvisor/cadvisor:{{ cadvisor_version }}
+    image: "{{ cadvisor_image }}:{{ cadvisor_version }}"
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
@@ -183,7 +184,7 @@ services:
     labels:
       - com.centurylinklabs.watchtower.enable=true
     container_name: nextcloud-exporter
-    image: "xperimental/nextcloud-exporter:{{ nextcloud_exporter_version }}"
+    image: "{{ nextcloud_exporter_image }}:{{ nextcloud_exporter_version }}"
     security_opt:
       - no-new-privileges:true
     command: nextcloud-exporter -c /conf/config.yml 
@@ -213,7 +214,7 @@ services:
   diun: # Docker image update notifier with mail notifications
     labels:
       - com.centurylinklabs.watchtower.enable=true
-    image: crazymax/diun:{{ diun_version }}
+    image: "{{ diun_image }}:{{ diun_version }}"
     container_name: diun
     restart: always
     environment:
@@ -242,7 +243,7 @@ services:
   autoheal: # restart container when healthcheck is ko
     labels:
       - com.centurylinklabs.watchtower.enable={{ 'true' if autoheal_version != 'latest' else 'false' }}
-    image: willfarrell/autoheal:{{ autoheal_version }}
+    image: "{{ autoheal_image }}:{{ autoheal_version }}"
     restart: always
     environment:
       AUTOHEAL_CONTAINER_LABEL: all
@@ -257,7 +258,7 @@ services:
   watchtower:
     labels:
       - com.centurylinklabs.watchtower.enable={{ 'true' if watchtower_version != 'latest' else 'false' }}
-    image: containrrr/watchtower:{{ watchtower_version }}
+    image: "{{ watchtower_image }}:{{ watchtower_version }}"
     container_name: watchtower
     restart: always
     environment:
@@ -265,6 +266,7 @@ services:
       - WATCHTOWER_LABEL_ENABLE=true
       - WATCHTOWER_INCLUDE_RESTARTING=true
       - WATCHTOWER_SCHEDULE=0 0 4 * * *  # Daily at 4am
+      - DOCKER_MIN_API_VERSION=1.44
       - TZ=Europe/Paris
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -274,6 +276,8 @@ services:
 
 networks:
   traefik_backend:
+    external: true
+  authentik_backend:
     external: true
   backend:
 
