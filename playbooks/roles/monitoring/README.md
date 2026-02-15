@@ -10,6 +10,22 @@ This role deploys a comprehensive monitoring stack using Docker Compose, includi
 - **cAdvisor** - Container metrics exporter
 - **Nextcloud Exporter** - Nextcloud-specific metrics
 
+## Dependencies
+
+This role requires the following roles to be executed first:
+- **traefik** - Provides reverse proxy and SSL certificate management for Grafana
+
+When running the full installation, ensure roles are executed in the correct order in your playbook:
+```yaml
+- role: traefik
+- role: monitoring
+```
+
+For targeted deployment:
+```bash
+ansible-playbook install.yml --tags monitoring
+```
+
 ## Alerting Configuration
 
 The monitoring stack supports multi-channel alerting with intelligent fallback:

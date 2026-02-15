@@ -15,10 +15,10 @@
 - name: Install apps & backup
   hosts: docker_server
   roles:
-    - role: traefik
-      tags: ['traefik', 'docker-apps']
     - role: authentik
       tags: ['authentik', 'docker-apps']
+    - role: traefik
+      tags: ['traefik', 'docker-apps']
     - role: monitoring
       tags: ['monitoring', 'docker-apps']
     - role: gitlab

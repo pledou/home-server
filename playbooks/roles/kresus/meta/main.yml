@@ -1,5 +1,0 @@
-# code: language=ansible
----
-dependencies:
-  - authentik
-...
