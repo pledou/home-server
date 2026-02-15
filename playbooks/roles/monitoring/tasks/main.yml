@@ -103,7 +103,9 @@
 
 - name: Clone Nextcloud Talk webhook bot repository
   ansible.builtin.git:
-    repo: https://github.com/weichwaren-schmiede/nextcloud-talk-webhook-bot.git
+    repo: https://github.com/pledou/nextcloud-talk-webhook-bot.git 
+    # add Alertmanager json format support to https://github.com/weichwaren-schmiede/nextcloud-talk-webhook-bot.git
+    # A MR has been opened here: https://github.com/weichwaren-schmiede/nextcloud-talk-webhook-bot/pull/1
     dest: /home/{{ ansible_user }}/home-server/stacks/monitoring/nextcloud-talk-bot
     version: main
     force: true

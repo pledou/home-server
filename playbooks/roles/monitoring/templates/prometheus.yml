@@ -44,4 +44,4 @@ scrape_configs:
       - targets: ['nextcloud-exporter:9205']
   - job_name: authentik
     static_configs:
-      - targets: ['auth-authentik-1:9300']
+      - targets: ['authentik-server-1:9300']
