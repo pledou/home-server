@@ -72,19 +72,26 @@ services:
       # Enable only essential collectors
       - '--collector.disable-defaults'
       - '--collector.cpu'
+      - '--collector.cpu.info=false'
       - '--collector.loadavg'
       - '--collector.meminfo'
       - '--collector.diskstats'
       - '--collector.filesystem'
       - '--collector.netdev'
       - '--collector.time'
-      - '--collector.uname'
       - '--collector.thermal_zone'
     networks:
       - backend
     restart: always
     deploy:
       mode: global
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.25'
+          memory: 64M
 
   grafana:
     labels:
