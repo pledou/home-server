@@ -171,6 +171,71 @@ Edit `files/alerts.rules` to add custom alert rules:
     description: "Filesystem {{ $labels.mountpoint }} has less than 10% space remaining"
 ```
 
+## Grafana User Role Management
+
+Grafana automatically syncs user roles from Authentik based on group membership. Users are assigned roles through Authentik groups, which are mapped to Grafana organizational roles via property mappers.
+
+### Setting Up Role-Based Access Control
+
+#### Step 1: Groups Automatically Created
+
+The playbook automatically creates three Authentik groups during deployment:
+- `grafana-admin` - Full administrative access
+- `grafana-editor` - Can create and edit dashboards
+- `grafana-viewer` - Read-only access to existing dashboards (default)
+
+No manual group creation needed!
+
+#### Step 2: Configure Group-to-Role Property Mappers
+
+The OAuth provider includes three property mappers that automatically handle role assignment:
+
+- **grafana_mapper_role_admin**: Maps users in `grafana-admin` group to Grafana Admin role
+- **grafana_mapper_role_editor**: Maps users in `grafana-editor` group to Grafana Editor role
+- **grafana_mapper_role_viewer**: Maps users in `grafana-viewer` group to Grafana Viewer role
+
+These mappers are automatically configured during deployment.
+
+#### Step 3: Assign Users to Groups
+
+1. **In Authentik Admin Panel** → **Directory** → **Users**
+2. **Select a user** and go to **Groups** tab
+3. **Add the user** to one of:
+   - `grafana-admin` - Full admin access
+   - `grafana-editor` - Dashboard editor access
+   - `grafana-viewer` - Read-only access (default)
+4. **Save**
+
+#### Step 4: User Logs In to Grafana
+
+When user next logs in via Authentik OAuth, their role is automatically assigned based on group membership.
+
+### Role Hierarchy
+
+| Role | Permissions |
+|------|-------------|
+| **Admin** | Manage users, organizations, dashboards, alerts, plugins |
+| **Editor** | Create, edit, and delete dashboards; manage alerts |
+| **Viewer** | View dashboards and panels (read-only) |
+
+### User Provisioning Flow
+
+When a user logs in via Authentik:
+1. User is automatically created in Grafana on first login (if doesn't exist)
+2. User is assigned to default **Viewer** role
+3. Role is updated based on Authentik group membership in real-time
+4. Changes to group membership in Authentik sync to Grafana on next login
+
+### Useful Grafana Admin Commands
+
+```bash
+# List all Grafana users
+docker exec monitoring-grafana-1 grafana-cli admin users list
+
+# Verify user roles
+docker exec monitoring-grafana-1 grafana-cli admin users list | grep -E "(Id|Admin|Name):"
+```
+
 ## Troubleshooting
 
 ### Alerts Not Being Sent

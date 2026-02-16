@@ -112,7 +112,7 @@ services:
     environment:
       GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_password }}"
       GF_USERS_ALLOW_SIGN_UP: false
-      GF_SERVER_DOMAI: "grafana.{{ app_domain_name }}"
+      GF_SERVER_DOMAIN: "grafana.{{ app_domain_name }}"
       GF_SERVER_ROOT_URL: "https://grafana.{{ app_domain_name }}"
       GF_SMTP_ENABLED: true
       GF_SMTP_HOST: "{{ grafana_mail_smtphost }}:{{ grafana_mail_smtpport }}"
@@ -141,6 +141,17 @@ services:
     networks:
       - backend
       - traefik_backend
+    depends_on:
+      prometheus:
+        condition: service_started
+      loki:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
   loki:
@@ -152,8 +163,6 @@ services:
       - loki-config:/etc/loki
     networks:
       - backend
-    depends_on:
-      - grafana
     restart: unless-stopped
 
   promtail:
@@ -167,8 +176,6 @@ services:
       - promtail-conf:/etc/promtail/
     networks:
       - backend
-    depends_on:
-      - grafana
     restart: unless-stopped
 
   cadvisor:

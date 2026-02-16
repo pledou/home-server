@@ -219,6 +219,66 @@
   become: false
   when: authentik_api_token is defined
   block:
+    - name: Create Grafana role-mapping groups in Authentik
+      when: authentik_api_token is defined
+      block:
+        - name: Create grafana-admin group
+          ansible.builtin.uri:
+            url: "https://auth.{{ app_domain_name }}/api/v3/core/groups/"
+            method: POST
+            headers:
+              Authorization: "Bearer {{ authentik_api_token }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              name: "grafana-admin"
+              is_superuser: false
+            status_code: [201, 400]
+            validate_certs: true
+          register: grafana_admin_group
+          changed_when: grafana_admin_group.status == 201
+
+        - name: Create grafana-editor group
+          ansible.builtin.uri:
+            url: "https://auth.{{ app_domain_name }}/api/v3/core/groups/"
+            method: POST
+            headers:
+              Authorization: "Bearer {{ authentik_api_token }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              name: "grafana-editor"
+              is_superuser: false
+            status_code: [201, 400]
+            validate_certs: true
+          register: grafana_editor_group
+          changed_when: grafana_editor_group.status == 201
+
+        - name: Create grafana-viewer group
+          ansible.builtin.uri:
+            url: "https://auth.{{ app_domain_name }}/api/v3/core/groups/"
+            method: POST
+            headers:
+              Authorization: "Bearer {{ authentik_api_token }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              name: "grafana-viewer"
+              is_superuser: false
+            status_code: [201, 400]
+            validate_certs: true
+          register: grafana_viewer_group
+          changed_when: grafana_viewer_group.status == 201
+
+        - name: Display created groups
+          ansible.builtin.debug:
+            msg: |
+              Grafana groups have been created in Authentik:
+              - grafana-admin: Full administrative access
+              - grafana-editor: Can create and edit dashboards
+              - grafana-viewer: Read-only access to dashboards
+              You can now assign users to these groups in the Authentik Admin Panel.
+
     - name: Configure Authentik providers and applications for Monitoring services
       when: authentik_api_token is defined
       ansible.builtin.include_tasks: "tasks/authentik_common.yml"
@@ -251,7 +311,11 @@
               access_code_validity: "minutes=1"
               access_token_validity: "minutes=10"
               refresh_token_validity: "days=30"
-              scopes: "openid profile email"
+              scopes: "openid profile email groups"
+              property_mappings:
+                - name: "grafana_mapper_role_admin"
+                - name: "grafana_mapper_role_editor"
+                - name: "grafana_mapper_role_viewer"
             app:
               name: "Grafana"
               slug: "grafana-slug"
