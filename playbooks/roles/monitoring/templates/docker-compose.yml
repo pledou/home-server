@@ -72,7 +72,7 @@ services:
       # Enable only essential collectors
       - '--collector.disable-defaults'
       - '--collector.cpu'
-      - '--collector.cpu.info=false'
+      - '--no-collector.cpu.info'
       - '--collector.loadavg'
       - '--collector.meminfo'
       - '--collector.diskstats'
