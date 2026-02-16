@@ -3,6 +3,8 @@
   "extends": [
     "config:recommended"
   ],
+  "dependencyDashboard": true,
+  "prConcurrency": 10,
   "schedule": [
     "before 5am on Monday"
   ],
@@ -20,6 +22,16 @@
     }
   ],
   "packageRules": [
+    {
+      "description": "Allow non-major updates to create PRs immediately",
+      "excludeDepNames": [],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "automerge": false,
+      "prCreation": "immediate"
+    },
     {
       "description": "Group all monitoring role updates",
       "matchFileNames": [
