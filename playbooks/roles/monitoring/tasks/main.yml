@@ -33,6 +33,10 @@
   vars:
     secrets:
       - grafana_admin_password
+      - name: grafana_oauth_client_id
+        length: 32
+      - name: grafana_oauth_client_secret
+        length: 64
       - name: alertmanager_nextcloud_bot_secret
         length: 64
 
@@ -64,10 +68,6 @@
       dest: promtail-conf/config.yml
       owner: "{{ ansible_user }}"
       group: "{{ ansible_user }}"
-    - file: grafana/datasources.yml
-      dest: grafana-provisioning/datasources/datasource.yml
-      owner: "{{ ansible_user }}"
-      group: "{{ ansible_user }}"
     - file: nextcloud-exporter-conf.yml
       dest: nextcloud-exporter-conf/config.yml
     - file: alertmanager-config.yml
@@ -81,20 +81,12 @@
     src: "{{ item.file }}"
     dest: "{{ docker_volumes_path }}/{{ item.dest }}"
     mode: u=rwx,g=o=rx
+    force: true
   loop:
     - file: alerts.rules
       dest: prometheus-conf/alerts.rules
   loop_control:
     label: "{{ item.file }} -> {{ item.dest }}"
-
-- name: Copy grafana dashboards
-  become: true
-  ansible.builtin.copy:
-    src: templates/grafana/dashboards/
-    dest: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/"
-    mode: u=rwx,g=o=rx
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
 
 - name: Get Users infos
   ansible.builtin.getent:
@@ -103,7 +95,7 @@
 
 - name: Clone Nextcloud Talk webhook bot repository
   ansible.builtin.git:
-    repo: https://github.com/pledou/nextcloud-talk-webhook-bot.git 
+    repo: https://github.com/pledou/nextcloud-talk-webhook-bot.git
     # add Alertmanager json format support to https://github.com/weichwaren-schmiede/nextcloud-talk-webhook-bot.git
     # A MR has been opened here: https://github.com/weichwaren-schmiede/nextcloud-talk-webhook-bot/pull/1
     dest: /home/{{ ansible_user }}/home-server/stacks/monitoring/nextcloud-talk-bot
@@ -136,6 +128,36 @@
     build: "always"
     state: present
     project_src: /home/{{ ansible_user }}/home-server/stacks/monitoring
+
+- name: Wait for Grafana API to be up
+  ansible.builtin.uri:
+    url: "https://grafana.{{ app_domain_name }}/api/health"
+    method: GET
+    status_code: 200
+    validate_certs: true
+  register: grafana_health
+  retries: 12
+  delay: 10
+  until: grafana_health.status == 200
+
+- name: Download Grafana.com dashboards
+  become: true
+  ansible.builtin.get_url:
+    url: "https://grafana.com/api/dashboards/{{ item.gnet_id }}/revisions/latest/download"
+    dest: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/{{ item.gnet_id }}.json"
+    mode: u=rwx,g=o=rx
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+  loop: "{{ grafana_dashboard_updates | default([]) }}"
+  loop_control:
+    label: "{{ item.gnet_id }} -> {{ item.gnet_id }}.json"
+
+- name: Restart Grafana after dashboard updates
+  community.docker.docker_compose_v2:
+    project_src: /home/{{ ansible_user }}/home-server/stacks/monitoring
+    services:
+      - grafana
+    state: restarted
 
 - name: Check if Nextcloud container exists
   ansible.builtin.shell:

@@ -24,6 +24,15 @@ nextcloud_exporter_version: "0.9.0"
 watchtower_image: "percona/watchtower"
 watchtower_version: "3"
 
+# Grafana dashboards to refresh from Grafana.com (gnetId)
+grafana_dashboard_updates:
+  - gnet_id: 17346 # Traefik Official Standalone Dashboard
+  - gnet_id: 1860 # Node Explorer Full
+  - gnet_id: 20716 # Nextcloud
+  - gnet_id: 17821 # Nextcloud Logs
+  - gnet_id: 14837 # authentik
+  - gnet_id: 21743 # cadvisor-exporter-docker-containers-overview
+
 # Alerting configuration
 # These should be overridden in group_vars or host_vars
 # alertmanager_nextcloud_conversation_token: ""  # Optional: Nextcloud Talk conversation token (auto-generates secret)

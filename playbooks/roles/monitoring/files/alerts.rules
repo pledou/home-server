@@ -1,5 +1,5 @@
 groups:
-- name: example
+- name: LocalCloud
   rules:
 
   # Alert for any instance that is unreachable for >2 minutes.

@@ -79,14 +79,6 @@ alertmanager_smtp_require_tls: true
 # Step 3: Set token below and redeploy (bot will be automatically added to conversation)
 # alertmanager_nextcloud_conversation_token: "xhevvhbo"  # Conversation token from Talk URL
 
-grafana_oauth_client_id: !vault |
-                         $ANSIBLE_VAULT;1.1;AES256
-                         YOUR_ENCRYPTED_GRAFANA_OAUTH_CLIENT_ID_HERE
-
-grafana_oauth_client_secret: !vault |
-                             $ANSIBLE_VAULT;1.1;AES256
-                             YOUR_ENCRYPTED_GRAFANA_OAUTH_CLIENT_SECRET_HERE
-
 webui_oauth_client_id: !vault |
                        $ANSIBLE_VAULT;1.1;AES256
                        YOUR_ENCRYPTED_WEBUI_OAUTH_CLIENT_ID_HERE
