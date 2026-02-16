@@ -4,7 +4,6 @@
     "config:recommended"
   ],
   "dependencyDashboard": true,
-  "prConcurrency": 10,
   "schedule": [
     "before 5am on Monday"
   ],
