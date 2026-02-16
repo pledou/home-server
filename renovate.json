@@ -13,7 +13,7 @@
         "^playbooks/roles/.+/defaults/main\\.ya?ml$"
       ],
       "matchStrings": [
-        "(?<depName>[a-z0-9_]+)_image:\\s*[\"']?(?<packageName>[^\"'\\n]+)[\"']?\\s*\\n\\s*\\1_version:\\s*[\"']?(?<currentValue>[^\"'\\n]+)[\"']?"
+        "[a-z0-9_]+_image:\\s*[\"']?(?<packageName>[^\"'\\s]+)[\"']?[\\s\\S]*?[a-z0-9_]+_version:\\s*[\"']?(?<currentValue>[^\"'\\s]+)[\"']?"
       ],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"

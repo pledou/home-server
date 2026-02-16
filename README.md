@@ -3,6 +3,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/pledou/home-server/workflows/CI/badge.svg)](https://github.com/pledou/home-server/actions/workflows/ci.yml)
 [![Security Scan](https://img.shields.io/badge/security-scanned-brightgreen)](https://github.com/pledou/home-server/actions/workflows/ci.yml)
+[![Last Renovate Scan](https://img.shields.io/endpoint?url=https://api.github.com/repos/pledou/home-server/contents/.renovaterc.json)](https://github.com/pledou/home-server/actions/workflows/renovate.yml)
+[![Renovate PRs](https://img.shields.io/github/issues-pr/pledou/home-server?label=renovate%20updates&author=renovate&logo=renovatebot)](https://github.com/pledou/home-server/pulls?q=author:renovate)
 
 An Infrastructure-as-Code solution for deploying and managing a self-hosted home server environment using Ansible. This setup provides automated deployment of multiple containerized services including cloud storage, home automation, monitoring, authentication, and more.
 
