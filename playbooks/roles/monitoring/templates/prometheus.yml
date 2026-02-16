@@ -34,11 +34,6 @@ scrape_configs:
   - job_name: traefik
     static_configs:
       - targets: ['traefik-traefik-1:8082']
-  - job_name: docker
-      # metrics_path defaults to '/metrics'
-      # scheme defaults to 'http'.
-    static_configs:
-      - targets: ["host.docker.internal:9323"]
   - job_name: nextcloud-exporter
     static_configs:
       - targets: ['nextcloud-exporter:9205']
