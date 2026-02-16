@@ -128,7 +128,7 @@ services:
       GF_AUTH_GENERIC_OAUTH_SCOPES: "openid profile email"
       GF_AUTH_GENERIC_OAUTH_AUTH_URL: "https://auth.{{ app_domain_name }}/application/o/authorize/"
       GF_AUTH_GENERIC_OAUTH_TOKEN_URL: "https://auth.{{ app_domain_name }}/application/o/token/"
-      GF_AUTH_GENERIC_OAUTH_API_URL: "https://auth.{{ app_domain_name }}/application/o/userinfo/"
+      GF_AUTH_GENERIC_OAUTH_API_URL: "https://auth.{{ app_domain_name }}/application/o/grafana-slug/userinfo"
       GF_AUTH_SIGNOUT_REDIRECT_URL: "https://auth.{{ app_domain_name }}/application/o/grafana-slug/end-session/"
       # User creation and sync settings
       GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: "true"

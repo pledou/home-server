@@ -33,10 +33,6 @@
   vars:
     secrets:
       - grafana_admin_password
-      - name: grafana_oauth_client_id
-        length: 32
-      - name: grafana_oauth_client_secret
-        length: 64
       - name: alertmanager_nextcloud_bot_secret
         length: 64
 
@@ -68,6 +64,14 @@
       dest: promtail-conf/config.yml
       owner: "{{ ansible_user }}"
       group: "{{ ansible_user }}"
+    - file: grafana/datasources.yml
+      dest: grafana-provisioning/datasources/datasource.yml
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+    - file: grafana/dashboards/dashboard.yml
+      dest: grafana-provisioning/dashboards/dashboard.yml
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
     - file: nextcloud-exporter-conf.yml
       dest: nextcloud-exporter-conf/config.yml
     - file: alertmanager-config.yml
@@ -92,6 +96,105 @@
   ansible.builtin.getent:
     database: passwd
     key: "{{ ansible_user }}"
+
+- name: Configure Authentik providers and applications for Monitoring
+  delegate_to: localhost
+  become: false
+  when: authentik_api_token is defined
+  block:
+    - name: Create Grafana role-mapping groups in Authentik
+      when: authentik_api_token is defined
+      block:
+        - name: Create grafana-admin group
+          ansible.builtin.uri:
+            url: "https://auth.{{ app_domain_name }}/api/v3/core/groups/"
+            method: POST
+            headers:
+              Authorization: "Bearer {{ authentik_api_token }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              name: "grafana-admin"
+              is_superuser: false
+            status_code: [201, 400]
+            validate_certs: true
+          register: grafana_admin_group
+          changed_when: grafana_admin_group.status == 201
+
+        - name: Create grafana-editor group
+          ansible.builtin.uri:
+            url: "https://auth.{{ app_domain_name }}/api/v3/core/groups/"
+            method: POST
+            headers:
+              Authorization: "Bearer {{ authentik_api_token }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              name: "grafana-editor"
+              is_superuser: false
+            status_code: [201, 400]
+            validate_certs: true
+          register: grafana_editor_group
+          changed_when: grafana_editor_group.status == 201
+
+        - name: Create grafana-viewer group
+          ansible.builtin.uri:
+            url: "https://auth.{{ app_domain_name }}/api/v3/core/groups/"
+            method: POST
+            headers:
+              Authorization: "Bearer {{ authentik_api_token }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              name: "grafana-viewer"
+              is_superuser: false
+            status_code: [201, 400]
+            validate_certs: true
+          register: grafana_viewer_group
+          changed_when: grafana_viewer_group.status == 201
+
+    - name: Configure Authentik providers and applications for Monitoring services
+      when: authentik_api_token is defined
+      ansible.builtin.include_tasks: "tasks/authentik_common.yml"
+      vars:
+        provider_apps:
+          - provider:
+              name: "alertmanager-provider"
+              external_host: "https://alertmanager.{{ app_domain_name }}"
+            app:
+              name: "Alertmanager"
+              slug: "alertmanager"
+          - provider:
+              name: "prometheus-provider"
+              external_host: "https://prometheus.{{ app_domain_name }}"
+            app:
+              name: "Prometheus"
+              slug: "prometheus"
+        oauth_apps:
+          - provider:
+              name: "grafana-oauth-provider"
+              redirect_uris:
+                - url: "https://grafana.{{ app_domain_name }}/login/generic_oauth"
+                  matching_mode: "strict"
+              client_type: "confidential"
+              sub_mode: "user_email"
+              include_claims_in_id_token: true
+              issuer_mode: "per_provider"
+              access_code_validity: "minutes=1"
+              access_token_validity: "minutes=10"
+              refresh_token_validity: "days=30"
+              scopes: "openid profile email groups"
+              property_mappings:
+                - name: "grafana_mapper_role_admin"
+                - name: "grafana_mapper_role_editor"
+                - name: "grafana_mapper_role_viewer"
+            app:
+              name: "Grafana"
+              slug: "grafana-slug"
+              open_in_new_tab: true
+              meta_launch_url: "https://grafana.{{ app_domain_name }}"
+              meta_description: "Grafana monitoring and analytics platform"
+              meta_publisher: "Grafana"
 
 - name: Clone Nextcloud Talk webhook bot repository
   ansible.builtin.git:
@@ -148,6 +251,7 @@
     mode: u=rwx,g=o=rx
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
+    force: true # update to last version on each run
   loop: "{{ grafana_dashboard_updates | default([]) }}"
   loop_control:
     label: "{{ item.gnet_id }} -> {{ item.gnet_id }}.json"
@@ -233,116 +337,7 @@
     - name: Display bot configuration result
       ansible.builtin.debug:
         msg: |
-          Nextcloud Talk bot 'Prometheus Alerts' is fully configured and added to conversation {{ alertmanager_nextcloud_conversation_token }}.
+          Nextcloud Talk bot 'Prometheus Alerts' is fully configured and
+          added to conversation {{ alertmanager_nextcloud_conversation_token }}.
           Alerts will now be sent to your Nextcloud Talk conversation!
 
-- name: Configure Authentik providers and applications for Monitoring
-  delegate_to: localhost
-  become: false
-  when: authentik_api_token is defined
-  block:
-    - name: Create Grafana role-mapping groups in Authentik
-      when: authentik_api_token is defined
-      block:
-        - name: Create grafana-admin group
-          ansible.builtin.uri:
-            url: "https://auth.{{ app_domain_name }}/api/v3/core/groups/"
-            method: POST
-            headers:
-              Authorization: "Bearer {{ authentik_api_token }}"
-              Content-Type: "application/json"
-            body_format: json
-            body:
-              name: "grafana-admin"
-              is_superuser: false
-            status_code: [201, 400]
-            validate_certs: true
-          register: grafana_admin_group
-          changed_when: grafana_admin_group.status == 201
-
-        - name: Create grafana-editor group
-          ansible.builtin.uri:
-            url: "https://auth.{{ app_domain_name }}/api/v3/core/groups/"
-            method: POST
-            headers:
-              Authorization: "Bearer {{ authentik_api_token }}"
-              Content-Type: "application/json"
-            body_format: json
-            body:
-              name: "grafana-editor"
-              is_superuser: false
-            status_code: [201, 400]
-            validate_certs: true
-          register: grafana_editor_group
-          changed_when: grafana_editor_group.status == 201
-
-        - name: Create grafana-viewer group
-          ansible.builtin.uri:
-            url: "https://auth.{{ app_domain_name }}/api/v3/core/groups/"
-            method: POST
-            headers:
-              Authorization: "Bearer {{ authentik_api_token }}"
-              Content-Type: "application/json"
-            body_format: json
-            body:
-              name: "grafana-viewer"
-              is_superuser: false
-            status_code: [201, 400]
-            validate_certs: true
-          register: grafana_viewer_group
-          changed_when: grafana_viewer_group.status == 201
-
-        - name: Display created groups
-          ansible.builtin.debug:
-            msg: |
-              Grafana groups have been created in Authentik:
-              - grafana-admin: Full administrative access
-              - grafana-editor: Can create and edit dashboards
-              - grafana-viewer: Read-only access to dashboards
-              You can now assign users to these groups in the Authentik Admin Panel.
-
-    - name: Configure Authentik providers and applications for Monitoring services
-      when: authentik_api_token is defined
-      ansible.builtin.include_tasks: "tasks/authentik_common.yml"
-      vars:
-        provider_apps:
-          - provider:
-              name: "alertmanager-provider"
-              external_host: "https://alertmanager.{{ app_domain_name }}"
-            app:
-              name: "Alertmanager"
-              slug: "alertmanager"
-          - provider:
-              name: "prometheus-provider"
-              external_host: "https://prometheus.{{ app_domain_name }}"
-            app:
-              name: "Prometheus"
-              slug: "prometheus"
-        oauth_apps:
-          - provider:
-              name: "grafana-oauth-provider"
-              client_id: "{{ grafana_oauth_client_id | default('grafana') }}"
-              client_secret: "{{ grafana_oauth_client_secret }}"
-              redirect_uris:
-                - url: "https://grafana.{{ app_domain_name }}/login/generic_oauth"
-                  matching_mode: "strict"
-              client_type: "confidential"
-              sub_mode: "user_email"
-              include_claims_in_id_token: true
-              issuer_mode: "per_provider"
-              access_code_validity: "minutes=1"
-              access_token_validity: "minutes=10"
-              refresh_token_validity: "days=30"
-              scopes: "openid profile email groups"
-              property_mappings:
-                - name: "grafana_mapper_role_admin"
-                - name: "grafana_mapper_role_editor"
-                - name: "grafana_mapper_role_viewer"
-            app:
-              name: "Grafana"
-              slug: "grafana-slug"
-              open_in_new_tab: true
-              meta_launch_url: "https://grafana.{{ app_domain_name }}"
-              meta_description: "Grafana monitoring and analytics platform"
-              meta_publisher: "Grafana"
-...
