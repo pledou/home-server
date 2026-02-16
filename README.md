@@ -1,7 +1,7 @@
 # Home Server Ansible Configuration
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/pledou/home-server/workflows/CI/badge.svg)](https://github.com/pledou/home-server/actions/workflows/ci.yml)
+[![CI](https://github.com/pledou/home-server/workflows/CI/badge.svg?branch=master)](https://github.com/pledou/home-server/actions/workflows/ci.yml)
 [![Security Scan](https://img.shields.io/badge/security-scanned-brightgreen)](https://github.com/pledou/home-server/actions/workflows/ci.yml)
 [![Renovate enabled](https://img.shields.io/badge/renovate-enabled-%231473e6)](https://github.com/renovatebot/renovate)
 [![Renovate PRs](https://img.shields.io/github/issues-pr/pledou/home-server?label=renovate%20updates&author=renovate&logo=renovatebot)](https://github.com/pledou/home-server/pulls?q=author:renovate)
