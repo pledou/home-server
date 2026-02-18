@@ -79,6 +79,7 @@ services:
       - '--collector.filesystem'
       - '--collector.netdev'
       - '--collector.time'
+      - '--collector.uname'
       - '--collector.thermal_zone'
     networks:
       - backend
