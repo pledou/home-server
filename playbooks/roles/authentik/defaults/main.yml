@@ -2,7 +2,7 @@
 ---
 # Default PostgreSQL version for Authentik
 authentik_postgres_image: "postgres"
-authentik_postgres_version: "17"
+authentik_postgres_version: "18"
 authentik_redis_image: "redis"
 authentik_redis_version: "alpine"
 authentik_image: "ghcr.io/goauthentik/server"
