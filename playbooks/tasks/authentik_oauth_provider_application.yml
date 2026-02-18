@@ -6,6 +6,83 @@
   ansible.builtin.debug:
     var: oauth_app.provider.redirect_uris
 
+- name: "Compute requested OAuth scopes for: {{ oauth_app.provider.name }}"
+  ansible.builtin.set_fact:
+    oauth_requested_scopes: "{{ (oauth_app.provider.scopes | default('openid profile email')) | split(' ') | reject('equalto', '') | list | unique }}"
+
+- name: "Define default scope mapping expressions"
+  ansible.builtin.set_fact:
+    oauth_scope_mapping_expression_defaults:
+      openid: "return {}"
+      email: "return {'email': request.user.email, 'email_verified': request.user.is_active}"
+      profile: "return {'preferred_username': request.user.username, 'name': request.user.name if request.user.name else request.user.username, 'given_name': request.user.name if request.user.name else request.user.username}"
+      group: "return {'groups': [group.name for group in request.user.ak_groups.all()]}"
+
+- name: "Initialize resolved scope mapping PKs"
+  ansible.builtin.set_fact:
+    oauth_scope_mapping_pks: []
+    oauth_missing_scopes: []
+
+- name: "Lookup scope mappings by scope_name"
+  ansible.builtin.uri:
+    url: "https://auth.{{ app_domain_name }}/api/v3/propertymappings/provider/scope/?scope_name={{ item | urlencode }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    validate_certs: true
+  loop: "{{ oauth_requested_scopes }}"
+  register: oauth_scope_mapping_lookups
+
+- name: "Collect existing scope mapping PKs"
+  ansible.builtin.set_fact:
+    oauth_scope_mapping_pks: "{{ oauth_scope_mapping_pks + [item.json.results[0].pk] }}"
+  loop: "{{ oauth_scope_mapping_lookups.results }}"
+  when: item.json.results | length > 0
+
+- name: "Collect missing scopes"
+  ansible.builtin.set_fact:
+    oauth_missing_scopes: "{{ oauth_missing_scopes + [item.item] }}"
+  loop: "{{ oauth_scope_mapping_lookups.results }}"
+  when: item.json.results | length == 0
+
+- name: "Create missing provider scope mappings"
+  ansible.builtin.uri:
+    url: "https://auth.{{ app_domain_name }}/api/v3/propertymappings/provider/scope/"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      name: "{{ oauth_app.provider.name }}-{{ item }}-scope"
+      scope_name: "{{ item }}"
+      expression: "{{ oauth_scope_mapping_expression_defaults[item] | default('return {}') }}"
+      description: "Managed by Ansible for {{ oauth_app.provider.name }}"
+    status_code: [201, 400]
+  loop: "{{ oauth_missing_scopes }}"
+  register: oauth_scope_mapping_creates
+  failed_when:
+    - oauth_scope_mapping_creates.status == 400
+    - "'already exists' not in (oauth_scope_mapping_creates.json | string | lower)"
+  changed_when: oauth_scope_mapping_creates.status == 201
+
+- name: "Lookup newly created scope mappings"
+  ansible.builtin.uri:
+    url: "https://auth.{{ app_domain_name }}/api/v3/propertymappings/provider/scope/?scope_name={{ item | urlencode }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    validate_certs: true
+  loop: "{{ oauth_missing_scopes }}"
+  register: oauth_scope_mapping_post_create_lookups
+  when: oauth_missing_scopes | length > 0
+
+- name: "Collect created scope mapping PKs"
+  ansible.builtin.set_fact:
+    oauth_scope_mapping_pks: "{{ oauth_scope_mapping_pks + [item.json.results[0].pk] }}"
+  loop: "{{ oauth_scope_mapping_post_create_lookups.results | default([]) }}"
+  when: item.json.results | length > 0
+
 - name: "Prepare OAuth provider body for: {{ oauth_app.provider.name }}"
   ansible.builtin.set_fact:
     oauth_provider_body:
@@ -20,14 +97,7 @@
       access_code_validity: "{{ oauth_app.provider.access_code_validity | default('minutes=1') }}"
       access_token_validity: "{{ oauth_app.provider.access_token_validity | default('minutes=5') }}"
       refresh_token_validity: "{{ oauth_app.provider.refresh_token_validity | default('days=30') }}"
-
-- name: "Add optional property_mappings for: {{ oauth_app.provider.name }}"
-  ansible.builtin.set_fact:
-    oauth_provider_body:
-      "{{ oauth_provider_body | combine({
-        'property_mappings': oauth_app.provider.property_mappings
-      }) }}"
-  when: oauth_app.provider.property_mappings is defined
+      property_mappings: "{{ (oauth_scope_mapping_pks + (oauth_app.provider.property_mappings | default([]))) | unique }}"
 
 - name: "Check if OAuth provider already exists: {{ oauth_app.provider.name }}"
   ansible.builtin.uri:
@@ -60,6 +130,22 @@
     - authentik_api_token is defined
     - oauth_app.provider is defined
     - existing_oauth_provider.json.results | length == 0
+
+- name: "Update existing OAuth provider if needed: {{ oauth_app.provider.name }}"
+  ansible.builtin.uri:
+    url: "https://auth.{{ app_domain_name }}/api/v3/providers/oauth2/{{ existing_oauth_provider.json.results[0].pk }}/"
+    method: PATCH
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body: "{{ oauth_provider_body }}"
+    status_code: [200, 400]
+  register: oauth_provider_update_result
+  when:
+    - authentik_api_token is defined
+    - oauth_app.provider is defined
+    - existing_oauth_provider.json.results | length > 0
 
 - name: "Set OAuth provider PK from new provider: {{ oauth_app.provider.name }}"
   ansible.builtin.set_fact:
@@ -118,6 +204,8 @@
     msg:
       - "OAuth Provider PK: {{ oauth_provider_pk }}"
       - "Client ID: {{ oauth_provider_client_id }}"
+      - "Configured scopes: {{ oauth_app.provider.scopes | default('openid profile email') }}"
+      - "Mapped property_mappings count: {{ oauth_scope_mapping_pks | length }}"
       - "Application created: {{ oauth_app_result.status == 201 if oauth_app_result is defined else 'Skipped' }}"
   when:
     - authentik_api_token is defined

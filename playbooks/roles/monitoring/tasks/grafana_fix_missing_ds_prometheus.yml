@@ -1,0 +1,103 @@
+# code: language=ansible
+---
+- name: Check if dashboard file exists
+  become: true
+  ansible.builtin.stat:
+    path: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/{{ dashboard_gnet_id }}.json"
+  register: dashboard_file
+
+- name: Read dashboard file
+  become: true
+  ansible.builtin.slurp:
+    src: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/{{ dashboard_gnet_id }}.json"
+  register: dashboard_content
+  changed_when: false
+  when: dashboard_file.stat.exists
+
+- name: Parse dashboard JSON
+  ansible.builtin.set_fact:
+    dashboard_json: "{{ dashboard_content.content | b64decode | from_json }}"
+  when: dashboard_file.stat.exists
+
+- name: Set dashboard templating list
+  ansible.builtin.set_fact:
+    dashboard_templating_list: "{{ dashboard_json.templating.list if (dashboard_json.templating is defined and dashboard_json.templating.list is defined) else [] }}"
+  when: dashboard_file.stat.exists
+
+- name: Check dashboard datasource references and variables
+  ansible.builtin.set_fact:
+    dashboard_references_ds_prometheus: "{{ (dashboard_content.content | b64decode) is search('\\$\\{DS_PROMETHEUS\\}') }}"
+    dashboard_references_ds_loki: "{{ (dashboard_content.content | b64decode) is search('\\$\\{DS_LOKI\\}') }}"
+    dashboard_has_ds_prometheus: "{{ (dashboard_templating_list | selectattr('name', 'equalto', 'DS_PROMETHEUS') | list | length) > 0 }}"
+    dashboard_has_ds_loki: "{{ (dashboard_templating_list | selectattr('name', 'equalto', 'DS_LOKI') | list | length) > 0 }}"
+  when: dashboard_file.stat.exists
+
+- name: Build missing dashboard datasource variable list
+  ansible.builtin.set_fact:
+    dashboard_missing_datasource_vars: |
+      {{
+        (
+          [
+            {
+              'current': {},
+              'includeAll': false,
+              'label': 'Datasource',
+              'name': 'DS_PROMETHEUS',
+              'options': [],
+              'query': 'prometheus',
+              'refresh': 1,
+              'regex': '',
+              'type': 'datasource'
+            }
+          ] if (dashboard_references_ds_prometheus and not dashboard_has_ds_prometheus) else []
+        )
+        +
+        (
+          [
+            {
+              'current': {},
+              'includeAll': false,
+              'label': 'Datasource',
+              'name': 'DS_LOKI',
+              'options': [],
+              'query': 'loki',
+              'refresh': 1,
+              'regex': '',
+              'type': 'datasource'
+            }
+          ] if (dashboard_references_ds_loki and not dashboard_has_ds_loki) else []
+        )
+      }}
+  when: dashboard_file.stat.exists
+
+- name: Add missing dashboard datasource variables
+  become: true
+  ansible.builtin.copy:
+    dest: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/{{ dashboard_gnet_id }}.json"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: u=rwx,g=o=rx
+    content: |
+      {{
+        (
+          dashboard_json
+          | combine(
+            {
+              'templating': (
+                (dashboard_json.templating | default({}))
+                | combine(
+                  {
+                    'list': dashboard_missing_datasource_vars + dashboard_templating_list
+                  },
+                  recursive=True
+                )
+              )
+            },
+            recursive=True
+          )
+        )
+        | to_nice_json
+      }}
+  when:
+    - dashboard_file.stat.exists
+    - dashboard_missing_datasource_vars | length > 0

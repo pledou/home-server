@@ -35,6 +35,7 @@ scrape_configs:
     static_configs:
       - targets: ['traefik-traefik-1:8082']
   - job_name: nextcloud-exporter
+    scrape_interval: 90s
     static_configs:
       - targets: ['nextcloud-exporter:9205']
   - job_name: authentik
