@@ -2,19 +2,19 @@
 ---
 # Docker image versions for Monitoring role
 prometheus_image: "prom/prometheus"
-prometheus_version: "v2.50.1"
+prometheus_version: "v3.9.1"
 alertmanager_image: "prom/alertmanager"
 alertmanager_version: "v0.27.0"
 node_exporter_image: "quay.io/prometheus/node-exporter"
 node_exporter_version: "v1.10.2"
 grafana_image: "grafana/grafana"
-grafana_version: "10.3.3"
+grafana_version: "12.3.3"
 loki_image: "grafana/loki"
-loki_version: "2.9.4"
+loki_version: "3.6.5"
 promtail_image: "grafana/promtail"
-promtail_version: "2.9.4"
+promtail_version: "3.6.5"
 cadvisor_image: "gcr.io/cadvisor/cadvisor"
-cadvisor_version: "v0.49.1"
+cadvisor_version: "v0.51.0"
 diun_image: "crazymax/diun"
 diun_version: "4.28"
 autoheal_image: "willfarrell/autoheal"
@@ -23,6 +23,15 @@ nextcloud_exporter_image: "xperimental/nextcloud-exporter"
 nextcloud_exporter_version: "0.9.0"
 watchtower_image: "percona/watchtower"
 watchtower_version: "3"
+
+# Grafana dashboards to refresh from Grafana.com (gnetId)
+grafana_dashboard_updates:
+  - gnet_id: 17346 # Traefik Official Standalone Dashboard
+  - gnet_id: 1860 # Node Explorer Full
+  - gnet_id: 20716 # Nextcloud
+  - gnet_id: 17821 # Nextcloud Logs
+  - gnet_id: 14837 # authentik
+  - gnet_id: 21743 # cadvisor-exporter-docker-containers-overview
 
 # Alerting configuration
 # These should be overridden in group_vars or host_vars

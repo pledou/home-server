@@ -68,6 +68,10 @@
       dest: grafana-provisioning/datasources/datasource.yml
       owner: "{{ ansible_user }}"
       group: "{{ ansible_user }}"
+    - file: grafana/dashboards/dashboard.yml
+      dest: grafana-provisioning/dashboards/dashboard.yml
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
     - file: nextcloud-exporter-conf.yml
       dest: nextcloud-exporter-conf/config.yml
     - file: alertmanager-config.yml
@@ -81,29 +85,116 @@
     src: "{{ item.file }}"
     dest: "{{ docker_volumes_path }}/{{ item.dest }}"
     mode: u=rwx,g=o=rx
+    force: true
   loop:
     - file: alerts.rules
       dest: prometheus-conf/alerts.rules
   loop_control:
     label: "{{ item.file }} -> {{ item.dest }}"
 
-- name: Copy grafana dashboards
-  become: true
-  ansible.builtin.copy:
-    src: templates/grafana/dashboards/
-    dest: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/"
-    mode: u=rwx,g=o=rx
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-
 - name: Get Users infos
   ansible.builtin.getent:
     database: passwd
     key: "{{ ansible_user }}"
 
+- name: Configure Authentik providers and applications for Monitoring
+  delegate_to: localhost
+  become: false
+  when: authentik_api_token is defined
+  block:
+    - name: Create Grafana role-mapping groups in Authentik
+      when: authentik_api_token is defined
+      block:
+        - name: Create grafana-admin group
+          ansible.builtin.uri:
+            url: "https://auth.{{ app_domain_name }}/api/v3/core/groups/"
+            method: POST
+            headers:
+              Authorization: "Bearer {{ authentik_api_token }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              name: "grafana-admin"
+              is_superuser: false
+            status_code: [201, 400]
+            validate_certs: true
+          register: grafana_admin_group
+          changed_when: grafana_admin_group.status == 201
+
+        - name: Create grafana-user group
+          ansible.builtin.uri:
+            url: "https://auth.{{ app_domain_name }}/api/v3/core/groups/"
+            method: POST
+            headers:
+              Authorization: "Bearer {{ authentik_api_token }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              name: "grafana-user"
+              is_superuser: false
+            status_code: [201, 400]
+            validate_certs: true
+          register: grafana_user_group
+          changed_when: grafana_user_group.status == 201
+
+        - name: Create grafana-viewer group
+          ansible.builtin.uri:
+            url: "https://auth.{{ app_domain_name }}/api/v3/core/groups/"
+            method: POST
+            headers:
+              Authorization: "Bearer {{ authentik_api_token }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              name: "grafana-viewer"
+              is_superuser: false
+            status_code: [201, 400]
+            validate_certs: true
+          register: grafana_viewer_group
+          changed_when: grafana_viewer_group.status == 201
+
+    - name: Configure Authentik providers and applications for Monitoring services
+      when: authentik_api_token is defined
+      ansible.builtin.include_tasks: "tasks/authentik_common.yml"
+      vars:
+        provider_apps:
+          - provider:
+              name: "alertmanager-provider"
+              external_host: "https://alertmanager.{{ app_domain_name }}"
+            app:
+              name: "Alertmanager"
+              slug: "alertmanager"
+          - provider:
+              name: "prometheus-provider"
+              external_host: "https://prometheus.{{ app_domain_name }}"
+            app:
+              name: "Prometheus"
+              slug: "prometheus"
+        oauth_apps:
+          - provider:
+              name: "grafana-oauth-provider"
+              redirect_uris:
+                - url: "https://grafana.{{ app_domain_name }}/login/generic_oauth"
+                  matching_mode: "strict"
+              client_type: "confidential"
+              sub_mode: "user_email"
+              include_claims_in_id_token: true
+              issuer_mode: "global"
+              access_code_validity: "minutes=1"
+              access_token_validity: "minutes=10"
+              refresh_token_validity: "days=30"
+              scopes: "openid profile email group"
+            app:
+              name: "Grafana"
+              slug: "grafana-slug"
+              open_in_new_tab: true
+              meta_launch_url: "https://grafana.{{ app_domain_name }}"
+              meta_description: "Grafana monitoring and analytics platform"
+              meta_publisher: "Grafana"
+
 - name: Clone Nextcloud Talk webhook bot repository
   ansible.builtin.git:
-    repo: https://github.com/pledou/nextcloud-talk-webhook-bot.git 
+    repo: https://github.com/pledou/nextcloud-talk-webhook-bot.git
     # add Alertmanager json format support to https://github.com/weichwaren-schmiede/nextcloud-talk-webhook-bot.git
     # A MR has been opened here: https://github.com/weichwaren-schmiede/nextcloud-talk-webhook-bot/pull/1
     dest: /home/{{ ansible_user }}/home-server/stacks/monitoring/nextcloud-talk-bot
@@ -116,6 +207,64 @@
     src: docker-compose.yml
     dest: /home/{{ ansible_user }}/home-server/stacks/monitoring/docker-compose.yml
     mode: u=g=rwx,o=rx
+
+- name: Download Grafana.com dashboards
+  become: true
+  ansible.builtin.get_url:
+    url: "https://grafana.com/api/dashboards/{{ item.gnet_id }}/revisions/latest/download"
+    dest: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/{{ item.gnet_id }}.json"
+    mode: u=rwx,g=o=rx
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    force: true # update to last version on each run
+  loop: "{{ grafana_dashboard_updates | default([]) }}"
+  loop_control:
+    label: "{{ item.gnet_id }} -> {{ item.gnet_id }}.json"
+
+- name: Ensure dashboards referencing datasource variables define them
+  ansible.builtin.include_tasks: grafana_fix_missing_ds_prometheus.yml
+  loop: "{{ grafana_dashboard_updates | default([]) }}"
+  loop_control:
+    label: "{{ item.gnet_id }}.json"
+  vars:
+    dashboard_gnet_id: "{{ item.gnet_id }}"
+
+- name: Fix Nextcloud dashboard datasource template variable
+  shell: |
+    jq '.templating.list = [{
+      "current": {},
+      "includeAll": false,
+      "label": "Datasource",
+      "name": "DS_LOCAL",
+      "options": [],
+      "query": "prometheus",
+      "refresh": 1,
+      "regex": "",
+      "type": "datasource"
+    }] + .templating.list' /opt/grafana-provisioning/dashboards/20716.json > /tmp/20716.json.tmp && \
+    mv /tmp/20716.json.tmp /opt/grafana-provisioning/dashboards/20716.json
+  args:
+    executable: /bin/bash
+
+- name: Replace Prometheus dashboard datasource variables with fixed UID
+  become: true
+  ansible.builtin.replace:
+    path: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/{{ item.gnet_id }}.json"
+    regexp: '\$\{DS_(?:PROM[A-Z_]*|PRM[A-Z_]*)\}'
+    replace: 'prometheus_uid'
+  loop: "{{ grafana_dashboard_updates | default([]) }}"
+  loop_control:
+    label: "{{ item.gnet_id }}.json"
+
+- name: Replace Loki dashboard datasource variables with fixed UID
+  become: true
+  ansible.builtin.replace:
+    path: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/{{ item.gnet_id }}.json"
+    regexp: '\$\{DS_LOKI[A-Z_]*\}'
+    replace: 'loki_uid'
+  loop: "{{ grafana_dashboard_updates | default([]) }}"
+  loop_control:
+    label: "{{ item.gnet_id }}.json"
 
 - name: Try to pull latest images (continue on failure)
   community.docker.docker_compose_v2:
@@ -211,52 +360,7 @@
     - name: Display bot configuration result
       ansible.builtin.debug:
         msg: |
-          Nextcloud Talk bot 'Prometheus Alerts' is fully configured and added to conversation {{ alertmanager_nextcloud_conversation_token }}.
+          Nextcloud Talk bot 'Prometheus Alerts' is fully configured and
+          added to conversation {{ alertmanager_nextcloud_conversation_token }}.
           Alerts will now be sent to your Nextcloud Talk conversation!
 
-- name: Configure Authentik providers and applications for Monitoring
-  delegate_to: localhost
-  become: false
-  when: authentik_api_token is defined
-  block:
-    - name: Configure Authentik providers and applications for Monitoring services
-      when: authentik_api_token is defined
-      ansible.builtin.include_tasks: "tasks/authentik_common.yml"
-      vars:
-        provider_apps:
-          - provider:
-              name: "alertmanager-provider"
-              external_host: "https://alertmanager.{{ app_domain_name }}"
-            app:
-              name: "Alertmanager"
-              slug: "alertmanager"
-          - provider:
-              name: "prometheus-provider"
-              external_host: "https://prometheus.{{ app_domain_name }}"
-            app:
-              name: "Prometheus"
-              slug: "prometheus"
-        oauth_apps:
-          - provider:
-              name: "grafana-oauth-provider"
-              client_id: "{{ grafana_oauth_client_id | default('grafana') }}"
-              client_secret: "{{ grafana_oauth_client_secret }}"
-              redirect_uris:
-                - url: "https://grafana.{{ app_domain_name }}/login/generic_oauth"
-                  matching_mode: "strict"
-              client_type: "confidential"
-              sub_mode: "user_email"
-              include_claims_in_id_token: true
-              issuer_mode: "per_provider"
-              access_code_validity: "minutes=1"
-              access_token_validity: "minutes=10"
-              refresh_token_validity: "days=30"
-              scopes: "openid profile email"
-            app:
-              name: "Grafana"
-              slug: "grafana-slug"
-              open_in_new_tab: true
-              meta_launch_url: "https://grafana.{{ app_domain_name }}"
-              meta_description: "Grafana monitoring and analytics platform"
-              meta_publisher: "Grafana"
-...

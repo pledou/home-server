@@ -6,3 +6,6 @@ authToken: "{{ nextcloud_exporter_auth_token }}"
 listenAddress: ":9205"
 timeout: "5s"
 tlsSkipVerify: false
+info:
+  apps: true
+  update: true
