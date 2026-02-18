@@ -3,11 +3,13 @@ apiVersion: 1
 
 datasources:
   - name: Prometheus
+    uid: prometheus_uid
     type: prometheus
     url: http://monitoring-prometheus-1:9090
     access: proxy
     isDefault: true
   - name: Loki
+    uid: loki_uid
     type: loki
     url: http://monitoring-loki-1:3100
     access: proxy

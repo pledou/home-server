@@ -22,7 +22,7 @@ groups:
       description: "{{ $labels.instance }} load average is at {{ $value | humanizePercentage }} of CPU capacity for more than 10 minutes."
 
   - alert: high_load_critical
-    expr: node_load5 / on(instance) group_left count(node_cpu_seconds_total{mode="idle"}) by (instance) > 1.0
+    expr: node_load5{job!~".*node-exporter.*"} / on(instance) group_left count(node_cpu_seconds_total{job!~".*node-exporter.*",mode="idle"}) by (instance) > 1.0
     for: 10m
     labels:
       severity: critical
@@ -39,6 +39,15 @@ groups:
     annotations:
       summary: "Monitoring infrastructure {{ $labels.instance }} under elevated load"
       description: "Node-exporter on {{ $labels.instance }} has elevated load at {{ $value | humanizePercentage }} of CPU capacity for more than 15 minutes. This is acceptable for monitoring infrastructure."
+
+  - alert: high_load_critical_monitoring
+    expr: (node_load5{job=~".*node-exporter.*"} / on(instance) group_left count(node_cpu_seconds_total{job=~".*node-exporter.*",mode="idle"}) by (instance)) > 2.0
+    for: 15m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Monitoring infrastructure {{ $labels.instance }} critically overloaded"
+      description: "Node-exporter on {{ $labels.instance }} has critical load at {{ $value | humanizePercentage }} of CPU capacity (exceeding 200%) for more than 15 minutes. Investigation recommended."
 
   - alert: high_temperature_warning
     expr: node_thermal_zone_temp > 70
