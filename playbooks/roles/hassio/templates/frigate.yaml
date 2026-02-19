@@ -20,10 +20,3 @@ snapshots:
   enabled: true
   retain:
     default: 30
-
-genai:
-  enabled: true
-  provider: ollama
-  base_url: "http://ollama:11434"
-  #  Error initializing Ollama: model 'gpt-4o' not found
-  model: "ministral-3"
