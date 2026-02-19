@@ -35,6 +35,7 @@
       - grafana_admin_password
       - name: alertmanager_nextcloud_bot_secret
         length: 64
+      - watchtower_api_token
 
 - name: Ensure destination directory exists
   ansible.builtin.file:

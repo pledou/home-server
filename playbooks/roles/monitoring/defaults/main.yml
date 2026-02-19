@@ -15,8 +15,6 @@ promtail_image: "grafana/promtail"
 promtail_version: "3.6.5"
 cadvisor_image: "gcr.io/cadvisor/cadvisor"
 cadvisor_version: "v0.51.0"
-diun_image: "crazymax/diun"
-diun_version: "4.28"
 autoheal_image: "willfarrell/autoheal"
 autoheal_version: "latest"
 nextcloud_exporter_image: "xperimental/nextcloud-exporter"
@@ -32,10 +30,12 @@ grafana_dashboard_updates:
   - gnet_id: 17821 # Nextcloud Logs
   - gnet_id: 14837 # authentik
   - gnet_id: 21743 # cadvisor-exporter-docker-containers-overview
+  - gnet_id: 23005 # Watchtower
 
 # Alerting configuration
 # These should be overridden in group_vars or host_vars
-# alertmanager_nextcloud_conversation_token: ""  # Optional: Nextcloud Talk conversation token (auto-generates secret)
+# alertmanager_nextcloud_conversation_token: ""  # Optional Nextcloud Talk conversation token
+# (used by Alertmanager + Watchtower notifications)
 # alertmanager_email_to: "changeme"
 # alertmanager_smtp_host: "changeme"
 # alertmanager_smtp_port: "changeme"
