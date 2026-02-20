@@ -45,6 +45,25 @@
     - grafana-provisioning/datasources
     - grafana-provisioning/dashboards
 
+- name: Deploy Prometheus configuration
+  become: true
+  ansible.builtin.template:
+    src: prometheus.yml
+    dest: "{{ docker_volumes_path }}/prometheus-conf/prometheus.yml"
+    mode: u=rwx,g=o=rx
+    owner: root
+    group: root
+  notify: Restart Prometheus
+
+- name: Deploy Prometheus alert rules
+  become: true
+  ansible.builtin.copy:
+    src: alerts.rules
+    dest: "{{ docker_volumes_path }}/prometheus-conf/alerts.rules"
+    mode: u=rwx,g=o=rx
+    force: true
+  notify: Restart Prometheus
+
 - name: Create configurations files as root
   become: true
   ansible.builtin.template:
@@ -54,8 +73,6 @@
     owner: "{{ item.owner | default('root') }}"
     group: "{{ item.group | default('root') }}"
   loop:
-    - file: prometheus.yml
-      dest: prometheus-conf/prometheus.yml
     - file: loki.yml
       dest: loki-config/local-config.yaml
       owner: "{{ ansible_user }}"
@@ -79,18 +96,6 @@
   loop_control:
     label: "{{ item.file }} -> {{ item.dest }}"
 
-- name: Copy configurations files
-  become: true
-  ansible.builtin.copy:
-    src: "{{ item.file }}"
-    dest: "{{ docker_volumes_path }}/{{ item.dest }}"
-    mode: u=rwx,g=o=rx
-    force: true
-  loop:
-    - file: alerts.rules
-      dest: prometheus-conf/alerts.rules
-  loop_control:
-    label: "{{ item.file }} -> {{ item.dest }}"
 
 - name: Get Users infos
   ansible.builtin.getent:

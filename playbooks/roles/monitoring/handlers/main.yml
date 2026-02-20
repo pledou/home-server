@@ -1,0 +1,7 @@
+---
+- name: Restart Prometheus
+  community.docker.docker_compose_v2:
+    project_src: "/home/{{ ansible_user }}/home-server/stacks/monitoring"
+    services:
+      - prometheus
+    state: restarted
