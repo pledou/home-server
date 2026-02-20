@@ -8,15 +8,27 @@
 
 - name: "Compute requested OAuth scopes for: {{ oauth_app.provider.name }}"
   ansible.builtin.set_fact:
-    oauth_requested_scopes: "{{ (oauth_app.provider.scopes | default('openid profile email')) | split(' ') | reject('equalto', '') | list | unique }}"
+    oauth_requested_scopes: "{{
+      (oauth_app.provider.scopes | default('openid profile email'))
+      | split(' ')
+      | reject('equalto', '')
+      | list
+      | unique
+      }}"
 
 - name: "Define default scope mapping expressions"
   ansible.builtin.set_fact:
     oauth_scope_mapping_expression_defaults:
       openid: "return {}"
-      email: "return {'email': request.user.email, 'email_verified': request.user.is_active}"
-      profile: "return {'preferred_username': request.user.username, 'name': request.user.name if request.user.name else request.user.username, 'given_name': request.user.name if request.user.name else request.user.username}"
-      group: "return {'groups': [group.name for group in request.user.ak_groups.all()]}"
+      email: >-
+        return {'email': request.user.email,
+        'email_verified': request.user.is_active}
+      profile: >-
+        return {'preferred_username': request.user.username,
+        'name': request.user.name if request.user.name else request.user.username,
+        'given_name': request.user.name if request.user.name else request.user.username}
+      group: >-
+        return {'groups': [group.name for group in request.user.ak_groups.all()]}
 
 - name: "Initialize resolved scope mapping PKs"
   ansible.builtin.set_fact:
@@ -97,7 +109,10 @@
       access_code_validity: "{{ oauth_app.provider.access_code_validity | default('minutes=1') }}"
       access_token_validity: "{{ oauth_app.provider.access_token_validity | default('minutes=5') }}"
       refresh_token_validity: "{{ oauth_app.provider.refresh_token_validity | default('days=30') }}"
-      property_mappings: "{{ (oauth_scope_mapping_pks + (oauth_app.provider.property_mappings | default([]))) | unique }}"
+      property_mappings: "{{
+        (oauth_scope_mapping_pks + (oauth_app.provider.property_mappings | default([])))
+        | unique
+        }}"
 
 - name: "Check if OAuth provider already exists: {{ oauth_app.provider.name }}"
   ansible.builtin.uri:
@@ -124,7 +139,7 @@
   register: oauth_provider_result
   failed_when:
     - oauth_provider_result.status == 400
-    - '"already exists" not in (oauth_provider_result.json.name[0] | default(""))'
+    - "'already exists' not in (oauth_provider_result.json | string | lower)"
   changed_when: oauth_provider_result.status == 201
   when:
     - authentik_api_token is defined
@@ -189,10 +204,7 @@
   register: oauth_app_result
   failed_when:
     - oauth_app_result.status == 400
-    - >-
-      "already exists" not in (oauth_app_result.json.slug[0] | default(""))
-      and "Application with this provider already exists"
-      not in (oauth_app_result.json.provider[0] | default(""))
+    - "'already exists' not in (oauth_app_result.json | string | lower)"
   changed_when: oauth_app_result.status == 201
   when:
     - authentik_api_token is defined

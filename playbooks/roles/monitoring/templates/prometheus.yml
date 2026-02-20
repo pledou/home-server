@@ -44,3 +44,7 @@ scrape_configs:
   - job_name: authentik
     static_configs:
       - targets: ['authentik-server-1:9300']
+  - job_name: ollama-metrics
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['ollama-metrics:8080']

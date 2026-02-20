@@ -4,6 +4,17 @@
 
 - name: "Create Forward Auth provider: {{ provider_app.provider.name }}"
   ansible.builtin.uri:
+    url: "https://auth.{{ app_domain_name }}/api/v3/providers/proxy/?name={{ provider_app.provider.name | urlencode }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    validate_certs: true
+  register: existing_provider
+  when:
+    - authentik_api_token is defined
+
+- name: "Create Forward Auth provider: {{ provider_app.provider.name }}"
+  ansible.builtin.uri:
     url: "https://auth.{{ app_domain_name }}/api/v3/providers/proxy/"
     method: POST
     headers:
@@ -20,20 +31,52 @@
   register: provider_result
   failed_when:
     - provider_result.status == 400
-    - '"already exists" not in (provider_result.json.name[0] | default(""))'
+    - "'already exists' not in (provider_result.json | string | lower)"
   changed_when: provider_result.status == 201
   when:
     - authentik_api_token is defined
+    - existing_provider.json.results | length == 0
 
-- name: "Set provider PK: {{ provider_app.provider.name }}"
+- name: "Update existing Forward Auth provider if needed: {{ provider_app.provider.name }}"
+  ansible.builtin.uri:
+    url: "https://auth.{{ app_domain_name }}/api/v3/providers/proxy/{{ existing_provider.json.results[0].pk }}/"
+    method: PATCH
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      name: "{{ provider_app.provider.name }}"
+      authorization_flow: "{{ auth_flow_result.json.results[0].pk }}"
+      invalidation_flow: "{{ invalidation_flow_result.json.results[0].pk }}"
+      external_host: "{{ provider_app.provider.external_host }}"
+      mode: "{{ provider_app.provider.mode | default('forward_single') }}"
+    status_code: [200, 400]
+  register: provider_update_result
+  when:
+    - authentik_api_token is defined
+    - existing_provider.json.results | length > 0
+
+- name: "Set provider PK from created provider: {{ provider_app.provider.name }}"
   ansible.builtin.set_fact:
     provider_pk: "{{ provider_result.json.pk }}"
   when:
     - authentik_api_token is defined
-    - (provider_result is succeeded and provider_result.json.pk is defined)
-  failed_when: provider_pk is not defined and authentik_api_token is defined
-
-- name: "Add provider PK to list: {{ provider_config.name }}"
+    - provider_result is defined
+    - provider_result.json.pk is defined
+- name: "Set provider PK from existing provider: {{ provider_app.provider.name }}"
+  ansible.builtin.set_fact:
+    provider_pk: "{{ existing_provider.json.results[0].pk }}"
+  when:
+    - authentik_api_token is defined
+    - existing_provider.json.results | length > 0
+- name: "Ensure provider PK is defined: {{ provider_app.provider.name }}"
+  ansible.builtin.fail:
+    msg: "Could not determine provider PK for {{ provider_app.provider.name }}"
+  when:
+    - authentik_api_token is defined
+    - provider_pk is not defined
+- name: "Add provider PK to list: {{ provider_app.provider.name }}"
   ansible.builtin.set_fact:
     authentik_provider_pks: "{{ authentik_provider_pks | default([]) + [provider_pk] }}"
   when: provider_pk is defined
@@ -55,12 +98,8 @@
   register: app_result
   failed_when:
     - app_result.status == 400
-    - >-
-      "already exists" not in (app_result.json.slug[0] | default("")) and
-      "Application with this provider already exists" not in (app_result.json.provider[0] | default(""))
+    - "'already exists' not in (app_result.json | string | lower)"
   changed_when: app_result.status == 201
-
   when:
     - authentik_api_token is defined
     - provider_pk is defined
-
