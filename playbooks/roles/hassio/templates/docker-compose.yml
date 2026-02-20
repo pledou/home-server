@@ -1,3 +1,4 @@
+#jinja2: lstrip_blocks: True, trim_blocks: True
 services:
   homeassistant:
     labels:
@@ -16,10 +17,10 @@ services:
     entrypoint:
       - /init
     hostname: homeassistant
-{% if enocean_device_id is defined %}
+     {% if enocean_device_id is defined %}
     devices:
       - /dev/serial/by-id/{{enocean_device_id}}:/dev/enocean
-{% endif %}
+    {% endif %}
     image: "{{ homeassistant_image }}:{{ homeassistant_version }}"
     network_mode: host
     healthcheck:
@@ -40,7 +41,7 @@ services:
       - /etc/machine-id:/etc/machine-id:ro
     working_dir: /config
 
-{% if zigbee2mqtt_device_id is defined %}
+  {% if zigbee2mqtt_device_id is defined %}
   zigbee2mqtt:
     labels:
       - com.centurylinklabs.watchtower.enable=true
@@ -69,7 +70,7 @@ services:
       - backend
       - traefik_backend
 
-{% endif %}
+  {% endif %}
 
   esphome:
     labels:
@@ -188,39 +189,7 @@ services:
       - ia_network
       - traefik_backend
 
-  wyoming-piper: # Text-to-Speech service at port 10200
-    image: "{{ piper_image }}:{{ piper_version }}"
-    labels:
-      com.centurylinklabs.watchtower.enable: 'true'
-    restart: always
-    ports:
-      - "10200:10200"
-    volumes:
-      - piper-data:/data
-    command: [ "--voice", "fr_FR-upmc-medium", "--data-dir", "/data" ]
-
-
-  faster-whisper: # Speech-to-Text service at port 10300
-    image: "{{ faster_whisper_image }}:{{ faster_whisper_version }}"
-    container_name: faster-whisper
-    labels:
-      com.centurylinklabs.watchtower.enable: 'true'
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Etc/UTC
-      - WHISPER_MODEL=small-int8
-      - WHISPER_BEAM=1 #optional
-      - WHISPER_LANG=fr #optional
-    volumes:
-      - /path/to/data:/config
-    ports:
-      - 10300:10300
-    restart: unless-stopped
-
 volumes:
-  piper-data:
-    driver: local
   enocean2mqtt:
     driver: local
     driver_opts:
