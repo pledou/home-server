@@ -13,3 +13,14 @@ ollama_metrics_image: "ghcr.io/norskhelsenett/ollama-metrics"
 ollama_metrics_version: "latest"
 
 webui_secret_key: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
+
+ollama_resource_ratio: 0.90
+ollama_min_memory_mb: 4096
+ollama_min_cpus: 1.0
+
+ollama_detected_vcpus: "{{ ansible_facts.processor_vcpus | default(ansible_processor_vcpus) | default(2) | int }}"
+ollama_detected_mem_mb: "{{ ansible_facts.memtotal_mb | default(ansible_memtotal_mb) | default(8192) | int }}"
+
+ollama_cpu_limit: "{{ [ollama_min_cpus, (ollama_detected_vcpus * ollama_resource_ratio)] | max | round(2) }}"
+ollama_memory_limit_mb: "{{ [ollama_min_memory_mb, (ollama_detected_mem_mb * ollama_resource_ratio) | int] | max }}"
+ollama_num_threads: "{{ [1, (ollama_detected_vcpus * ollama_resource_ratio) | int] | max }}"
