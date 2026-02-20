@@ -19,7 +19,7 @@ services:
         exec bash start.sh
       "
     environment:
-      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_BASE_URL: http://ollama-metrics:8080
 
       # Generic OAuth
       OAUTH_PROVIDER_NAME: "authentik"
@@ -31,7 +31,7 @@ services:
       ENABLE_OAUTH_SIGNUP: True
       ENABLE_LOGIN_FORM: False
       DEFAULT_LOCALE: "fr"
-      DEFAULT_MODELS: "mixtral-8x7b"
+      DEFAULT_MODELS: "ministral-3"
       DEFAULT_USER_ROLE: "user"
       OAUTH_MERGE_ACCOUNTS_BY_EMAIL: True
 
@@ -58,10 +58,6 @@ services:
     labels:
       - com.centurylinklabs.watchtower.enable=true
     image: "{{ ollama_image }}:{{ ollama_version }}"
-    expose:
-     - 11434/tcp
-    ports:
-     - 11434:11434/tcp
     healthcheck:
       test: ollama --version || exit 1
     command: serve
@@ -102,10 +98,6 @@ services:
     pull_policy: always
     tty: true
     restart: always
-    expose:
-    - 11434/tcp
-    ports:
-    - 11434:11434/tcp
     # healthcheck:
     #   test: ollama --version || exit 1
     environment:
@@ -138,6 +130,28 @@ services:
               device_ids: ['all']
               capabilities: [gpu]
   {%- endif %}
+
+  ollama-metrics:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    image: "{{ ollama_metrics_image }}:{{ ollama_metrics_version }}"
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - PORT=8080
+    depends_on:
+      - ollama
+    expose:
+      - 8080/tcp
+    ports:
+      - 8080:11434/tcp
+    restart: unless-stopped
+    networks:
+      network:
+        aliases:
+          - ollama-metrics
+      monitoring_backend:
+        aliases:
+          - ollama-metrics
 
   speech:
     labels:
@@ -201,4 +215,6 @@ volumes:
 networks:
   network:
   traefik_backend:
+    external: true
+  monitoring_backend:
     external: true
