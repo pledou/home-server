@@ -1,0 +1,5 @@
+{
+  "whisper-1": "{{ speaches_stt_model }}",
+  "tts-1": "{{ speaches_tts_model }}",
+  "tts-1-hd": "{{ speaches_tts_model }}"
+}

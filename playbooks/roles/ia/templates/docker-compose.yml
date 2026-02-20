@@ -37,6 +37,10 @@ services:
 
       AUDIO_OPENAI_API_BASE_URL: "http://speaches:8000/v1"
       AUDIO_OPENAI_API_KEY: "openai-api-key"
+      AUDIO_STT_ENGINE: "openai"
+      AUDIO_STT_OPENAI_API_BASE_URL: "http://speaches:8000/v1"
+      AUDIO_STT_OPENAI_API_KEY: "openai-api-key"
+      AUDIO_STT_MODEL: "{{ speaches_stt_model }}"
       ENABLE_ADMIN_EXPORT: False
     restart: always
     volumes:
@@ -154,14 +158,19 @@ services:
   speaches:
     labels:
       - com.centurylinklabs.watchtower.enable=true
-    image: "{{ speaches_image }}:{{ speaches_version }}"
+    image: "{{ speaches_image }}:{{ speaches_cuda_version if gpu == 'nvidia' else speaches_cpu_version }}"
     pull_policy: always
+    environment:
+      - PRELOAD_MODELS={{ speaches_preload_models | to_json }}
     networks:
       network:
         aliases:
           - speaches
     ports:
       - 8000:8000
+    volumes:
+      - speaches-hf-cache:/home/ubuntu/.cache/huggingface/hub
+      - ./model_aliases.json:/home/ubuntu/speaches/model_aliases.json:ro
     restart: unless-stopped
     {%- if gpu == 'nvidia' %}
     {#- Set nvidia runtime if it's not the default #}
@@ -189,6 +198,12 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/open-webui"
+  speaches-hf-cache:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/speaches-hf-cache"
 
 networks:
   network:
