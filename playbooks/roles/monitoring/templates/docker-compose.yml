@@ -1,3 +1,4 @@
+#jinja2: lstrip_blocks: True, trim_blocks: True
 services:
   prometheus:
     labels:
@@ -211,7 +212,7 @@ services:
         aliases:
           - nextcloud-exporter
 
-{% if alertmanager_nextcloud_conversation_token is defined and alertmanager_nextcloud_conversation_token %}
+  {% if alertmanager_nextcloud_conversation_token is defined and alertmanager_nextcloud_conversation_token %}
   nextcloud-talk-bot:
     build:
       context: ./nextcloud-talk-bot
@@ -224,36 +225,7 @@ services:
       SECRET: "{{ alertmanager_nextcloud_bot_secret }}"
     networks:
       - backend
-{% endif %}
-
-  diun: # Docker image update notifier with mail notifications
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
-    image: "{{ diun_image }}:{{ diun_version }}"
-    container_name: diun
-    restart: always
-    environment:
-      - DIUN_LOG_LEVEL=info
-      - DIUN_PROVIDERS_DOCKER=true
-      - DIUN_PROVIDERS_DOCKER_WATCHBYDEFAULT=true
-      - DIUN_WATCH_WORKERS=10
-      - DIUN_WATCH_SCHEDULE={{ diun_schedule | default('0 0 6 * * *') }}  # Daily at 6am by default
-      - DIUN_PERSISTENCE=filesystem
-      - DIUN_PERSISTENCE_PATH=/data
-
-      # Mail notification settings (override via role/playbook vars)
-      - DIUN_NOTIF_MAIL_TO={{ diun_mail_to | default('you@example.com') }}
-      - DIUN_NOTIF_MAIL_FROM={{ diun_mail_from | default('diun@' + app_domain_name) }}
-      - DIUN_NOTIF_MAIL_HOST={{ diun_mail_host | default('smtp.example.com') }}
-      - DIUN_NOTIF_MAIL_PORT={{ diun_mail_port | default(587) }}
-      - DIUN_NOTIF_MAIL_USERNAME={{ diun_mail_user | default('') }}
-      - DIUN_NOTIF_MAIL_PASSWORD={{ diun_mail_password | default('') }}
-
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - diun-data:/data
-    networks:
-      - backend
+  {% endif %}
 
   autoheal: # restart container when healthcheck is ko
     labels:
@@ -281,8 +253,26 @@ services:
       - WATCHTOWER_LABEL_ENABLE=true
       - WATCHTOWER_INCLUDE_RESTARTING=true
       - WATCHTOWER_SCHEDULE=0 0 4 * * *  # Daily at 4am
-      - DOCKER_MIN_API_VERSION=1.44
+      - WATCHTOWER_LOG_LEVEL=info
+      - WATCHTOWER_HTTP_API_METRICS=true
+      - WATCHTOWER_HTTP_API_TOKEN={{ watchtower_api_token }}
       - TZ=Europe/Paris
+    {% if alertmanager_nextcloud_conversation_token is defined and alertmanager_nextcloud_conversation_token %}
+      - WATCHTOWER_NOTIFICATION_URL=generic+http://nextcloud-talk-bot:81/send_message?template=json&disabletls=true
+      - WATCHTOWER_NOTIFICATION_REPORT=true
+      - WATCHTOWER_NOTIFICATIONS_LEVEL=warn
+      # - 'WATCHTOWER_NOTIFICATION_TEMPLATE={% raw %}{{- if .Report -}}{{- with .Report -}}{{len .Scanned}} Scanned, {{len .Updated}} Updated, {{len .Failed}} Failed{{- range .Updated}}\n- {{.Name}} ({{.ImageName}}): {{.CurrentImageID.ShortID}} updated to {{.LatestImageID.ShortID}}{{- end -}}{{- range .Fresh}}\n- {{.Name}} ({{.ImageName}}): {{.State}}{{- end -}}{{- range .Skipped}}\n- {{.Name}} ({{.ImageName}}): {{.State}}: {{.Error}}{{- end -}}{{- range .Failed}}\n- {{.Name}} ({{.ImageName}}): {{.State}}: {{.Error}}{{- end -}}{{- end -}}{{- else -}}{{range .Entries -}}{{.Message}}{{"\n"}}{{- end -}}{{- end -}}{% endraw %}'
+    {% else %}
+      - WATCHTOWER_NOTIFICATIONS=email
+      - WATCHTOWER_NOTIFICATION_EMAIL_FROM={{ alertmanager_smtp_from }}
+      - WATCHTOWER_NOTIFICATION_EMAIL_TO={{ alertmanager_email_to }}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER={{ alertmanager_smtp_host }}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PORT={{ alertmanager_smtp_port | default(587) }}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_USER={{ alertmanager_smtp_user }}
+      - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PASSWORD={{ alertmanager_smtp_password }}
+      - WATCHTOWER_NOTIFICATION_EMAIL_DELAY=2
+    {% endif %}
+
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
@@ -297,7 +287,6 @@ networks:
   backend:
 
 volumes:
-  diun-data:
   loki-config:
     driver: local
     driver_opts:

@@ -114,9 +114,8 @@ This document maps Docker images used in Ansible templates to their correspondin
 | loki | `grafana/loki:{{ loki_version }}` | `loki_version` | `"2.9.4"` |
 | promtail | `grafana/promtail:{{ promtail_version }}` | `promtail_version` | `"2.9.4"` |
 | cadvisor | `gcr.io/cadvisor/cadvisor:{{ cadvisor_version }}` | `cadvisor_version` | `"v0.49.1"` |
-| diun | `crazymax/diun:{{ diun_version }}` | `diun_version` | `"4.28"` |
 | autoheal | `willfarrell/autoheal:{{ autoheal_version }}` | `autoheal_version` | `"latest"` |
-| watchtower | `containrrr/watchtower:{{ watchtower_version }}` | `watchtower_version` | `"latest"` |
+| watchtower | `percona/watchtower:{{ watchtower_version }}` | `watchtower_version` | `"3"` |
 | nextcloud-exporter | `xperimental/nextcloud-exporter:{{ nextcloud_exporter_version }}` | `nextcloud_exporter_version` | `"0.9.0"` |
 
 ---

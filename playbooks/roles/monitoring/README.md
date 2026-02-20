@@ -64,12 +64,12 @@ alertmanager_smtp_require_tls: true
 
 ### Nextcloud Talk Alerting (Optional)
 
-Nextcloud Talk provides real-time notifications through the Bot API. The Bot API requires HMAC-SHA256 signed requests, so we use a **webhook bridge bot** that receives simple webhooks from Alertmanager and forwards them to Nextcloud Talk with proper authentication.
+Nextcloud Talk provides real-time notifications through the Bot API. The Bot API requires HMAC-SHA256 signed requests, so we use a **webhook bridge bot** that receives simple webhooks from Alertmanager/Watchtower and forwards them to Nextcloud Talk with proper authentication.
 
 #### Architecture
 
 ```
-Alertmanager → Webhook Bot (Docker) → Nextcloud Talk Bot API
+Alertmanager + Watchtower → Webhook Bot (Docker) → Nextcloud Talk Bot API
 ```
 
 The webhook bot handles:
@@ -126,7 +126,7 @@ ansible-playbook -i ../home-server-private-data/inventories/inventory.yml \
   --ask-vault-pass
 ```
 
-Alerts will now be sent to your Nextcloud Talk conversation!
+Alerts and Watchtower update notifications will now be sent to your Nextcloud Talk conversation!
 
 #### Step 3: Deploy the Configuration
 
