@@ -61,8 +61,6 @@ This document maps Docker images used in Ansible templates to their correspondin
 | mosquitto | `eclipse-mosquitto:{{ mosquitto_version }}` | `mosquitto_version` | `2.0` |
 | myelectricaldata | `m4dm4rtig4n/myelectricaldata:{{ myelectricaldata_version }}` | `myelectricaldata_version` | `"latest"` |
 | frigate | `ghcr.io/blakeblackshear/frigate:stable` | `frigate_version` | `"stable"` *(not used in template)* |
-| wyoming-piper | `rhasspy/wyoming-piper` | `piper_version` | `"latest"` *(not used in template)* |
-| faster-whisper | `lscr.io/linuxserver/faster-whisper:{{ faster_whisper_version }}` | `faster_whisper_version` | `"latest"` |
 
 **Note:** Some variables are defined but not used in templates (hardcoded tags instead).
 
@@ -79,7 +77,7 @@ This document maps Docker images used in Ansible templates to their correspondin
 | webui | `ghcr.io/open-webui/open-webui:{{ webui_version }}` | `webui_version` | `"main"` |
 | ollama | `ollama/ollama:{{ ollama_version }}` | `ollama_version` | `"latest"` |
 | ollama (Intel) | `intelanalytics/ipex-llm-inference-cpp-xpu:{{ ollama_intel_version }}` | `ollama_intel_version` | `"latest"` |
-| speech | `ghcr.io/matatonic/openedai-speech:{{ speech_version }}` | `speech_version` | `"latest"` |
+| speaches | `ghcr.io/speaches-ai/speaches:{{ speaches_version }}` | `speaches_version` | `"latest"` |
 
 **Note:** The ollama service has two different images depending on the GPU type (nvidia/other vs intel).
 
@@ -158,7 +156,7 @@ This document maps Docker images used in Ansible templates to their correspondin
 
 ### 1. Inconsistent Variable Usage
 Some roles define version variables but don't use them in templates:
-- **hassio:** `homeassistant_version`, `frigate_version`, `piper_version` defined but not used
+- **hassio:** `homeassistant_version`, `frigate_version` defined but not used
 - **nextcloud:** `harp_version` defined but not used
 - **gitlab:** `gitlab_runner_version` defined but not used
 
@@ -178,8 +176,8 @@ Some images don't have version variables:
 
 ### 4. Latest Tags
 Several services use `"latest"` tags which is not recommended for production:
-- ia: ollama, ollama_intel, speech
-- hassio: myelectricaldata, faster-whisper
+- ia: ollama, ollama_intel, speaches
+- hassio: myelectricaldata
 - kresus: kresus (if set to latest)
 - monitoring: autoheal, watchtower
 - traefik: unbound

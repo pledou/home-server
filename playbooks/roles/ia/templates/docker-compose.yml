@@ -35,22 +35,18 @@ services:
       DEFAULT_USER_ROLE: "user"
       OAUTH_MERGE_ACCOUNTS_BY_EMAIL: True
 
-      AUDIO_OPENAI_API_BASE_URL: "http://speech:8000/v1"
-      AUDIO_OPENAI_API_MODEL: "tts-1"
-      AUDIO_OPENAI_API_SPEAKER: "upmc"
+      AUDIO_OPENAI_API_BASE_URL: "http://speaches:8000/v1"
       AUDIO_OPENAI_API_KEY: "openai-api-key"
-      WHISPER_MODEL_AUTO_UPDATE: True
-      WHISPER_MODEL_AUTO_UPDATE_INTERVAL: 2w
       ENABLE_ADMIN_EXPORT: False
     restart: always
     volumes:
       - open-webui:/app/backend/data
-      - ./install-tools.sh:/install-tools.sh:ro
     networks:
       - network
       - traefik_backend
     depends_on:
      - ollama
+     - speaches
 
 
   {% if gpu != 'intel' -%}
@@ -155,25 +151,17 @@ services:
         aliases:
           - ollama-metrics
 
-  speech:
+  speaches:
     labels:
       - com.centurylinklabs.watchtower.enable=true
-    image: "{{ speech_image }}:{{ speech_version }}"
-    environment:
-      - TTS_HOME=voices
-      - HF_HOME=voices
-      #PRELOAD_MODEL=xtts
-      #PRELOAD_MODEL=xtts_v2.0.2
-      #PRELOAD_MODEL=parler-tts/parler_tts_mini_v0.1
-    # ports:
-    #   - "8000:8000"
+    image: "{{ speaches_image }}:{{ speaches_version }}"
+    pull_policy: always
     networks:
       network:
         aliases:
-          - speech
-    volumes:
-      - voices:/app/voices
-      - speech_config:/app/config
+          - speaches
+    ports:
+      - 8000:8000
     restart: unless-stopped
     {%- if gpu == 'nvidia' %}
     {#- Set nvidia runtime if it's not the default #}
@@ -201,18 +189,6 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/open-webui"
-  voices:
-   driver: local
-   driver_opts:
-     type: none
-     o: bind
-     device: "{{ docker_volumes_path }}/voices"
-  speech_config:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: "{{ docker_volumes_path }}/speech"
 
 networks:
   network:
