@@ -208,6 +208,16 @@
     dest: /home/{{ ansible_user }}/home-server/stacks/monitoring/docker-compose.yml
     mode: u=g=rwx,o=rx
 
+- name: Download NorskHelsenett Ollama Metrics dashboard
+  become: true
+  ansible.builtin.get_url:
+    url: "{{ ollama_metrics_dashboard_url }}"
+    dest: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/ollama-metrics-dashboard.json"
+    mode: u=rwx,g=o=rx
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    force: true
+
 - name: Download Grafana.com dashboards
   become: true
   ansible.builtin.get_url:
@@ -223,14 +233,14 @@
 
 - name: Ensure dashboards referencing datasource variables define them
   ansible.builtin.include_tasks: grafana_fix_missing_ds_prometheus.yml
-  loop: "{{ grafana_dashboard_updates | default([]) }}"
+  loop: "{{ grafana_dashboard_updates | default([]) + [{'gnet_id': 'ollama-metrics-dashboard'}] }}"
   loop_control:
     label: "{{ item.gnet_id }}.json"
   vars:
     dashboard_gnet_id: "{{ item.gnet_id }}"
 
 - name: Fix Nextcloud dashboard datasource template variable
-  shell: |
+  ansible.builtin.shell: |
     jq '.templating.list = [{
       "current": {},
       "includeAll": false,
@@ -245,6 +255,7 @@
     mv /tmp/20716.json.tmp /opt/grafana-provisioning/dashboards/20716.json
   args:
     executable: /bin/bash
+  changed_when: false
 
 - name: Replace Prometheus dashboard datasource variables with fixed UID
   become: true
@@ -252,9 +263,39 @@
     path: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/{{ item.gnet_id }}.json"
     regexp: '\$\{DS_(?:PROM[A-Z_]*|PRM[A-Z_]*)\}'
     replace: 'prometheus_uid'
-  loop: "{{ grafana_dashboard_updates | default([]) }}"
+  loop: "{{ grafana_dashboard_updates | default([]) + [{'gnet_id': 'ollama-metrics-dashboard'}] }}"
   loop_control:
     label: "{{ item.gnet_id }}.json"
+
+- name: Normalize Ollama dashboard Prometheus datasource references
+  become: true
+  ansible.builtin.shell: |
+    set -o pipefail
+    jq '
+      (.. | objects | select(has("datasource")) | .datasource) |=
+        (if . == "prometheus" or . == "Prometheus" then
+           "prometheus_uid"
+         elif (type == "object") then
+           (if ((.uid // "") == "prometheus" or (.uid // "") == "Prometheus") then
+              .uid = "prometheus_uid"
+            elif ((.uid // "") == "" and (.type // "") == "prometheus") then
+              . + {"uid": "prometheus_uid"}
+            else
+              .
+            end)
+         else
+           .
+         end)
+      | (.. | objects
+          | select(has("datasourceUid") and (.datasourceUid == "prometheus" or .datasourceUid == "Prometheus"))
+          | .datasourceUid) = "prometheus_uid"
+    ' "{{ docker_volumes_path }}/grafana-provisioning/dashboards/ollama-metrics-dashboard.json" \
+    > /tmp/ollama-metrics-dashboard.json.tmp && \
+    mv /tmp/ollama-metrics-dashboard.json.tmp \
+      "{{ docker_volumes_path }}/grafana-provisioning/dashboards/ollama-metrics-dashboard.json"
+  args:
+    executable: /bin/bash
+  changed_when: false
 
 - name: Replace Loki dashboard datasource variables with fixed UID
   become: true
@@ -306,7 +347,15 @@
   block:
     - name: Check if bot already exists
       ansible.builtin.command:
-        cmd: docker exec nc-nextcloud-1 php occ talk:bot:list
+        argv:
+          - docker
+          - exec
+          - -u
+          - www-data
+          - nc-nextcloud-1
+          - php
+          - occ
+          - talk:bot:list
       register: bot_list
       changed_when: false
       failed_when: false
@@ -316,6 +365,8 @@
         argv:
           - docker
           - exec
+          - -u
+          - www-data
           - nc-nextcloud-1
           - php
           - occ
@@ -332,19 +383,41 @@
 
     - name: Get bot list to extract ID
       ansible.builtin.command:
-        cmd: docker exec nc-nextcloud-1 php occ talk:bot:list
+        argv:
+          - docker
+          - exec
+          - -u
+          - www-data
+          - nc-nextcloud-1
+          - php
+          - occ
+          - talk:bot:list
       register: bot_list_output
       changed_when: false
 
     - name: Extract Prometheus Alerts bot ID
       ansible.builtin.set_fact:
-        prometheus_bot_id: "{{ bot_list_output.stdout | regex_search('\\|\\s+(\\d+)\\s+\\|\\s+Prometheus Alerts', '\\1') | first }}"
+        prometheus_bot_id: "{{ (bot_list_output.stdout_lines
+          | select('search', '^\\|\\s*\\d+\\s*\\|\\s*Prometheus Alerts\\s*\\|')
+          | map('regex_replace', '^\\|\\s*(\\d+)\\s*\\|.*$', '\\1')
+          | first
+          | default('')) | trim }}"
+
+    - name: Ensure Prometheus Alerts bot ID was found
+      ansible.builtin.fail:
+        msg: >
+          Could not extract Prometheus Alerts bot ID from `occ talk:bot:list` output.
+          Output was: {{ bot_list_output.stdout }}
+      when:
+        - prometheus_bot_id | length == 0 or not (prometheus_bot_id is match('^\\d+$'))
 
     - name: Add bot to conversation
       ansible.builtin.command:
         argv:
           - docker
           - exec
+          - -u
+          - www-data
           - nc-nextcloud-1
           - php
           - occ
@@ -363,4 +436,3 @@
           Nextcloud Talk bot 'Prometheus Alerts' is fully configured and
           added to conversation {{ alertmanager_nextcloud_conversation_token }}.
           Alerts will now be sent to your Nextcloud Talk conversation!
-
