@@ -50,7 +50,7 @@ inhibit_rules:
     equal: ['alertname', 'instance']
 
 receivers:
-  # Default receiver tries Nextcloud Talk bot first, then falls back to email
+  # Default receiver uses Nextcloud Talk bot when available, otherwise falls back to email
   - name: 'default-receiver'
     {% if alertmanager_nextcloud_conversation_token is defined and alertmanager_nextcloud_conversation_token %}
     webhook_configs:
@@ -78,30 +78,30 @@ receivers:
           {{ "{{ end }}" }}
     {% endif %}
   
-# Critical receiver - only email for reliability
-- name: 'critical-receiver'
-  {% if alertmanager_email_to is defined and alertmanager_email_to %}
-  email_configs:
-    - to: '{{ alertmanager_email_to }}'
-      send_resolved: true
-      headers:
-        Subject: '[CRITICAL] [{{ "{{ .Status | toUpper }}" }}] {{ "{{ .GroupLabels.alertname }}" }}'
-      html: |
-        <h2 style="color: red;">CRITICAL ALERT</h2>
-        {{ "{{ range .Alerts }}" }}
-        <h3>Alert: {{ "{{ .Labels.alertname }}" }}</h3>
-        <p><strong>Status:</strong> {{ "{{ .Status }}" }}</p>
-        <p><strong>Severity:</strong> {{ "{{ .Labels.severity }}" }}</p>
-        <p><strong>Summary:</strong> {{ "{{ .Annotations.summary }}" }}</p>
-        <p><strong>Description:</strong> {{ "{{ .Annotations.description }}" }}</p>
-        <p><strong>Instance:</strong> {{ "{{ .Labels.instance }}" }}</p>
-        <p><strong>Job:</strong> {{ "{{ .Labels.job }}" }}</p>
-        <hr>
-        {{ "{{ end }}" }}
-  {% elif alertmanager_nextcloud_conversation_token is defined and alertmanager_nextcloud_conversation_token %}
-  webhook_configs:
-    - url: 'http://nextcloud-talk-bot:81/send_message'
-      send_resolved: true
-      http_config:
-        follow_redirects: true
-  {% endif %}
+  # Critical receiver uses Nextcloud Talk bot when available, otherwise falls back to email
+  - name: 'critical-receiver'
+    {% if alertmanager_nextcloud_conversation_token is defined and alertmanager_nextcloud_conversation_token %}
+    webhook_configs:
+      - url: 'http://nextcloud-talk-bot:81/send_message'
+        send_resolved: true
+        http_config:
+          follow_redirects: true
+    {% elif alertmanager_email_to is defined and alertmanager_email_to %}
+    email_configs:
+      - to: '{{ alertmanager_email_to }}'
+        send_resolved: true
+        headers:
+          Subject: '[CRITICAL] [{{ "{{ .Status | toUpper }}" }}] {{ "{{ .GroupLabels.alertname }}" }}'
+        html: |
+          <h2 style="color: red;">CRITICAL ALERT</h2>
+          {{ "{{ range .Alerts }}" }}
+          <h3>Alert: {{ "{{ .Labels.alertname }}" }}</h3>
+          <p><strong>Status:</strong> {{ "{{ .Status }}" }}</p>
+          <p><strong>Severity:</strong> {{ "{{ .Labels.severity }}" }}</p>
+          <p><strong>Summary:</strong> {{ "{{ .Annotations.summary }}" }}</p>
+          <p><strong>Description:</strong> {{ "{{ .Annotations.description }}" }}</p>
+          <p><strong>Instance:</strong> {{ "{{ .Labels.instance }}" }}</p>
+          <p><strong>Job:</strong> {{ "{{ .Labels.job }}" }}</p>
+          <hr>
+          {{ "{{ end }}" }}
+    {% endif %}
