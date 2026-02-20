@@ -66,7 +66,7 @@ services:
     restart: always
     environment:
       - OLLAMA_KEEP_ALIVE=24h
-      - OLLAMA_NUM_THREADS=10
+      - OLLAMA_NUM_THREADS={{ ollama_num_threads }}
       - OLLAMA_HOST=0.0.0.0
     networks:
       network:
@@ -75,7 +75,8 @@ services:
     volumes:
       - ollama:/root/.ollama
     
-    mem_limit: "32G"
+    cpus: "{{ ollama_cpu_limit }}"
+    mem_limit: "{{ ollama_memory_limit_mb }}m"
     shm_size: "16g" 
 
     {% if gpu == 'nvidia' -%}
@@ -93,7 +94,8 @@ services:
       - com.centurylinklabs.watchtower.enable=true
     user: root
     image: "{{ ollama_intel_image }}:{{ ollama_intel_version }}"
-    mem_limit: "32G"
+    cpus: "{{ ollama_cpu_limit }}"
+    mem_limit: "{{ ollama_memory_limit_mb }}m"
     shm_size: "16g" 
     pull_policy: always
     tty: true
@@ -103,7 +105,7 @@ services:
     environment:
       - DEVICE=iGPU
       - OLLAMA_KEEP_ALIVE=24h
-      - OLLAMA_NUM_THREADS=10
+      - OLLAMA_NUM_THREADS={{ ollama_num_threads }}
       - OLLAMA_HOST=0.0.0.0
       - no_proxy=localhost,127.0.0.1
       - OLLAMA_NUM_GPU=999
