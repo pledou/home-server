@@ -77,7 +77,7 @@ This document maps Docker images used in Ansible templates to their correspondin
 | webui | `ghcr.io/open-webui/open-webui:{{ webui_version }}` | `webui_version` | `"main"` |
 | ollama | `ollama/ollama:{{ ollama_version }}` | `ollama_version` | `"latest"` |
 | ollama (Intel) | `intelanalytics/ipex-llm-inference-cpp-xpu:{{ ollama_intel_version }}` | `ollama_intel_version` | `"latest"` |
-| speaches | `ghcr.io/speaches-ai/speaches:{{ speaches_version }}` | `speaches_version` | `"latest"` |
+| speaches | `ghcr.io/speaches-ai/speaches:{{ speaches_cuda_version if gpu == 'nvidia' else speaches_cpu_version }}` | `speaches_cpu_version` / `speaches_cuda_version` | `"latest-cpu"` / `"latest-cuda"` |
 
 **Note:** The ollama service has two different images depending on the GPU type (nvidia/other vs intel).
 

@@ -41,7 +41,47 @@ Defined in `playbooks/roles/ia/defaults/main.yml`:
 
 - `webui_image`, `webui_version`
 - `ollama_image`, `ollama_version`, `ollama_intel_image`, `ollama_intel_version`
-- `speaches_image`, `speaches_version`
+- `speaches_image`, `speaches_cpu_version`, `speaches_cuda_version`
+- `speaches_stt_model`, `speaches_tts_model`, `speaches_preload_models`
+- `speaches_postdeploy_model_install_enabled`, `speaches_postdeploy_models`
+
+Default french-oriented setup:
+
+- STT model: `Systran/faster-whisper-small`
+- TTS model: `rhasspy/piper-voices`
+
+By default, only the STT model is preloaded at Speaches startup through `PRELOAD_MODELS`.
+This avoids startup failure when a TTS model ID is not available in the Speaches registry.
+
+Important: if any model in `speaches_preload_models` is invalid, Speaches can fail to start.
+In that case, Open WebUI transcription fails with `Server Connection Error`.
+
+For additional models, you can either:
+
+- add a valid model ID to `speaches_preload_models`, or
+- install it after startup via Speaches API (`POST /v1/models/{model_id}`).
+Aliases are also generated in `stacks/ia/model_aliases.json`:
+
+- `whisper-1` → `speaches_stt_model`
+- `tts-1` / `tts-1-hd` → `speaches_tts_model`
+
+### Post-deploy model installation task
+
+The role now includes a post-deploy step that:
+
+1. waits for Speaches health (`/health`),
+2. reads local models (`/v1/models`),
+3. installs missing models from `speaches_postdeploy_models` via `POST /v1/models/{model_id}`.
+
+Default behavior:
+
+- `speaches_postdeploy_model_install_enabled: true`
+- `speaches_postdeploy_models:`
+	- `speaches-ai/piper-fr_FR-upmc-medium`
+	- `speaches-ai/piper-fr_FR-siwis-medium`
+	- `speaches-ai/piper-fr_FR-gilles-low`
+
+Unknown IDs (`404`) or server-side model install errors (`500`) are skipped with a warning (non bloquant).
 
 ## Home Assistant voice setup
 
@@ -50,6 +90,37 @@ After IA deployment, configure Home Assistant/Home Agent voice endpoints to use 
 - OpenAI-compatible base URL: `http://<ia-host>:8000/v1`
 
 If Home Assistant runs on the same host/network, use the Docker host IP (or DNS name) from the Home Assistant container perspective.
+
+### Home Assistant TTS with `openai_tts` custom integration
+
+You can use Speaches directly in Home Assistant with the custom integration:
+
+- Repository: `https://github.com/sfortis/openai_tts`
+
+Recommended setup:
+
+1. Install `openai_tts` from HACS (or manually from the repository).
+2. In Home Assistant, add/configure the OpenAI TTS integration.
+3. Use your Speaches endpoint and model aliases from this role:
+	- Base URL: `http://<ia-host>:8000/v1`
+	- API key: `openai-api-key` (or the value you set)
+	- Model: `tts-1` (alias mapped to `speaches_tts_model`)
+
+Notes:
+
+- `tts-1` and `tts-1-hd` aliases are generated in `stacks/ia/model_aliases.json`.
+- If Home Assistant cannot resolve `speaches` by Docker DNS, use the IA host IP/FQDN.
+- Keep one TTS backend enabled in Home Assistant to avoid duplicate voice providers.
+
+## Open WebUI wiring
+
+The role sets Open WebUI audio STT variables to Speaches automatically:
+
+- `AUDIO_STT_ENGINE=openai`
+- `AUDIO_STT_OPENAI_API_BASE_URL=http://speaches:8000/v1`
+- `AUDIO_STT_MODEL={{ speaches_stt_model }}`
+
+If Open WebUI UI settings were previously customized, UI values can override env defaults. In that case, re-check Admin → Audio and point STT to Speaches.
 
 ## MCP integration with Open WebUI
 

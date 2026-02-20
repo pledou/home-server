@@ -8,7 +8,15 @@ ollama_version: "latest"
 ollama_intel_image: "intelanalytics/ipex-llm-inference-cpp-xpu"
 ollama_intel_version: "latest"
 speaches_image: "ghcr.io/speaches-ai/speaches"
-speaches_version: "latest"
+speaches_cpu_version: "latest-cpu"
+speaches_cuda_version: "latest-cuda"
+speaches_stt_model: "Systran/faster-whisper-small"
+speaches_tts_model: "rhasspy/piper-voices"
+speaches_preload_models:
+  - "{{ speaches_stt_model }}"
+speaches_postdeploy_model_install_enabled: true
+speaches_postdeploy_models:
+  - "speaches-ai/piper-fr_FR-upmc-medium"
 ollama_metrics_image: "ghcr.io/norskhelsenett/ollama-metrics"
 ollama_metrics_version: "latest"
 

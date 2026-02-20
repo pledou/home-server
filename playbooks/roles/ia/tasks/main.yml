@@ -14,18 +14,109 @@
   loop:
     - ollama
     - open-webui
+    - speaches-hf-cache
 
 - name: Create docker-compose stack file
   ansible.builtin.template:
     src: docker-compose.yml
     dest: /home/{{ ansible_user }}/home-server/stacks/ia/docker-compose.yml
     mode: u=rwx,g=o=rx
+
+- name: Create Speaches model aliases file
+  ansible.builtin.template:
+    src: speaches_model_aliases.json
+    dest: /home/{{ ansible_user }}/home-server/stacks/ia/model_aliases.json
+    mode: u=rw,g=o=r
+
 - name: Deploy stack from a compose file
   community.docker.docker_compose_v2:
     pull: "always"
     build: "always"
     state: present
     project_src: /home/{{ ansible_user }}/home-server/stacks/ia
+
+- name: Wait for Speaches API health
+  when:
+    - speaches_postdeploy_model_install_enabled | bool
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8000/health"
+    method: GET
+    status_code: 200
+  register: speaches_health_check
+  retries: 30
+  delay: 2
+  until: speaches_health_check.status == 200
+
+- name: Retrieve currently installed Speaches models
+  when: speaches_postdeploy_model_install_enabled | bool
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8000/v1/models"
+    method: GET
+    status_code:
+      - 200
+      - 500
+  register: speaches_local_models
+
+- name: Warn when Speaches model listing fails
+  when:
+    - speaches_postdeploy_model_install_enabled | bool
+    - (speaches_local_models.status | int) != 200
+  ansible.builtin.debug:
+    msg: >-
+      Speaches returned status {{ speaches_local_models.status }} on /v1/models.
+      Continuing with empty installed-model list and attempting configured post-deploy downloads.
+
+- name: Compute already installed Speaches model IDs
+  when: speaches_postdeploy_model_install_enabled | bool
+  ansible.builtin.set_fact:
+    speaches_installed_model_ids: >-
+      {{
+        ((speaches_local_models.json.data | default([])) | map(attribute='id') | list)
+        if ((speaches_local_models.status | int) == 200 and (speaches_local_models.json is defined))
+        else []
+      }}
+
+- name: Download missing Speaches models via API
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8000/v1/models/{{ item | urlencode }}"
+    method: POST
+    status_code:
+      - 200
+      - 201
+      - 202
+      - 409
+      - 404
+      - 500
+  register: speaches_model_download_results
+  loop: "{{ speaches_postdeploy_models | default([]) }}"
+  when:
+    - speaches_postdeploy_model_install_enabled | bool
+    - item is string
+    - item | length > 0
+    - item not in (speaches_installed_model_ids | default([]))
+
+- name: Warn for unknown Speaches model IDs
+  ansible.builtin.debug:
+    msg: >-
+      Speaches model '{{ item.item }}' not found in registry (404) and was skipped.
+      Use GET /v1/registry to pick a valid model_id for speaches_postdeploy_models.
+  loop: "{{ speaches_model_download_results.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item | default('unknown') }}"
+  when:
+    - (item.status | default(0) | int) == 404
+
+- name: Warn for Speaches internal errors on model download
+  ansible.builtin.debug:
+    msg: >-
+      Speaches returned 500 while downloading '{{ item.item }}'.
+      Model was not installed by post-deploy step and was skipped.
+      You can retry later, or temporarily set speaches_postdeploy_models to [] to unblock deployment.
+  loop: "{{ speaches_model_download_results.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item | default('unknown') }}"
+  when:
+    - (item.status | default(0) | int) == 500
 
 - name: Configure Authentik OAuth applications for IA
   delegate_to: localhost
