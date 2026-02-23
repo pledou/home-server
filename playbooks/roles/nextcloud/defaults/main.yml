@@ -4,7 +4,7 @@ nextcloud_postgres_version: "15"
 
 # Docker image versions
 coturn_image: "instrumentisto/coturn"
-coturn_version: "4.6"
+coturn_version: "4"
 elasticsearch_image: "docker.elastic.co/elasticsearch/elasticsearch"
 elasticsearch_version: "8.12.0"
 harp_image: "ghcr.io/nextcloud/nextcloud-appapi-harp"
@@ -24,7 +24,7 @@ nextcloud_defaultapp_list:
   - richdocuments
   - richdocumentscode
   - previewgenerator
-  - integration_openai
+  - assistant
   - music
   - notify_push
   - notes
@@ -33,6 +33,9 @@ nextcloud_defaultapp_list:
   - contacts
   - mail
   - oidc # Used to log in on authentik based on nextcloud user
+  - forms
+  - spreed # Talk
+  - context_chat # Context Agent integration for enhanced automation capabilities
 
 nextcloud_system_config:
   - "overwrite.cli.url --value=https://{{ app_domain_name }}"
