@@ -5,16 +5,26 @@
     path: "/home/{{ ansible_user }}/home-server/stacks/ia"
     state: directory
     mode: u=rwx,g=o=rx
-- name: Create ia provisionning directories
+- name: Create ia provisionning directories (root-owned)
   become: true
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item }}"
     state: directory
-    mode: u=rw,g=o=r
+    owner: root
+    group: root
+    mode: u=rwx,g=o=rx
   loop:
     - ollama
     - open-webui
-    - speaches-hf-cache
+
+- name: Create Speaches cache directory (ubuntu-owned)
+  become: true
+  ansible.builtin.file:
+    path: "{{ docker_volumes_path }}/speaches-hf-cache"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: u=rwx,g=o=rx
 
 - name: Create docker-compose stack file
   ansible.builtin.template:
@@ -36,8 +46,6 @@
     project_src: /home/{{ ansible_user }}/home-server/stacks/ia
 
 - name: Wait for Speaches API health
-  when:
-    - speaches_postdeploy_model_install_enabled | bool
   ansible.builtin.uri:
     url: "http://127.0.0.1:8000/health"
     method: GET
@@ -48,7 +56,6 @@
   until: speaches_health_check.status == 200
 
 - name: Retrieve currently installed Speaches models
-  when: speaches_postdeploy_model_install_enabled | bool
   ansible.builtin.uri:
     url: "http://127.0.0.1:8000/v1/models"
     method: GET
@@ -59,7 +66,6 @@
 
 - name: Warn when Speaches model listing fails
   when:
-    - speaches_postdeploy_model_install_enabled | bool
     - (speaches_local_models.status | int) != 200
   ansible.builtin.debug:
     msg: >-
@@ -67,7 +73,6 @@
       Continuing with empty installed-model list and attempting configured post-deploy downloads.
 
 - name: Compute already installed Speaches model IDs
-  when: speaches_postdeploy_model_install_enabled | bool
   ansible.builtin.set_fact:
     speaches_installed_model_ids: >-
       {{
@@ -90,7 +95,6 @@
   register: speaches_model_download_results
   loop: "{{ speaches_postdeploy_models | default([]) }}"
   when:
-    - speaches_postdeploy_model_install_enabled | bool
     - item is string
     - item | length > 0
     - item not in (speaches_installed_model_ids | default([]))
