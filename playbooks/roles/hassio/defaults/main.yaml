@@ -13,3 +13,6 @@ esphome_image: "esphome/esphome"
 esphome_version: "stable"
 zigbee2mqtt_image: "koenkk/zigbee2mqtt"
 zigbee2mqtt_version: "2"
+
+# HACS (Home Assistant Community Store) setup
+homeassistant_hacs_enabled: true
