@@ -229,7 +229,7 @@ services:
 
   autoheal: # restart container when healthcheck is ko
     labels:
-      - com.centurylinklabs.watchtower.enable={{ 'true' if autoheal_version != 'latest' else 'false' }}
+      - com.centurylinklabs.watchtower.enable=true
     image: "{{ autoheal_image }}:{{ autoheal_version }}"
     restart: always
     environment:
@@ -260,7 +260,7 @@ services:
     {% if alertmanager_nextcloud_conversation_token is defined and alertmanager_nextcloud_conversation_token %}
       - WATCHTOWER_NOTIFICATION_URL=generic+http://nextcloud-talk-bot:81/send_message?template=json&disabletls=true
       - WATCHTOWER_NOTIFICATION_REPORT=true
-      - WATCHTOWER_NOTIFICATIONS_LEVEL=warn
+      - WATCHTOWER_NOTIFICATIONS_LEVEL=info
       # - 'WATCHTOWER_NOTIFICATION_TEMPLATE={% raw %}{{- if .Report -}}{{- with .Report -}}{{len .Scanned}} Scanned, {{len .Updated}} Updated, {{len .Failed}} Failed{{- range .Updated}}\n- {{.Name}} ({{.ImageName}}): {{.CurrentImageID.ShortID}} updated to {{.LatestImageID.ShortID}}{{- end -}}{{- range .Fresh}}\n- {{.Name}} ({{.ImageName}}): {{.State}}{{- end -}}{{- range .Skipped}}\n- {{.Name}} ({{.ImageName}}): {{.State}}: {{.Error}}{{- end -}}{{- range .Failed}}\n- {{.Name}} ({{.ImageName}}): {{.State}}: {{.Error}}{{- end -}}{{- end -}}{{- else -}}{{range .Entries -}}{{.Message}}{{"\n"}}{{- end -}}{{- end -}}{% endraw %}'
     {% else %}
       - WATCHTOWER_NOTIFICATIONS=email
