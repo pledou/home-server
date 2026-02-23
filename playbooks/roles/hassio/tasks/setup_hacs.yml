@@ -1,0 +1,185 @@
+# code: language=ansible
+---
+# HACS (Home Assistant Community Store) automated setup
+
+- name: Check if HACS is already installed
+  become: true
+  ansible.builtin.stat:
+    path: "{{ docker_volumes_path }}/homeassistant/custom_components/hacs"
+  register: hacs_directory
+
+- name: Download and install HACS
+  when: not hacs_directory.stat.exists
+  block:
+    - name: Create custom_components directory
+      become: true
+      ansible.builtin.file:
+        path: "{{ docker_volumes_path }}/homeassistant/custom_components"
+        state: directory
+        owner: root
+        group: 0998
+        mode: u=rwx,g=rx,o=
+
+    - name: Get latest HACS release info
+      ansible.builtin.uri:
+        url: https://api.github.com/repos/hacs/integration/releases/latest
+        method: GET
+        return_content: true
+      register: hacs_release
+
+    - name: Download HACS zip
+      become: true
+      ansible.builtin.get_url:
+        url: "{{ hacs_release.json.assets | selectattr('name', 'equalto', 'hacs.zip') | map(attribute='browser_download_url') | first }}"
+        dest: "/tmp/hacs.zip"
+        mode: '0644'
+
+    - name: Unzip HACS to custom_components
+      become: true
+      ansible.builtin.unarchive:
+        src: "/tmp/hacs.zip"
+        dest: "{{ docker_volumes_path }}/homeassistant/custom_components"
+        remote_src: true
+        owner: root
+        group: 0998
+        mode: u=rwx,g=rx,o=
+
+    - name: Remove HACS zip file
+      become: true
+      ansible.builtin.file:
+        path: "/tmp/hacs.zip"
+        state: absent
+
+    - name: Notify about HACS installation
+      ansible.builtin.debug:
+        msg: "HACS installed. Home Assistant will need to restart to load it."
+
+- name: Wait for Home Assistant to be ready (after potential HACS install)
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8123"
+    method: GET
+    status_code: 200
+  register: ha_health_check
+  retries: 60
+  delay: 5
+  when: not hacs_directory.stat.exists
+
+- name: Add custom HACS repositories
+  become: true
+  when: hacs_directory.stat.exists or (not hacs_directory.stat.exists)
+  block:
+    - name: Wait a bit for HACS to initialize after first install
+      ansible.builtin.pause:
+        seconds: 10
+      when: not hacs_directory.stat.exists
+
+    - name: Check if HACS repositories storage exists
+      become: true
+      ansible.builtin.stat:
+        path: "{{ docker_volumes_path }}/homeassistant/.storage/hacs.repositories"
+      register: hacs_repositories_file
+
+    - name: Add OpenAI Whisper Cloud repository to HACS
+      become: true
+      when: hacs_repositories_file.stat.exists
+      block:
+        - name: Read current HACS repositories
+          become: true
+          ansible.builtin.slurp:
+            path: "{{ docker_volumes_path }}/homeassistant/.storage/hacs.repositories"
+          register: hacs_repos_content
+
+        - name: Parse HACS repositories JSON
+          ansible.builtin.set_fact:
+            hacs_repos: "{{ hacs_repos_content.content | b64decode | from_json }}"
+
+        - name: Check if OpenAI Whisper Cloud repo exists
+          ansible.builtin.set_fact:
+            whisper_repo_exists: >-
+              {{
+                hacs_repos.data.repositories
+                | selectattr('full_name', 'equalto', 'fabio-garavini/ha-openai-whisper-stt-api')
+                | list | length > 0
+              }}
+
+        - name: Check if OpenAI TTS repo exists
+          ansible.builtin.set_fact:
+            tts_repo_exists: >-
+              {{
+                hacs_repos.data.repositories
+                | selectattr('full_name', 'equalto', 'sfortis/openai_tts')
+                | list | length > 0
+              }}
+
+        - name: Add custom repositories to HACS if missing
+          become: true
+          when: not (whisper_repo_exists | bool) or not (tts_repo_exists | bool)
+          block:
+            - name: Prepare new repository entries
+              ansible.builtin.set_fact:
+                new_repos_to_add: []
+
+            - name: Add Whisper repo to list if needed
+              when: not (whisper_repo_exists | bool)
+              ansible.builtin.set_fact:
+                new_repos_to_add: >-
+                  {{
+                    new_repos_to_add + [{
+                      'id': (900000000 + (999999 | random)) | string,
+                      'full_name': 'fabio-garavini/ha-openai-whisper-stt-api',
+                      'category': 'integration',
+                      'show': true,
+                      'installed': false
+                    }]
+                  }}
+
+            - name: Add TTS repo to list if needed
+              when: not (tts_repo_exists | bool)
+              ansible.builtin.set_fact:
+                new_repos_to_add: >-
+                  {{
+                    new_repos_to_add + [{
+                      'id': (900100000 + (999999 | random)) | string,
+                      'full_name': 'sfortis/openai_tts',
+                      'category': 'integration',
+                      'show': true,
+                      'installed': false
+                    }]
+                  }}
+
+            - name: Combine existing and new repositories
+              ansible.builtin.set_fact:
+                combined_repos: >-
+                  {{ hacs_repos.data.repositories + new_repos_to_add }}
+
+            - name: Update HACS configuration with new repositories
+              ansible.builtin.set_fact:
+                updated_hacs_config: >-
+                  {{
+                    hacs_repos
+                    | combine({'data': {'repositories': combined_repos}}, recursive=true)
+                  }}
+
+            - name: Write updated HACS repositories
+              become: true
+              ansible.builtin.copy:
+                content: "{{ updated_hacs_config | to_nice_json }}"
+                dest: "{{ docker_volumes_path }}/homeassistant/.storage/hacs.repositories"
+                owner: root
+                group: 0998
+                mode: '0644'
+                backup: true
+
+    - name: Information about manual steps
+      ansible.builtin.debug:
+        msg: |
+          HACS setup complete. To finish installation:
+          1. Restart Home Assistant to load HACS
+          2. Go to Settings → Devices & Services
+          3. Configure HACS integration (if first install)
+          4. In HACS, the custom repositories should appear
+          5. Download and install:
+             - OpenAI Whisper Cloud (fabio-garavini/ha-openai-whisper-stt-api)
+             - OpenAI TTS (sfortis/openai_tts)
+          6. Restart Home Assistant again
+          7. Configure both integrations via UI

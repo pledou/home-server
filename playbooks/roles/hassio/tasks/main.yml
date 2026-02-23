@@ -112,6 +112,7 @@
         trusted_proxies:
           - 127.0.0.1
           - 172.0.0.0/8
+
 - name: Configure UFW rules for Home Assistant services
   become: true
   vars:
@@ -208,6 +209,10 @@
     build: "always"
     state: present
     project_src: /home/{{ ansible_user }}/home-server/stacks/hassio
+
+- name: Setup HACS and custom integrations
+  when: homeassistant_hacs_enabled | bool
+  ansible.builtin.include_tasks: "setup_hacs.yml"
 
 - name: Configure Authentik providers and applications for Home Assistant services
   delegate_to: localhost
