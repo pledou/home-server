@@ -121,8 +121,9 @@ Default french-oriented setup:
 - STT model: `Systran/faster-whisper-small`
 - TTS model: `rhasspy/piper-voices`
 
-By default, only the STT model is preloaded at Speaches startup through `PRELOAD_MODELS`.
-This avoids startup failure when a TTS model ID is not available in the Speaches registry.
+Both STT and TTS models are preloaded at Speaches startup through `PRELOAD_MODELS` for immediate availability.
+
+**Fail-safe mechanism**: The TTS model is also in `speaches_postdeploy_models`. If preload fails (invalid model ID or registry issue), Speaches starts without it and the post-deploy step installs it via API.
 
 Important: if any model in `speaches_preload_models` is invalid, Speaches can fail to start.
 In that case, Open WebUI transcription fails with `Server Connection Error`.

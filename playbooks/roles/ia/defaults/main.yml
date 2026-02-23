@@ -15,6 +15,7 @@ speaches_tts_model: "speaches-ai/piper-fr_FR-upmc-medium"
 speaches_tts_voice: "upmc"
 speaches_preload_models:
   - "{{ speaches_stt_model }}"
+  - "{{ speaches_tts_model }}"
 speaches_postdeploy_models:
   - "{{ speaches_tts_model }}"
 ollama_metrics_image: "ghcr.io/norskhelsenett/ollama-metrics"
