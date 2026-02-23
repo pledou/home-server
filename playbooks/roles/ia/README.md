@@ -35,6 +35,77 @@ Do not run multiple STT/TTS backends for the same function in parallel from Open
 ansible-playbook -i ../home-server-private-data/inventories/inventory.yml playbooks/install.yml --tags ia
 ```
 
+## Access Methods
+
+### Local Network Access to Ollama
+
+Ollama is accessible on your local network through the **ollama-metrics** proxy:
+
+- **URL**: `http://<host>:8080`
+- **API endpoint**: `http://<host>:8080/api` (Ollama API)
+- **Models list**: `http://<host>:8080/api/tags`
+- **Authentication**: None (local network only)
+
+The ollama-metrics service acts as a proxy and exposes Ollama on port 8080 while also providing Prometheus metrics.
+
+**Example usage:**
+```bash
+# List models
+curl http://<host>:8080/api/tags
+
+# Generate completion
+curl http://<host>:8080/api/generate -d '{
+  "model": "llama3.2",
+  "prompt": "Why is the sky blue?"
+}'
+```
+
+### Distant Access via Open WebUI API
+
+For remote/internet access to Ollama, use Open WebUI's authenticated API:
+
+1. **Generate an API key in Open WebUI:**
+   - Go to `https://ia.{{ app_domain_name }}`
+   - Navigate to Settings → Account → API Keys
+   - Click "Create new secret key"
+   - Copy and save the key
+
+2. **Use the Open WebUI Ollama API endpoint:**
+   - **Base URL**: `https://ia.{{ app_domain_name }}/ollama/api`
+   - **Authentication**: Bearer token (your API key)
+
+**Example usage:**
+```bash
+# List models
+curl https://ia.{{ app_domain_name }}/ollama/api/tags \
+  -H "Authorization: Bearer sk-xxxxxxxxxxxxx"
+
+# Generate completion
+curl https://ia.{{ app_domain_name }}/ollama/api/generate \
+  -H "Authorization: Bearer sk-xxxxxxxxxxxxx" \
+  -d '{
+    "model": "llama3.2",
+    "prompt": "Why is the sky blue?"
+  }'
+```
+
+### Access Matrix
+
+| Access Method | URL | Auth | Use Case |
+|--------------|-----|------|----------|
+| **Open WebUI (Web)** | `https://ia.{{ app_domain_name }}` | OAuth (Authentik) | Web chat interface |
+| **Ollama API (Local)** | `http://<host>:8080/api` | None | Local network access |
+| **Ollama API (Remote)** | `https://ia.{{ app_domain_name }}/ollama/api` | API Key | Distant/internet access |
+| **Speaches Audio API** | `http://<host>:8000/v1` | API key | Local STT/TTS integration |
+
+### Which Access Method Should I Use?
+
+- **Home Assistant integration**: Use local Ollama (`http://<ia-host>:8080/v1`) for Home Agent
+- **Remote/distant API access**: Use Open WebUI API (`https://ia.{{ app_domain_name }}/ollama/api`) with API token
+- **Web chat interface**: Use Open WebUI (`https://ia.{{ app_domain_name }}`)
+- **Local development/testing**: Use direct Ollama (`http://<host>:8080/api`)
+- **Voice integration**: Speaches is exposed on port 8000 (OpenAI-compatible)
+
 ## Main variables
 
 Defined in `playbooks/roles/ia/defaults/main.yml`:
@@ -221,7 +292,7 @@ The **hassio** role automatically adds Home Agent to HACS. After deployment:
 
 ```yaml
 Name: Home Agent
-LLM Base URL: http://<ia-host>:11434/v1
+LLM Base URL: http://<ia-host>:8080/v1
 API Key: (leave empty or any value)
 Model: llama3.2 (or your preferred model)
 Temperature: 0.7
@@ -243,10 +314,10 @@ If you want to use Open WebUI features (chat UI, tools, workflows), you can:
    - Open WebUI → Ollama (for chat/tools)
    - Both use the same models, but different contexts
 
-2. **Option B: Point Home Agent to Open WebUI**
-   - LLM Base URL: `http://<ia-host>:3000/ollama/v1`
+2. **Option B: Point Home Agent to Open WebUI API**
+   - LLM Base URL: `https://ia.{{ app_domain_name }}/ollama/v1`
    - API Key: Generate in Open WebUI (Settings → Account → API Keys)
-   - This routes through Open WebUI but adds complexity
+   - This routes through Open WebUI with authentication
 
 ### Home Agent + MCP Strategy
 

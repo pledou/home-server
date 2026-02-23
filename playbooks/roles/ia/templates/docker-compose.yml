@@ -150,7 +150,7 @@ services:
     expose:
       - 8080/tcp
     ports:
-      - 8080:11434/tcp
+      - 8080:8080/tcp
     restart: unless-stopped
     networks:
       network:
