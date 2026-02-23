@@ -43,7 +43,7 @@ Defined in `playbooks/roles/ia/defaults/main.yml`:
 - `ollama_image`, `ollama_version`, `ollama_intel_image`, `ollama_intel_version`
 - `speaches_image`, `speaches_cpu_version`, `speaches_cuda_version`
 - `speaches_stt_model`, `speaches_tts_model`, `speaches_preload_models`
-- `speaches_postdeploy_model_install_enabled`, `speaches_postdeploy_models`
+- `speaches_postdeploy_models`
 
 Default french-oriented setup:
 
@@ -73,13 +73,10 @@ The role now includes a post-deploy step that:
 2. reads local models (`/v1/models`),
 3. installs missing models from `speaches_postdeploy_models` via `POST /v1/models/{model_id}`.
 
-Default behavior:
+Default post-deploy models:
 
-- `speaches_postdeploy_model_install_enabled: true`
 - `speaches_postdeploy_models:`
 	- `speaches-ai/piper-fr_FR-upmc-medium`
-	- `speaches-ai/piper-fr_FR-siwis-medium`
-	- `speaches-ai/piper-fr_FR-gilles-low`
 
 Unknown IDs (`404`) or server-side model install errors (`500`) are skipped with a warning (non bloquant).
 
@@ -90,6 +87,20 @@ After IA deployment, configure Home Assistant/Home Agent voice endpoints to use 
 - OpenAI-compatible base URL: `http://<ia-host>:8000/v1`
 
 If Home Assistant runs on the same host/network, use the Docker host IP (or DNS name) from the Home Assistant container perspective.
+
+### HACS prerequisites (required)
+
+For Home Assistant voice with Speaches, install both custom integrations from HACS:
+
+1. `openai_tts` for text-to-speech
+2. `OpenAI Whisper Cloud` for speech-to-text
+
+Repository links:
+
+- `https://github.com/sfortis/openai_tts`
+- `https://github.com/fabio-garavini/ha-openai-whisper-stt-api`
+
+After installation, restart Home Assistant before configuring providers.
 
 ### Home Assistant TTS with `openai_tts` custom integration
 
@@ -111,6 +122,26 @@ Notes:
 - `tts-1` and `tts-1-hd` aliases are generated in `stacks/ia/model_aliases.json`.
 - If Home Assistant cannot resolve `speaches` by Docker DNS, use the IA host IP/FQDN.
 - Keep one TTS backend enabled in Home Assistant to avoid duplicate voice providers.
+
+### Home Assistant STT with `OpenAI Whisper Cloud` custom integration
+
+Use Speaches for STT in Home Assistant with `OpenAI Whisper Cloud` (HACS custom integration).
+
+Recommended setup:
+
+1. Install `OpenAI Whisper Cloud` from HACS.
+2. In Home Assistant, add/configure the integration via UI.
+3. Choose **Custom** as the source and configure:
+	- API Key: `openai-api-key` (or your configured value)
+	- API URL: `http://<ia-host>:8000/v1`
+	- Model: `whisper-1` (alias mapped to `speaches_stt_model`)
+	- Temperature: `0` (default)
+
+Notes:
+
+- `whisper-1` alias is available from `model_aliases.json` and maps to your configured STT model.
+- This integration is UI-only (no YAML configuration).
+- Keep one STT backend enabled in Home Assistant to avoid duplicate transcription providers.
 
 ## Open WebUI wiring
 
