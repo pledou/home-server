@@ -165,25 +165,117 @@ Recommended:
 Reference:
 - Open WebUI Admin → Tools → MCP Servers
 
+## LLM Integration Options for Home Assistant
+
+Home Assistant offers two ways to integrate LLMs:
+
+### Native Ollama Integration vs Home Agent
+
+| Feature | Native Ollama | Home Agent (HACS) |
+|---------|--------------|-------------------|
+| **Installation** | Built-in | HACS required |
+| **Complexity** | Simple | Advanced |
+| **Entity Limit** | < 25 recommended | No limit (vector DB) |
+| **Conversation Memory** | ❌ No | ✅ Persistent |
+| **Custom Tools** | ❌ No | ✅ REST APIs + Services |
+| **Entity Control** | ⚠️ Experimental | ✅ Reliable (ha_control) |
+| **Vector Database** | ❌ No | ✅ ChromaDB support |
+| **Streaming** | ❌ No | ✅ For voice assistants |
+| **Memory System** | ❌ No | ✅ Long-term facts |
+| **Multi-LLM** | ❌ No | ✅ Yes |
+
+**Recommendation**: 
+- **Small homes** (< 25 entities) → Use native Ollama integration
+- **Large/complex homes** → Use Home Agent
+
+This documentation covers **Home Agent** setup. For native Ollama, see [Home Assistant docs](https://www.home-assistant.io/integrations/ollama/).
+
 ## Home Agent (HACS custom integration)
 
-When using the Home Agent custom integration from HACS:
+**Home Agent** is a Home Assistant custom integration that provides advanced natural language control via OpenAI-compatible LLMs.
 
-1. Install **Home Agent** from HACS in Home Assistant.
-2. Configure Home Agent to use your Open WebUI endpoint (`https://ia.<domain>`).
-3. In Open WebUI, enable the model/tools you want Home Agent to use.
-4. Add and validate MCP servers directly in Open WebUI before enabling automations.
+### What is Home Agent?
 
-Recommended flow:
-- Start with plain chat/model integration.
-- Add one MCP/OpenAPI tool at a time.
-- Validate each tool call before enabling advanced automations.
+Home Agent extends Home Assistant's native conversation platform to enable:
+- Natural language control of smart home devices
+- Persistent conversation memory
+- Built-in tools (`ha_control`, `ha_query`) for home automation
+- Custom REST API and service tools
+- Streaming responses for voice assistants
+- Optional vector database (ChromaDB) for semantic entity search
 
-### Home Agent + MCP strategy
+### Installation
 
-Use Home Agent as the Home Assistant-side orchestrator, but keep one backend tool endpoint per capability in Open WebUI:
+The **hassio** role automatically adds Home Agent to HACS. After deployment:
 
-- one Nextcloud MCP endpoint
-- one Home Assistant MCP endpoint
+1. Open HACS in Home Assistant → Integrations
+2. Search for **Home Agent** (aradlein/hass-agent-llm)
+3. Click Install
+4. Restart Home Assistant
+5. Go to **Settings → Devices & Services → Add Integration**
+6. Configure Home Agent (see below)
 
-This keeps behavior predictable and avoids duplicate tools competing for the same actions.
+### Recommended Configuration
+
+**Connect directly to Ollama** (not Open WebUI) for best performance:
+
+```yaml
+Name: Home Agent
+LLM Base URL: http://<ia-host>:11434/v1
+API Key: (leave empty or any value)
+Model: llama3.2 (or your preferred model)
+Temperature: 0.7
+Max Tokens: 500
+```
+
+**Why direct to Ollama?**
+- Simpler configuration
+- Lower latency
+- Avoids Open WebUI's additional UI overhead
+- Better for voice assistants and automation
+
+### Integration with Open WebUI (Optional)
+
+If you want to use Open WebUI features (chat UI, tools, workflows), you can:
+
+1. **Option A: Keep separate** (Recommended)
+   - Home Agent → Ollama (for HA voice/automation)
+   - Open WebUI → Ollama (for chat/tools)
+   - Both use the same models, but different contexts
+
+2. **Option B: Point Home Agent to Open WebUI**
+   - LLM Base URL: `http://<ia-host>:3000/ollama/v1`
+   - API Key: Generate in Open WebUI (Settings → Account → API Keys)
+   - This routes through Open WebUI but adds complexity
+
+### Home Agent + MCP Strategy
+
+For advanced integrations:
+
+1. **Home Assistant side** (Home Agent):
+   - Use for voice assistants and HA automation
+   - Configure custom tools if needed (REST APIs, HA services)
+   - Enable conversation history for context
+   
+2. **Open WebUI side** (MCP servers):
+   - Add Home Assistant MCP server in Open WebUI
+   - Add Nextcloud MCP server in Open WebUI
+   - Use for complex multi-tool workflows
+
+**Key principle**: Keep one tool per capability to avoid conflicts
+- One Home Assistant endpoint (either MCP in Open WebUI OR Home Agent in HA)
+- One Nextcloud endpoint
+- Avoid duplicate tools competing for the same actions
+
+### Usage Examples
+
+See the [hassio role README](../hassio/README.md#home-agent-llm-powered-conversation) for:
+- Voice control examples
+- Automation integration
+- Conversation management
+- Advanced features (vector DB, memory system, custom tools)
+- Troubleshooting
+
+### Documentation
+
+Full documentation: https://github.com/aradlein/hass-agent-llm/tree/main/docs
