@@ -42,7 +42,7 @@ homeassistant_ai_vector_db_collection: "home_entities"
 homeassistant_ai_vector_db_top_k: 3
 homeassistant_ai_vector_db_similarity_threshold: 250.0
 homeassistant_ai_vector_db_embedding_base_url: "http://127.0.0.1:8080"
-homeassistant_ai_vector_db_embedding_model: "nomic-embed-text"
+homeassistant_ai_vector_db_embedding_model: "{{ ia_ollama_embedding_model }}"
 
 # Speaches endpoints
 homeassistant_ai_speaches_base_url: "{{ ia_speaches_openai_base_url }}"
