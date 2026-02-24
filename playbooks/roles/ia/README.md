@@ -6,6 +6,7 @@ This role deploys the AI stack used by Open WebUI and Home Assistant integration
 - Ollama (LLM inference)
 - `speaches` (OpenAI-compatible audio API for STT/TTS)
 - Ollama metrics exporter
+- ChromaDB (vector database for RAG and embeddings)
 
 ## Rationalized scope
 
@@ -97,6 +98,7 @@ curl https://ia.{{ app_domain_name }}/ollama/api/generate \
 | **Ollama API (Local)** | `http://<host>:8080/api` | None | Local network access |
 | **Ollama API (Remote)** | `https://ia.{{ app_domain_name }}/ollama/api` | API Key | Distant/internet access |
 | **Speaches Audio API** | `http://<host>:8000/v1` | API key | Local STT/TTS integration |
+| **ChromaDB API** | `http://<host>:8001` | None | Vector database for RAG |
 
 ### Which Access Method Should I Use?
 
@@ -105,6 +107,61 @@ curl https://ia.{{ app_domain_name }}/ollama/api/generate \
 - **Web chat interface**: Use Open WebUI (`https://ia.{{ app_domain_name }}`)
 - **Local development/testing**: Use direct Ollama (`http://<host>:8080/api`)
 - **Voice integration**: Speaches is exposed on port 8000 (OpenAI-compatible)
+- **Vector database/RAG**: ChromaDB is exposed on port 8001
+
+## ChromaDB Vector Database
+
+ChromaDB is deployed as part of the IA stack to provide vector database capabilities for:
+
+- **RAG (Retrieval Augmented Generation)** with Ollama/Open WebUI
+- **Home Assistant Home Agent** semantic entity search
+- **Nextcloud** document embeddings (future integration)
+
+### Open WebUI Integration
+
+Open WebUI is automatically configured to use ChromaDB for document RAG through environment variables:
+- `VECTOR_DB=chromadb`
+- `CHROMA_HTTP_HOST=chromadb`
+- `CHROMA_HTTP_PORT=8000`
+
+**To use RAG in Open WebUI:**
+
+1. Open Open WebUI at `https://ia.{{ app_domain_name }}`
+2. Click on your profile → **Settings** → **Documents**
+3. Upload documents (PDF, TXT, DOCX, etc.)
+4. The documents will be automatically embedded and stored in ChromaDB
+5. In any chat, use the **#** button to attach documents for RAG-powered conversations
+
+Documents are chunked, embedded (using Ollama models), and stored in ChromaDB collections automatically.
+
+### Access
+
+- **Local network**: `http://<host>:8001`
+- **From Home Assistant**: `http://chromadb:8000` (via `ia_network`)
+- **From Open WebUI**: `http://chromadb:8000` (via `network`)
+
+### Cross-Stack Access
+
+ChromaDB is connected to the `ia_network` bridge network, which allows:
+- Home Assistant (hassio stack) to access ChromaDB
+- Frigate (hassio stack) to access ChromaDB
+- Any future service can join `ia_network` for access
+
+### Home Agent Integration
+
+To use ChromaDB with Home Agent:
+
+1. Install Home Agent from HACS
+2. Configure vector database settings:
+   - **Vector DB Type**: ChromaDB
+   - **ChromaDB URL**: `http://chromadb:8000`
+   - **Collection Name**: `home_assistant_entities`
+
+This enables semantic entity search for large homes (> 25-50 entities).
+
+### Data Persistence
+
+ChromaDB data is persisted in: `{{ docker_volumes_path }}/chromadb`
 
 ## Main variables
 
@@ -115,6 +172,7 @@ Defined in `playbooks/roles/ia/defaults/main.yml`:
 - `speaches_image`, `speaches_cpu_version`, `speaches_cuda_version`
 - `speaches_stt_model`, `speaches_tts_model`, `speaches_preload_models`
 - `speaches_postdeploy_models`
+- `chromadb_image`, `chromadb_version`
 
 Default french-oriented setup:
 
