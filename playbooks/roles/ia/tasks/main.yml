@@ -5,6 +5,7 @@
     path: "/home/{{ ansible_user }}/home-server/stacks/ia"
     state: directory
     mode: u=rwx,g=o=rx
+    
 - name: Create ia provisionning directories (root-owned)
   become: true
   ansible.builtin.file:
@@ -16,6 +17,7 @@
   loop:
     - ollama
     - open-webui
+    - chromadb
 
 - name: Create Speaches cache directory (ubuntu-owned)
   become: true

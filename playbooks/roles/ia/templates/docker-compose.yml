@@ -47,6 +47,11 @@ services:
       AUDIO_STT_OPENAI_API_KEY: "openai-api-key"
       AUDIO_STT_MODEL: "{{ speaches_stt_model }}"
       ENABLE_ADMIN_EXPORT: False
+
+      # Vector Database for RAG
+      VECTOR_DB: "chromadb"
+      CHROMA_HTTP_HOST: "chromadb"
+      CHROMA_HTTP_PORT: "8000"
     restart: always
     volumes:
       - open-webui:/app/backend/data
@@ -56,6 +61,7 @@ services:
     depends_on:
      - ollama
      - speaches
+     - chromadb
 
 
   {% if gpu != 'intel' -%}
@@ -190,6 +196,23 @@ services:
                capabilities: [gpu]
     {%- endif %}
 
+  chromadb:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    image: "{{ chromadb_image }}:{{ chromadb_version }}"
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    volumes:
+      - chromadb:/chroma/chroma
+    ports:
+      - 8001:8000
+    restart: unless-stopped
+    networks:
+      network:
+        aliases:
+          - chromadb
+
 volumes:
   ollama:
     driver: local
@@ -209,6 +232,12 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/speaches-hf-cache"
+  chromadb:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/chromadb"
 
 networks:
   network:
