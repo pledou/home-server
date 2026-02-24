@@ -16,3 +16,47 @@ zigbee2mqtt_version: "2"
 
 # HACS (Home Assistant Community Store) setup
 homeassistant_hacs_enabled: true
+
+# Home Assistant AI integrations post-deploy bootstrap
+homeassistant_ai_postdeploy_enabled: true
+homeassistant_ai_postdeploy_restart_ha: true
+homeassistant_ai_postdeploy_wait_seconds: 300
+
+# home_agent
+homeassistant_ai_ollama_base_url: "{{ ia_openai_base_url }}"
+homeassistant_ai_home_agent_model: "{{ ia_homeassistant_agent_model }}"
+homeassistant_ai_home_agent_max_tokens: 220
+homeassistant_ai_home_agent_temperature: 0.5
+homeassistant_ai_home_agent_thinking_enabled: false
+homeassistant_ai_max_context_tokens: 8000
+homeassistant_ai_history_enabled: true
+homeassistant_ai_history_max_messages: 4
+homeassistant_ai_history_max_tokens: 1200
+homeassistant_ai_streaming_enabled: true
+homeassistant_ai_debug_logging: false
+
+# Vector DB for home_agent
+homeassistant_ai_chromadb_host: "{{ ia_chromadb_host }}"
+homeassistant_ai_chromadb_port: "{{ ia_chromadb_port }}"
+homeassistant_ai_vector_db_collection: "home_entities"
+homeassistant_ai_vector_db_top_k: 3
+homeassistant_ai_vector_db_similarity_threshold: 250.0
+homeassistant_ai_vector_db_embedding_base_url: "http://127.0.0.1:8080"
+homeassistant_ai_vector_db_embedding_model: "nomic-embed-text"
+
+# Speaches endpoints
+homeassistant_ai_speaches_base_url: "{{ ia_speaches_openai_base_url }}"
+
+# openai_tts
+homeassistant_ai_tts_model: "tts-1"
+# we may have different quality/speed models for homeassistant vs speaches direct usage
+homeassistant_ai_tts_voice: "{{ speaches_tts_voice }}"
+homeassistant_ai_tts_speed: 1.0
+homeassistant_ai_tts_profile_name: "defaut"
+
+# openai_whisper_cloud
+homeassistant_ai_whisper_model: "whisper-1"
+# we may have different quality/speed models for homeassistant vs speaches direct usage
+homeassistant_ai_whisper_temperature: 0.0
+homeassistant_ai_whisper_prompt: ""
+homeassistant_ai_whisper_api_key: ""

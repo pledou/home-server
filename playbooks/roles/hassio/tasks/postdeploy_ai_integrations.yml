@@ -1,0 +1,204 @@
+# code: language=ansible
+---
+- name: Detect required IA services currently running
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      docker ps
+      --filter label=com.docker.compose.service={{ item }}
+      --format {{ '{{.Names}}' }}
+  register: hassio_ai_ia_service_lookup
+  loop:
+    - ollama-metrics
+    - speaches
+    - chromadb
+  changed_when: false
+
+- name: Decide whether Home Assistant AI bootstrap should run
+  ansible.builtin.set_fact:
+    hassio_ai_bootstrap_should_run: >-
+      {{
+        (
+          hassio_ai_ia_service_lookup.results
+          | rejectattr('stdout', 'equalto', '')
+          | list
+          | length
+        ) == 3
+      }}
+
+- name: Compute missing IA services for skip message
+  ansible.builtin.set_fact:
+    hassio_ai_missing_services: >-
+      {{
+        hassio_ai_ia_service_lookup.results
+        | rejectattr('stdout', 'search', '\\S')
+        | map(attribute='item')
+        | list
+      }}
+
+- name: Skip Home Assistant AI bootstrap because IA stack is not running
+  when: not hassio_ai_bootstrap_should_run
+  ansible.builtin.debug:
+    msg: >-
+      Required IA services are not all running (missing: {{ hassio_ai_missing_services | join(', ') }}).
+      Skipping Home Assistant AI post-deploy bootstrap.
+
+- name: Resolve Home Assistant container name from compose labels
+  become: true
+  vars:
+    hassio_compose_project_name: "{{ ('/home/' ~ ansible_user ~ '/home-server/stacks/hassio') | basename }}"
+    hassio_compose_service_name: "homeassistant"
+  ansible.builtin.command:
+    cmd: >-
+      docker ps
+      --filter label=com.docker.compose.project={{ hassio_compose_project_name }}
+      --filter label=com.docker.compose.service={{ hassio_compose_service_name }}
+      --format {{ '{{.Names}}' }}
+  register: hassio_homeassistant_container_lookup
+  changed_when: false
+  failed_when: (hassio_homeassistant_container_lookup.stdout_lines | default([]) | length) == 0
+  when: hassio_ai_bootstrap_should_run
+
+- name: Set resolved Home Assistant container name
+  ansible.builtin.set_fact:
+    hassio_homeassistant_container_name: "{{ hassio_homeassistant_container_lookup.stdout_lines[0] | trim }}"
+  when: hassio_ai_bootstrap_should_run
+
+- name: Wait for Home Assistant container to be running
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      docker inspect -f {{ '{{.State.Running}}' }} {{ hassio_homeassistant_container_name }}
+  register: hassio_container_running
+  retries: "{{ ((homeassistant_ai_postdeploy_wait_seconds | int) // 3) | max(1) }}"
+  delay: 3
+  changed_when: false
+  until:
+    - hassio_container_running.rc == 0
+    - (hassio_container_running.stdout | trim) == 'true'
+  when: hassio_ai_bootstrap_should_run
+
+- name: Wait for Home Assistant config entries file in container
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      docker exec {{ hassio_homeassistant_container_name }}
+      sh -lc "test -f /config/.storage/core.config_entries"
+  register: hassio_config_entries_file
+  retries: "{{ ((homeassistant_ai_postdeploy_wait_seconds | int) // 2) | max(1) }}"
+  delay: 2
+  changed_when: false
+  until: hassio_config_entries_file.rc == 0
+  when: hassio_ai_bootstrap_should_run
+
+- name: Define required Home Assistant AI custom components
+  ansible.builtin.set_fact:
+    hassio_ai_required_custom_components:
+      - openai_whisper_cloud
+      - openai_tts
+      - home_agent
+  when: hassio_ai_bootstrap_should_run
+
+- name: Check required custom components are already installed
+  become: true
+  ansible.builtin.stat:
+    path: "{{ docker_volumes_path }}/homeassistant/custom_components/{{ item }}"
+  loop: "{{ hassio_ai_required_custom_components }}"
+  register: hassio_ai_component_presence
+  when: hassio_ai_bootstrap_should_run
+
+- name: Compute missing custom components
+  ansible.builtin.set_fact:
+    hassio_ai_missing_custom_components: >-
+      {{
+        hassio_ai_component_presence.results
+        | rejectattr('stat.exists', 'equalto', true)
+        | map(attribute='item')
+        | list
+      }}
+  when: hassio_ai_bootstrap_should_run
+
+- name: Disable AI bootstrap when required custom components are missing
+  ansible.builtin.set_fact:
+    hassio_ai_bootstrap_should_run: false
+  when:
+    - hassio_ai_bootstrap_should_run
+    - (hassio_ai_missing_custom_components | default([]) | length) > 0
+
+- name: Explain manual HACS requirement for missing custom components
+  ansible.builtin.debug:
+    msg: >-
+      Required custom components are not installed: {{ hassio_ai_missing_custom_components | join(', ') }}.
+      Install them manually via HACS first, then rerun hassio deployment.
+  when: (hassio_ai_missing_custom_components | default([]) | length) > 0
+
+- name: Bootstrap Home Assistant AI integrations in core.config_entries
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      docker exec
+      -i
+      -e OLLAMA_BASE_URL={{ homeassistant_ai_ollama_base_url | quote }}
+      -e HOME_AGENT_MODEL={{ homeassistant_ai_home_agent_model | quote }}
+      -e HOME_AGENT_MAX_TOKENS={{ homeassistant_ai_home_agent_max_tokens | string | quote }}
+      -e HOME_AGENT_TEMPERATURE={{ homeassistant_ai_home_agent_temperature | string | quote }}
+      -e HOME_AGENT_THINKING_ENABLED={{ homeassistant_ai_home_agent_thinking_enabled | string | quote }}
+      -e CONTEXT_MODE="vector_db"
+      -e CONTEXT_FORMAT="json"
+      -e MAX_CONTEXT_TOKENS={{ homeassistant_ai_max_context_tokens | string | quote }}
+      -e HISTORY_ENABLED={{ homeassistant_ai_history_enabled | string | quote }}
+      -e HISTORY_MAX_MESSAGES={{ homeassistant_ai_history_max_messages | string | quote }}
+      -e HISTORY_MAX_TOKENS={{ homeassistant_ai_history_max_tokens | string | quote }}
+      -e STREAMING_ENABLED={{ homeassistant_ai_streaming_enabled | string | quote }}
+      -e DEBUG_LOGGING={{ homeassistant_ai_debug_logging | string | quote }}
+      -e CHROMADB_HOST={{ homeassistant_ai_chromadb_host | quote }}
+      -e CHROMADB_PORT={{ homeassistant_ai_chromadb_port | string | quote }}
+      -e VECTOR_DB_COLLECTION={{ homeassistant_ai_vector_db_collection | quote }}
+      -e VECTOR_DB_TOP_K={{ homeassistant_ai_vector_db_top_k | string | quote }}
+      -e VECTOR_DB_SIMILARITY_THRESHOLD={{ homeassistant_ai_vector_db_similarity_threshold | string | quote }}
+      -e VECTOR_DB_EMBEDDING_PROVIDER="ollama"
+      -e VECTOR_DB_EMBEDDING_BASE_URL={{ homeassistant_ai_vector_db_embedding_base_url | quote }}
+      -e VECTOR_DB_EMBEDDING_MODEL={{ homeassistant_ai_vector_db_embedding_model | quote }}
+      -e TTS_URL={{ (homeassistant_ai_speaches_base_url | regex_replace('/+$', '')) ~ '/audio/speech' | quote }}
+      -e TTS_MODEL={{ homeassistant_ai_tts_model | quote }}
+      -e TTS_VOICE={{ homeassistant_ai_tts_voice | quote }}
+      -e TTS_SPEED={{ homeassistant_ai_tts_speed | string | quote }}
+      -e TTS_PROFILE_NAME={{ homeassistant_ai_tts_profile_name | quote }}
+      -e TTS_PROFILE_TITLE="Speaches.ia"
+      -e WHISPER_NAME="Speaches.ia"
+      -e WHISPER_URL={{ (homeassistant_ai_speaches_base_url | regex_replace('/+$', '')) ~ '/audio/transcriptions' | quote }}
+      -e WHISPER_MODEL={{ homeassistant_ai_whisper_model | quote }}
+      -e WHISPER_TEMPERATURE={{ homeassistant_ai_whisper_temperature | string | quote }}
+      -e WHISPER_PROMPT={{ homeassistant_ai_whisper_prompt | quote }}
+      -e WHISPER_API_KEY={{ homeassistant_ai_whisper_api_key | quote }}
+      {{ hassio_homeassistant_container_name }} python -
+    stdin: "{{ lookup('file', role_path ~ '/files/hassio_ai_bootstrap.py') }}"
+  register: hassio_ai_bootstrap_result
+  changed_when: "'changed=True' in (hassio_ai_bootstrap_result.stdout | default(''))"
+  when: hassio_ai_bootstrap_should_run
+
+- name: Restart Home Assistant container when AI integrations changed
+  become: true
+  ansible.builtin.command:
+    cmd: docker restart {{ hassio_homeassistant_container_name }}
+  when:
+    - hassio_ai_bootstrap_should_run
+    - homeassistant_ai_postdeploy_restart_ha | bool
+    - hassio_ai_bootstrap_result.changed
+
+- name: Wait after Home Assistant restart
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      docker inspect -f {{ '{{.State.Running}}' }} {{ hassio_homeassistant_container_name }}
+  register: hassio_container_running_after_restart
+  retries: "{{ ((homeassistant_ai_postdeploy_wait_seconds | int) // 3) | max(1) }}"
+  delay: 3
+  changed_when: false
+  until:
+    - hassio_container_running_after_restart.rc == 0
+    - (hassio_container_running_after_restart.stdout | trim) == 'true'
+  when:
+    - hassio_ai_bootstrap_should_run
+    - homeassistant_ai_postdeploy_restart_ha | bool
+    - hassio_ai_bootstrap_result.changed

@@ -23,6 +23,13 @@ ollama_metrics_version: "latest"
 chromadb_image: "chromadb/chroma"
 chromadb_version: "latest"
 
+# Exposed IA runtime endpoints for cross-role integrations (e.g. hassio)
+ia_openai_base_url: "http://127.0.0.1:8080/v1"
+ia_homeassistant_agent_model: "ministral-3:3b"
+ia_chromadb_host: "127.0.0.1"
+ia_chromadb_port: 8001
+ia_speaches_openai_base_url: "http://127.0.0.1:8000/v1"
+
 webui_secret_key: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
 
 ollama_memory_limit_ratio: 0.90

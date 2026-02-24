@@ -214,6 +214,10 @@
   when: homeassistant_hacs_enabled | bool
   ansible.builtin.include_tasks: "setup_hacs.yml"
 
+- name: Bootstrap Home Assistant AI integrations after deployment
+  when: homeassistant_ai_postdeploy_enabled | bool
+  ansible.builtin.include_tasks: "postdeploy_ai_integrations.yml"
+
 - name: Configure Authentik providers and applications for Home Assistant services
   delegate_to: localhost
   become: false
