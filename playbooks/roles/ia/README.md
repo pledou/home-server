@@ -173,6 +173,7 @@ Defined in `playbooks/roles/ia/defaults/main.yml`:
 - `speaches_stt_model`, `speaches_tts_model`, `speaches_preload_models`
 - `speaches_postdeploy_models`
 - `chromadb_image`, `chromadb_version`
+- `ia_homeassistant_agent_model`, `ia_ollama_embedding_model`
 
 Default french-oriented setup:
 
@@ -199,9 +200,17 @@ Aliases are also generated in `stacks/ia/model_aliases.json`:
 
 The role now includes a post-deploy step that:
 
-1. waits for Speaches health (`/health`),
-2. reads local models (`/v1/models`),
-3. installs missing models from `speaches_postdeploy_models` via `POST /v1/models/{model_id}`.
+1. waits for Ollama API (`/api/tags`),
+2. installs missing Ollama models used by integrations (`ia_homeassistant_agent_model` and `ia_ollama_embedding_model`),
+3. waits for Speaches health (`/health`),
+4. reads local Speaches models (`/v1/models`),
+5. installs missing models from `speaches_postdeploy_models` via `POST /v1/models/{model_id}`.
+
+Default Ollama embedding model:
+
+- `ia_ollama_embedding_model` is `nomic-embed-text-v2-moe`
+
+Unknown Ollama or Speaches model IDs are skipped with warnings, so deployment keeps running and you can fix model names later.
 
 Default post-deploy models:
 

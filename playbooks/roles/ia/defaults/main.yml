@@ -26,6 +26,7 @@ chromadb_version: "latest"
 # Exposed IA runtime endpoints for cross-role integrations (e.g. hassio)
 ia_openai_base_url: "http://127.0.0.1:8080/v1"
 ia_homeassistant_agent_model: "ministral-3:3b"
+ia_ollama_embedding_model: "nomic-embed-text-v2-moe"
 ia_chromadb_host: "127.0.0.1"
 ia_chromadb_port: 8001
 ia_speaches_openai_base_url: "http://127.0.0.1:8000/v1"
