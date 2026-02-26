@@ -1,3 +1,4 @@
+#jinja2: lstrip_blocks: True, trim_blocks: True
 # Alertmanager configuration
 global:
   resolve_timeout: 5m
