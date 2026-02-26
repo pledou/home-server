@@ -28,10 +28,10 @@ homeassistant_ai_home_agent_model: "{{ ia_homeassistant_agent_model }}"
 homeassistant_ai_home_agent_max_tokens: 220
 homeassistant_ai_home_agent_temperature: 0.5
 homeassistant_ai_home_agent_thinking_enabled: false
-homeassistant_ai_max_context_tokens: 8000
+homeassistant_ai_max_context_tokens: 1000
 homeassistant_ai_history_enabled: true
-homeassistant_ai_history_max_messages: 4
-homeassistant_ai_history_max_tokens: 1200
+homeassistant_ai_history_max_messages: 3
+homeassistant_ai_history_max_tokens: 300
 homeassistant_ai_streaming_enabled: true
 homeassistant_ai_debug_logging: false
 
@@ -39,9 +39,9 @@ homeassistant_ai_debug_logging: false
 homeassistant_ai_chromadb_host: "{{ ia_chromadb_host }}"
 homeassistant_ai_chromadb_port: "{{ ia_chromadb_port }}"
 homeassistant_ai_vector_db_collection: "home_entities"
-homeassistant_ai_vector_db_top_k: 3
+homeassistant_ai_vector_db_top_k: 2
 homeassistant_ai_vector_db_similarity_threshold: 250.0
-homeassistant_ai_vector_db_embedding_base_url: "http://127.0.0.1:8080"
+homeassistant_ai_vector_db_embedding_base_url: "{{ ia_embeddings_base_url }}"
 homeassistant_ai_vector_db_embedding_model: "{{ ia_ollama_embedding_model }}"
 
 # Speaches endpoints

@@ -215,6 +215,15 @@ In Home Assistant:
 	- **Memory System**: Enable long-term memory for personalized experiences
 	- **Streaming**: Enable for low-latency voice assistant integration
 
+5. **Vector Database Configuration** (if using `vector_db` mode):
+	- **ChromaDB Host**: `{{ ia_chromadb_host }}`
+	- **ChromaDB Port**: `{{ ia_chromadb_port }}`
+	- **Embeddings Endpoint**: `{{ ia_embeddings_base_url }}` (e.g., `http://127.0.0.1:8082/v1`)
+	- **Embedding Model**: `{{ ia_ollama_embedding_model }}`
+	- **Collection Name**: `home_entities`
+	
+	**Note**: The IA stack provides a **dedicated Ollama instance** for embeddings (port 8082) separate from the main LLM instance (port 8080). This prevents embeddings requests from interfering with chat inference and ensures reliable vector database updates.
+
 ### Connecting to Open WebUI
 
 Home Agent can work with Open WebUI in two ways:

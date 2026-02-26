@@ -56,4 +56,4 @@ scrape_configs:
   - job_name: ollama-metrics
     scrape_interval: 15s
     static_configs:
-      - targets: ['ollama-metrics:8080']
+      - targets: ['ollama-metrics:8080','ollama-embeddings-metrics:8082']

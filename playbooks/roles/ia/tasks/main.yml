@@ -16,6 +16,7 @@
     mode: u=rwx,g=o=rx
   loop:
     - ollama
+    - ollama-embeddings
     - open-webui
     - chromadb
 
@@ -57,12 +58,33 @@
   delay: 2
   until: ia_ollama_tags.status == 200
 
+- name: Wait for Ollama Embeddings API tags endpoint
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8082/api/tags"
+    method: GET
+    status_code: 200
+  register: ia_ollama_embeddings_tags
+  retries: 30
+  delay: 2
+  until: ia_ollama_embeddings_tags.status == 200
+
 - name: Compute required and installed Ollama model lists
   ansible.builtin.set_fact:
     ia_ollama_installed_models: "{{ (ia_ollama_tags.json.models | default([])) | map(attribute='name') | list }}"
-    ia_ollama_required_models: >-
+    ia_ollama_embeddings_installed_models: >-
+      {{ (ia_ollama_embeddings_tags.json.models | default([])) | map(attribute='name') | list }}
+    ia_ollama_required_llm_models: >-
       {{
-        [ia_homeassistant_agent_model, ia_ollama_embedding_model]
+        [ia_homeassistant_agent_model]
+        | select('string')
+        | map('trim')
+        | reject('equalto', '')
+        | unique
+        | list
+      }}
+    ia_ollama_required_embedding_models: >-
+      {{
+        [ia_ollama_embedding_model]
         | select('string')
         | map('trim')
         | reject('equalto', '')
@@ -70,7 +92,7 @@
         | list
       }}
 
-- name: Pull missing Ollama models for IA integrations
+- name: Pull missing Ollama LLM models for IA integrations
   ansible.builtin.uri:
     url: "http://127.0.0.1:8080/api/pull"
     method: POST
@@ -82,22 +104,53 @@
       - 200
       - 404
       - 500
-  register: ia_ollama_pull_results
-  loop: "{{ ia_ollama_required_models | default([]) }}"
+  register: ia_ollama_llm_pull_results
+  loop: "{{ ia_ollama_required_llm_models | default([]) }}"
   when:
     - item is string
     - item | length > 0
     - item not in (ia_ollama_installed_models | default([]))
 
-- name: Warn for unknown Ollama model names
+- name: Pull missing Ollama embedding models to embeddings instance
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8082/api/pull"
+    method: POST
+    body_format: json
+    body:
+      name: "{{ item }}"
+      stream: false
+    status_code:
+      - 200
+      - 404
+      - 500
+  register: ia_ollama_embeddings_pull_results
+  loop: "{{ ia_ollama_required_embedding_models | default([]) }}"
+  when:
+    - item is string
+    - item | length > 0
+    - item not in (ia_ollama_embeddings_installed_models | default([]))
+
+- name: Warn for unknown Ollama LLM model names
   ansible.builtin.debug:
     msg: >-
-      Ollama model '{{ item.item }}' could not be pulled.
+      Ollama LLM model '{{ item.item }}' could not be pulled to main instance.
+      Status {{ item.status }}: {{ item.json.error | default('unknown error') }}.
+      Check model name availability in your Ollama registry.
+  loop: "{{ ia_ollama_llm_pull_results.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item | default('unknown') }}"
+  when:
+    - (item.status | default(0) | int) in [404, 500]
+
+- name: Warn for unknown Ollama embedding model names
+  ansible.builtin.debug:
+    msg: >-
+      Ollama embedding model '{{ item.item }}' could not be pulled to embeddings instance (port 8082).
       Status {{ item.status }}: {{ item.json.error | default('unknown error') }}.
       Check model name availability in your Ollama registry.
       For multilingual E5, try fully-qualified tags like
       intfloat/multilingual-e5-small or intfloat/multilingual-e5-base.
-  loop: "{{ ia_ollama_pull_results.results | default([]) }}"
+  loop: "{{ ia_ollama_embeddings_pull_results.results | default([]) }}"
   loop_control:
     label: "{{ item.item | default('unknown') }}"
   when:

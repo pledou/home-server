@@ -4,8 +4,9 @@ This role deploys the AI stack used by Open WebUI and Home Assistant integration
 
 - Open WebUI (chat + tools frontend)
 - Ollama (LLM inference)
+- Ollama Embeddings (dedicated instance for embeddings)
 - `speaches` (OpenAI-compatible audio API for STT/TTS)
-- Ollama metrics exporter
+- Ollama metrics exporter (for both instances)
 - ChromaDB (vector database for RAG and embeddings)
 
 ## Rationalized scope
@@ -95,8 +96,9 @@ curl https://ia.{{ app_domain_name }}/ollama/api/generate \
 | Access Method | URL | Auth | Use Case |
 |--------------|-----|------|----------|
 | **Open WebUI (Web)** | `https://ia.{{ app_domain_name }}` | OAuth (Authentik) | Web chat interface |
-| **Ollama API (Local)** | `http://<host>:8080/api` | None | Local network access |
+| **Ollama API (Local)** | `http://<host>:8080/api` | None | Local network access (LLM) |
 | **Ollama API (Remote)** | `https://ia.{{ app_domain_name }}/ollama/api` | API Key | Distant/internet access |
+| **Ollama Embeddings** | `http://<host>:8082/api` | None | Local embeddings generation |
 | **Speaches Audio API** | `http://<host>:8000/v1` | API key | Local STT/TTS integration |
 | **ChromaDB API** | `http://<host>:8001` | None | Vector database for RAG |
 
@@ -108,6 +110,39 @@ curl https://ia.{{ app_domain_name }}/ollama/api/generate \
 - **Local development/testing**: Use direct Ollama (`http://<host>:8080/api`)
 - **Voice integration**: Speaches is exposed on port 8000 (OpenAI-compatible)
 - **Vector database/RAG**: ChromaDB is exposed on port 8001
+- **Embeddings generation**: Use dedicated Ollama Embeddings (`http://<host>:8082`)
+
+## Ollama Instances Architecture
+
+This stack deploys **two separate Ollama instances** to prevent resource contention:
+
+### Main Ollama (Port 8080)
+- **Purpose**: LLM inference (chat, completion, generation)
+- **Models**: Large language models (llama3.2, ministral-3, etc.)
+- **Resource allocation**: 90% of available memory, most CPU cores
+- **Used by**: Open WebUI chat, Home Assistant conversation
+- **Access**: `http://<host>:8080/api`
+
+### Ollama Embeddings (Port 8082)
+- **Purpose**: Text embeddings generation for RAG and vector search
+- **Models**: Embedding models (nomic-embed-text-v2-moe, all-minilm, etc.)
+- **Resource allocation**: 15% of available memory, 25% of CPU cores
+- **Used by**: Open WebUI RAG, Home Assistant vector database, ChromaDB
+- **Access**: `http://<host>:8082/api`
+
+**Why separate instances?**
+- Prevents embeddings requests from blocking LLM inference
+- Allows different resource allocation strategies
+- Home Assistant vector DB updates won't impact conversation quality
+- Embedding models can stay loaded without evicting chat models
+- Better monitoring and metrics separation
+
+**Model Loading:**
+- LLM models (llama3.2, ministral-3, etc.) are automatically pulled to the main Ollama instance (port 8080)
+- Embedding models (nomic-embed-text-v2-moe, etc.) are automatically pulled to the Ollama Embeddings instance (port 8082)
+- Both instances are monitored via their respective ollama-metrics proxies
+
+Both instances support GPU acceleration (NVIDIA/Intel) when available.
 
 ## ChromaDB Vector Database
 
@@ -123,16 +158,19 @@ Open WebUI is automatically configured to use ChromaDB for document RAG through 
 - `VECTOR_DB=chromadb`
 - `CHROMA_HTTP_HOST=chromadb`
 - `CHROMA_HTTP_PORT=8000`
+- `RAG_EMBEDDING_ENGINE=ollama`
+- `RAG_OLLAMA_BASE_URL=http://ollama-embeddings:11434` (dedicated embeddings instance)
+- `RAG_EMBEDDING_MODEL={{ ia_ollama_embedding_model }}`
 
 **To use RAG in Open WebUI:**
 
 1. Open Open WebUI at `https://ia.{{ app_domain_name }}`
 2. Click on your profile → **Settings** → **Documents**
 3. Upload documents (PDF, TXT, DOCX, etc.)
-4. The documents will be automatically embedded and stored in ChromaDB
+4. The documents will be automatically embedded using the dedicated Ollama Embeddings instance
 5. In any chat, use the **#** button to attach documents for RAG-powered conversations
 
-Documents are chunked, embedded (using Ollama models), and stored in ChromaDB collections automatically.
+Documents are chunked, embedded (using the dedicated Ollama Embeddings instance), and stored in ChromaDB collections automatically.
 
 ### Access
 
@@ -169,11 +207,13 @@ Defined in `playbooks/roles/ia/defaults/main.yml`:
 
 - `webui_image`, `webui_version`
 - `ollama_image`, `ollama_version`, `ollama_intel_image`, `ollama_intel_version`
+- `ollama_embeddings_image`, `ollama_embeddings_version` (separate instance for embeddings)
 - `speaches_image`, `speaches_cpu_version`, `speaches_cuda_version`
 - `speaches_stt_model`, `speaches_tts_model`, `speaches_preload_models`
 - `speaches_postdeploy_models`
 - `chromadb_image`, `chromadb_version`
 - `ia_homeassistant_agent_model`, `ia_ollama_embedding_model`
+- `ia_openai_base_url`, `ia_embeddings_base_url` (cross-role integration endpoints)
 
 Default french-oriented setup:
 
@@ -200,11 +240,16 @@ Aliases are also generated in `stacks/ia/model_aliases.json`:
 
 The role now includes a post-deploy step that:
 
-1. waits for Ollama API (`/api/tags`),
-2. installs missing Ollama models used by integrations (`ia_homeassistant_agent_model` and `ia_ollama_embedding_model`),
-3. waits for Speaches health (`/health`),
-4. reads local Speaches models (`/v1/models`),
-5. installs missing models from `speaches_postdeploy_models` via `POST /v1/models/{model_id}`.
+1. waits for both Ollama instances (main on port 8080 and embeddings on port 8082),
+2. installs missing LLM models to the **main Ollama instance** (`ia_homeassistant_agent_model`),
+3. installs missing embedding models to the **Ollama Embeddings instance** (`ia_ollama_embedding_model`),
+4. waits for Speaches health (`/health`),
+5. reads local Speaches models (`/v1/models`),
+6. installs missing models from `speaches_postdeploy_models` via `POST /v1/models/{model_id}`.
+
+**Model Distribution:**
+- **Main Ollama (port 8080)**: LLM models for chat/completion (e.g., `ministral-3:3b`, `llama3.2`)
+- **Ollama Embeddings (port 8082)**: Embedding models for RAG/vector search (e.g., `nomic-embed-text-v2-moe`)
 
 Default Ollama embedding model:
 
