@@ -52,6 +52,11 @@ services:
       VECTOR_DB: "chroma"
       CHROMA_HTTP_HOST: "chromadb"
       CHROMA_HTTP_PORT: "8000"
+      
+      # RAG Embeddings (separate ollama instance)
+      RAG_EMBEDDING_ENGINE: "ollama"
+      RAG_OLLAMA_BASE_URL: "http://ollama-embeddings-metrics:8082"
+      RAG_EMBEDDING_MODEL: "{{ ia_ollama_embedding_model }}"
     restart: always
     volumes:
       - open-webui:/app/backend/data
@@ -60,6 +65,7 @@ services:
       - traefik_backend
     depends_on:
      - ollama
+     - ollama-embeddings
      - speaches
      - chromadb
 
@@ -166,6 +172,105 @@ services:
         aliases:
           - ollama-metrics
 
+  {% if gpu != 'intel' -%}
+  ollama-embeddings:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    image: "{{ ollama_embeddings_image }}:{{ ollama_embeddings_version }}"
+    healthcheck:
+      test: ollama --version || exit 1
+    command: serve
+    pull_policy: always
+    tty: true
+    restart: always
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_NUM_THREADS={{ ollama_embeddings_num_threads }}
+      - OLLAMA_HOST=0.0.0.0
+    networks:
+      network:
+        aliases:
+          - ollama-embeddings
+    volumes:
+      - ollama-embeddings:/root/.ollama
+    
+    cpus: "{{ ollama_embeddings_cpu_limit }}"
+    mem_limit: "{{ ollama_embeddings_memory_limit_mb }}m"
+    shm_size: "4g"
+
+    {% if gpu == 'nvidia' -%}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['all']
+              capabilities: [gpu]
+    {%- endif %}
+  {% else -%}
+  ollama-embeddings:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    user: root
+    image: "{{ ollama_embeddings_intel_image }}:{{ ollama_embeddings_intel_version }}"
+    cpus: "{{ ollama_embeddings_cpu_limit }}"
+    mem_limit: "{{ ollama_embeddings_memory_limit_mb }}m"
+    shm_size: "4g" 
+    pull_policy: always
+    tty: true
+    restart: always
+    environment:
+      - DEVICE=iGPU
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_NUM_THREADS={{ ollama_embeddings_num_threads }}
+      - OLLAMA_HOST=0.0.0.0
+      - no_proxy=localhost,127.0.0.1
+      - OLLAMA_NUM_GPU=999
+      - ZES_ENABLE_SYSMAN=1
+      - SYCL_CACHE_PERSISTENT=1
+      - SYCL_PI_LEVEL_ZERO_USE_IMMEDIATE_COMMANDLISTS=1
+    working_dir: /llm/scripts/
+    command: ["bash", "-c", "source ipex-llm-init --gpu --device iGPU && bash start-ollama.sh"]
+    
+    volumes:
+      - ollama-embeddings:/root/.ollama
+    devices:
+      - /dev/dri:/dev/dri
+    networks:
+      network:
+        aliases:
+          - ollama-embeddings
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: intel
+              device_ids: ['all']
+              capabilities: [gpu]
+  {%- endif %}
+
+  ollama-embeddings-metrics:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    image: "{{ ollama_metrics_image }}:{{ ollama_metrics_version }}"
+    environment:
+      - OLLAMA_HOST=http://ollama-embeddings:11434
+      - PORT=8082
+    depends_on:
+      - ollama-embeddings
+    expose:
+      - 8082/tcp
+    ports:
+      - 8082:8082/tcp
+    restart: unless-stopped
+    networks:
+      network:
+        aliases:
+          - ollama-embeddings-metrics
+      monitoring_backend:
+        aliases:
+          - ollama-embeddings-metrics
+
   speaches:
     labels:
       - com.centurylinklabs.watchtower.enable=true
@@ -220,6 +325,12 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/ollama"
+  ollama-embeddings:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/ollama-embeddings"
   open-webui:
     driver: local
     driver_opts:

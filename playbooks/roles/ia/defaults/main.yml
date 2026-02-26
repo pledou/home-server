@@ -23,8 +23,35 @@ ollama_metrics_version: "latest"
 chromadb_image: "chromadb/chroma"
 chromadb_version: "latest"
 
+# Ollama embeddings configuration (separate instance for embeddings)
+ollama_embeddings_image: "{{ ollama_image }}"
+ollama_embeddings_version: "{{ ollama_version }}"
+ollama_embeddings_intel_image: "{{ ollama_intel_image }}"
+ollama_embeddings_intel_version: "{{ ollama_intel_version }}"
+
+# Embeddings resource limits (smaller than main ollama)
+ollama_embeddings_memory_limit_ratio: 0.15
+ollama_embeddings_min_memory_mb: 2048
+ollama_embeddings_min_cpus: 0.5
+ollama_embeddings_cpu_limit_raw: "{{ (ollama_detected_vcpus | float) * 0.25 }}"
+ollama_embeddings_cpu_limit: >-
+  {%- set cpu_limit_float = ollama_embeddings_cpu_limit_raw | float -%}
+  {%- set min_cpus_float = ollama_embeddings_min_cpus | float -%}
+  {{ (cpu_limit_float | round(2)) if (cpu_limit_float > min_cpus_float) else min_cpus_float }}
+ollama_embeddings_memory_limit_mb_raw: >-
+  {{ ((ollama_detected_mem_mb | int) * (ollama_embeddings_memory_limit_ratio | float)) | int }}
+ollama_embeddings_memory_limit_mb: >-
+  {{ (ollama_embeddings_memory_limit_mb_raw | int)
+     if (ollama_embeddings_memory_limit_mb_raw | int) > (ollama_embeddings_min_memory_mb | int)
+     else (ollama_embeddings_min_memory_mb | int) }}
+ollama_embeddings_num_threads: >-
+  {{ ((ollama_embeddings_cpu_limit | float) | round(0, 'floor') | int)
+     if (ollama_embeddings_cpu_limit | float) >= 1.0
+     else 1 }}
+
 # Exposed IA runtime endpoints for cross-role integrations (e.g. hassio)
 ia_openai_base_url: "http://127.0.0.1:8080/v1"
+ia_embeddings_base_url: "http://127.0.0.1:8082"
 ia_homeassistant_agent_model: "ministral-3:3b"
 ia_ollama_embedding_model: "nomic-embed-text-v2-moe"
 ia_chromadb_host: "127.0.0.1"
