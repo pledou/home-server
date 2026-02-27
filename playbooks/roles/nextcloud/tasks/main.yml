@@ -173,12 +173,79 @@
   changed_when: "'set to' in configure_app.stdout or 'Config value' in configure_app.stdout"
   failed_when: false
 
-- name: Update apps & Add missing db objects
+- name: Update apps
+  ansible.builtin.command:
+    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app:update --all'
+  register: update_apps
+  failed_when: false
+  changed_when: update_apps.rc == 0
+
+- name: List AppAPI daemons
+  ansible.builtin.command:
+    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app_api:daemon:list'
+  register: appapi_daemon_list
+  changed_when: false
+  failed_when: false
+
+- name: Initialize Harp AppAPI daemon
+  ansible.builtin.command:
+    cmd: >
+      docker exec --user www-data nc-nextcloud-1 php occ app_api:daemon:register
+      --net nc_backend harp_proxy_host 'HaRP Proxy (Host)'
+      'docker-install' 'http' 'harp:8780'
+      'http://nextcloud' --harp --harp_frp_address 'harp:8782'
+      --harp_shared_key '{{ AppAPISecret }}' --harp_docker_socket_port 24000
+      --set-default
+  when: appapi_daemon_list.rc == 0 and ('harp_proxy_host' not in appapi_daemon_list.stdout)
+  changed_when: true
+
+- name: List registered ExApps
+  ansible.builtin.command:
+    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app_api:app:list'
+  register: appapi_exapp_list
+  changed_when: false
+  failed_when: false
+
+- name: Register exapps on Harp daemon
+  ansible.builtin.command:
+    cmd: >
+      docker exec --user www-data nc-nextcloud-1 php occ app_api:app:register
+      --wait-finish {{ item }} harp_proxy_host
+  register: register_exapp
+  loop: "{{ nextcloud_exapp_list }}"
+  when: appapi_exapp_list.rc == 0 and (item not in appapi_exapp_list.stdout)
+  changed_when: true
+  failed_when: register_exapp.rc != 0
+
+- name: Update already registered exapps
+  ansible.builtin.command:
+    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app_api:app:update {{ item }} --enabled'
+  register: update_exapp
+  loop: "{{ nextcloud_exapp_list }}"
+  when: appapi_exapp_list.rc == 0 and (item in appapi_exapp_list.stdout)
+  failed_when: false
+  changed_when: update_exapp.rc == 0
+
+- name: Install context_chat app after backend registration
+  become: true
+  ansible.builtin.command:
+    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app:install context_chat --no-interaction --no-warnings'
+    creates: '{{ docker_volumes_path }}/nextcloud-www/apps/context_chat'
+
+- name: Configure context_chat request timeout
+  ansible.builtin.command:
+    cmd: >
+      docker exec --user www-data nc-nextcloud-1 php occ config:app:set context_chat
+      request_timeout --value={{ nextcloud_context_chat_request_timeout }}
+  register: context_chat_timeout
+  failed_when: false
+  changed_when: "'set to' in context_chat_timeout.stdout or 'Config value' in context_chat_timeout.stdout"
+
+- name: Add missing db objects
   ansible.builtin.command:
     cmd: >
       docker exec --user www-data nc-nextcloud-1 /bin/bash -c
-      "php occ app:update --all;
-      php occ db:add-missing-indices;
+      "php occ db:add-missing-indices;
       php occ db:add-missing-columns;
       php occ db:add-missing-primary-keys;
       php occ db:convert-filecache-bigint;
