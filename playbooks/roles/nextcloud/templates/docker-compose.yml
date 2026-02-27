@@ -161,9 +161,11 @@ services:
     environment:
       HP_SHARED_KEY: "{{AppAPISecret}}"
       NC_INSTANCE_URL: "https://{{ app_domain_name }}"
+      HP_FRP_DISABLE_TLS: "false"
       # HP_TRUSTED_PROXY_IPS: "127.0.0.1/32"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:rw
+      - harp-certs:/certs:rw
     ports:
       - 8780:8780
       - 8782:8782
@@ -240,6 +242,7 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/nextcloud-elastic-data"
+  harp-certs:
 
 secrets:
   nextcloud_admin_password:

@@ -35,12 +35,22 @@ nextcloud_defaultapp_list:
   - oidc # Used to log in on authentik based on nextcloud user
   - forms
   - spreed # Talk
-  - context_chat # Context Agent integration for enhanced automation capabilities
+  - assistant
+  - integration_openai # OpenAI-compatible provider app (Ollama/LocalAI/OpenAI)
+
+nextcloud_integration_openai_url: "https://ia.{{ app_domain_name }}/api"
+nextcloud_context_chat_request_timeout: 3000
+
+nextcloud_exapp_list:
+  - context_chat_backend
+  - context_agent # Context Agent integration for enhanced automation capabilities
 
 nextcloud_system_config:
   - "overwrite.cli.url --value=https://{{ app_domain_name }}"
   - "trusted_domains 0 --value={{ app_domain_name }}"
   - "trusted_domains 1 --value=nginx"
+  - "trusted_domains 2 --value=nextcloud"
+  - "trusted_domains 3 --value=nc_nextcloud"
 #  - "trusted_proxies 0 --value={{ traefik_facts.container.NetworkSettings.Networks.backend.IPAddress }}"
   - "redis host --value='redis'"
   - "redis port --value='6379' --type=integer"
@@ -116,8 +126,9 @@ nextcloud_apps_config:
   - files_fulltextsearch_tesseract tesseract_psm --value="4"
   - files_fulltextsearch_tesseract tesseract_lang --value="eng,fra"
   - files_fulltextsearch_tesseract tesseract_pdf --value="1"
-  - integration_openai url --value="https://ia.{{ app_domain_name }}/api"
+  - integration_openai url --value="{{ nextcloud_integration_openai_url }}"
   - richdocuments enabled --value="yes"
   - richdocuments wopi_url --value="https://{{ app_domain_name }}/apps/richdocumentscode/proxy.php?req="
   - richdocuments public_wopi_url --value="https://{{ app_domain_name }}"
   - serverinfo token --value "{{ nextcloud_exporter_auth_token }}"
+
