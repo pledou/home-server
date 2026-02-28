@@ -176,7 +176,8 @@ services:
       - com.centurylinklabs.watchtower.enable=true
       - traefik.enable=true
       - traefik.docker.network=traefik_backend
-      - traefik.http.routers.exapps.rule="Host(`{{ app_domain_name }}`) && PathPrefix(`/exapps/`)"
+      - traefik.constraint-label=traefik_backend
+      - traefik.http.routers.exapps.rule=Host(`{{ app_domain_name }}`) && PathPrefix(`/exapps/`)
       - traefik.http.routers.exapps.entrypoints=https
       - traefik.http.routers.exapps.tls=true
       - traefik.http.routers.exapps.tls.certresolver=le
