@@ -41,6 +41,12 @@
     dest: /home/{{ ansible_user }}/home-server/stacks/ia/model_aliases.json
     mode: u=rw,g=o=r
 
+- name: Create override Dockerfile for ollama-metrics
+  ansible.builtin.template:
+    src: ollama-metrics.Dockerfile
+    dest: /home/{{ ansible_user }}/home-server/stacks/ia/ollama-metrics.Dockerfile
+    mode: u=rwx,g=o=rx
+
 - name: Deploy stack from a compose file
   community.docker.docker_compose_v2:
     pull: "always"

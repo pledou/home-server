@@ -153,6 +153,9 @@ services:
   ollama-metrics:
     labels:
       - com.centurylinklabs.watchtower.enable=true
+    build:
+      context: .
+      dockerfile: ./ollama-metrics.Dockerfile
     image: "{{ ollama_metrics_image }}:{{ ollama_metrics_version }}"
     environment:
       - OLLAMA_HOST=http://ollama:11434
@@ -252,6 +255,9 @@ services:
   ollama-embeddings-metrics:
     labels:
       - com.centurylinklabs.watchtower.enable=true
+    build:
+      context: .
+      dockerfile: ./ollama-metrics.Dockerfile
     image: "{{ ollama_metrics_image }}:{{ ollama_metrics_version }}"
     environment:
       - OLLAMA_HOST=http://ollama-embeddings:11434
