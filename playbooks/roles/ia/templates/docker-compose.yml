@@ -109,7 +109,7 @@ services:
     restart: always
     cpus: "{{ ollama_cpu_limit }}"
     mem_limit: "{{ ollama_memory_limit_mb }}m"
-    shm_size: "16g"
+    shm_size: "{{ ollama_shm_size_mb }}m"
     environment:
       {% if gpu == 'intel' %}
       - DEVICE=iGPU
@@ -196,7 +196,7 @@ services:
     
     cpus: "{{ ollama_embeddings_cpu_limit }}"
     mem_limit: "{{ ollama_embeddings_memory_limit_mb }}m"
-    shm_size: "4g"
+    shm_size: "{{ ollama_embeddings_shm_size_mb }}m"
 
     {% if gpu == 'nvidia' %}
     deploy:
@@ -215,7 +215,7 @@ services:
     image: "{{ ollama_embeddings_intel_image }}:{{ ollama_embeddings_intel_version }}"
     cpus: "{{ ollama_embeddings_cpu_limit }}"
     mem_limit: "{{ ollama_embeddings_memory_limit_mb }}m"
-    shm_size: "4g" 
+    shm_size: "{{ ollama_embeddings_shm_size_mb }}m" 
     pull_policy: always
     tty: true
     restart: always
