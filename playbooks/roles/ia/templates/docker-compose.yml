@@ -1,3 +1,4 @@
+#jinja2: lstrip_blocks: True, trim_blocks: True
 services:
 
   webui:
@@ -48,8 +49,8 @@ services:
       AUDIO_STT_MODEL: "{{ speaches_stt_model }}"
       ENABLE_ADMIN_EXPORT: False
       {% if IA_openai_api_key is defined and IA_openai_api_key != "" %}
-      OPENAI_API_BASE_URLS:"{{ IA_openai_api_url }}}"
-      OPENAI_API_KEYS="{{ IA_openai_api_key }}"
+      OPENAI_API_BASE_URLS: "{{ IA_openai_api_url }}"
+      OPENAI_API_KEYS: "{{ IA_openai_api_key }}"
       {% endif %}
 
       # Vector Database for RAG
@@ -89,85 +90,62 @@ services:
       - ./webui-api-proxy.conf:/etc/nginx/conf.d/default.conf:ro
 
 
-  {% if gpu != 'intel' -%}
   ollama:
     labels:
       - com.centurylinklabs.watchtower.enable=true
-    image: "{{ ollama_image }}:{{ ollama_version }}"
+    {% if gpu == 'intel' %}
+    user: root
+    {% endif %}
+    image: "{% if gpu == 'intel' %}{{ ollama_intel_image }}:{{ ollama_intel_version }}{% else %}{{ ollama_image }}:{{ ollama_version }}{% endif %}"
+    {% if gpu != 'intel' %}
     healthcheck:
       test: ollama --version || exit 1
     command: serve
+    {% else %}
+    command: ["bash", "-c", "source ipex-llm-init --gpu --device iGPU && bash start-ollama.sh"]
+    {% endif %}
     pull_policy: always
     tty: true
     restart: always
-    environment:
-      - OLLAMA_KEEP_ALIVE=24h
-      - OLLAMA_NUM_THREADS={{ ollama_num_threads }}
-      - OLLAMA_HOST=0.0.0.0
-    networks:
-      network:
-        aliases:
-          - ollama
-    volumes:
-      - ollama:/root/.ollama
-    
     cpus: "{{ ollama_cpu_limit }}"
     mem_limit: "{{ ollama_memory_limit_mb }}m"
-    shm_size: "16g" 
-
-    {% if gpu == 'nvidia' -%}
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              device_ids: ['all']
-              capabilities: [gpu]
-    {%- endif %}
-  {% else -%}
-  ollama:
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
-    user: root
-    image: "{{ ollama_intel_image }}:{{ ollama_intel_version }}"
-    cpus: "{{ ollama_cpu_limit }}"
-    mem_limit: "{{ ollama_memory_limit_mb }}m"
-    shm_size: "16g" 
-    pull_policy: always
-    tty: true
-    restart: always
-    # healthcheck:
-    #   test: ollama --version || exit 1
+    shm_size: "16g"
     environment:
+      {% if gpu == 'intel' %}
       - DEVICE=iGPU
+      {% endif %}
       - OLLAMA_KEEP_ALIVE=24h
       - OLLAMA_NUM_THREADS={{ ollama_num_threads }}
       - OLLAMA_HOST=0.0.0.0
+      {% if gpu == 'intel' %}
       - no_proxy=localhost,127.0.0.1
       - OLLAMA_NUM_GPU=999
       - ZES_ENABLE_SYSMAN=1
       - SYCL_CACHE_PERSISTENT=1
       - SYCL_PI_LEVEL_ZERO_USE_IMMEDIATE_COMMANDLISTS=1
+      {% endif %}
+    {% if gpu == 'intel' %}
     working_dir: /llm/scripts/
-    command: ["bash", "-c", "source ipex-llm-init --gpu --device iGPU && bash start-ollama.sh"]
-    {#- command: ["bash", "-c", "source ipex-llm-init --gpu --device iGPU && tail -F anything"] # debuggage #}
-    
+    {% endif %}
     volumes:
       - ollama:/root/.ollama
+    {% if gpu == 'intel' %}
     devices:
       - /dev/dri:/dev/dri
+    {% endif %}
     networks:
       network:
         aliases:
           - ollama
+    {% if gpu == 'nvidia' or gpu == 'intel' %}
     deploy:
       resources:
         reservations:
           devices:
-            - driver: intel
+            - driver: {% if gpu == 'intel' %}intel{% else %}nvidia{% endif %}
               device_ids: ['all']
               capabilities: [gpu]
-  {%- endif %}
+    {% endif %}
 
   ollama-metrics:
     labels:
@@ -194,7 +172,7 @@ services:
         aliases:
           - ollama-metrics
 
-  {% if gpu != 'intel' -%}
+  {% if gpu != 'intel' %}
   ollama-embeddings:
     labels:
       - com.centurylinklabs.watchtower.enable=true
@@ -220,7 +198,7 @@ services:
     mem_limit: "{{ ollama_embeddings_memory_limit_mb }}m"
     shm_size: "4g"
 
-    {% if gpu == 'nvidia' -%}
+    {% if gpu == 'nvidia' %}
     deploy:
       resources:
         reservations:
@@ -228,8 +206,8 @@ services:
             - driver: nvidia
               device_ids: ['all']
               capabilities: [gpu]
-    {%- endif %}
-  {% else -%}
+    {% endif %}
+  {% else %}
   ollama-embeddings:
     labels:
       - com.centurylinklabs.watchtower.enable=true
@@ -269,7 +247,7 @@ services:
             - driver: intel
               device_ids: ['all']
               capabilities: [gpu]
-  {%- endif %}
+  {% endif %}
 
   ollama-embeddings-metrics:
     labels:
@@ -323,18 +301,18 @@ services:
       - speaches-hf-cache:/home/ubuntu/.cache/huggingface/hub
       - ./model_aliases.json:/home/ubuntu/speaches/model_aliases.json:ro
     restart: unless-stopped
-    {%- if gpu == 'nvidia' %}
+    {% if gpu == 'nvidia' %}
     {#- Set nvidia runtime if it's not the default #}
     runtime: nvidia
-     deploy:
-       resources:
-         reservations:
-           devices:
-             - driver: nvidia
-               # device_ids: ['0', '1'] # Select a gpu, or use 'all' to use all available gpus
-               count: all
-               capabilities: [gpu]
-    {%- endif %}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              # device_ids: ['0', '1'] # Select a gpu, or use 'all' to use all available gpus
+              count: all
+              capabilities: [gpu]
+    {% endif %}
 
   chromadb:
     labels:
