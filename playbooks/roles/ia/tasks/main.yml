@@ -47,6 +47,12 @@
     dest: /home/{{ ansible_user }}/home-server/stacks/ia/ollama-metrics.Dockerfile
     mode: u=rwx,g=o=rx
 
+- name: Create OpenWebUI API proxy config
+  ansible.builtin.template:
+    src: webui-api-proxy.conf
+    dest: /home/{{ ansible_user }}/home-server/stacks/ia/webui-api-proxy.conf
+    mode: u=rw,g=o=r
+
 - name: Deploy stack from a compose file
   community.docker.docker_compose_v2:
     pull: "always"

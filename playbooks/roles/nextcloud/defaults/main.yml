@@ -38,8 +38,30 @@ nextcloud_defaultapp_list:
   - assistant
   - integration_openai # OpenAI-compatible provider app (Ollama/LocalAI/OpenAI)
 
-nextcloud_integration_openai_url: "https://ia.{{ app_domain_name }}/api"
-nextcloud_context_chat_request_timeout: 3000
+nextcloud_integration_openai_url: "http://webui-api-proxy:8080/api"
+nextcloud_integration_openai_default_completion_model_id: "ministral-3:3b"
+nextcloud_integration_openai_request_timeout: 600
+nextcloud_integration_openai_max_tokens: 2048
+nextcloud_context_chat_request_timeout: 900
+
+nextcloud_context_agent_tool_status:
+  mail: true
+  calendar: true
+  files: true
+  contacts: true
+  deck: true
+  talk: true
+  mcp: false
+  here: false
+  image_gen: false
+  context_chat: false
+  youtube: false
+  openstreetmap: false
+  weather: false
+  doc-gen: false
+  audio2text: true
+  duckduckgo: true
+  openproject: false
 
 nextcloud_exapp_list:
   - context_chat_backend
@@ -127,6 +149,10 @@ nextcloud_apps_config:
   - files_fulltextsearch_tesseract tesseract_lang --value="eng,fra"
   - files_fulltextsearch_tesseract tesseract_pdf --value="1"
   - integration_openai url --value="{{ nextcloud_integration_openai_url }}"
+  - integration_openai default_completion_model_id --value="{{ nextcloud_integration_openai_default_completion_model_id }}"
+  - integration_openai request_timeout --value="{{ nextcloud_integration_openai_request_timeout }}"
+  - integration_openai max_tokens --value="{{ nextcloud_integration_openai_max_tokens }}"
+  - context_agent tool_status --value='{{ nextcloud_context_agent_tool_status | to_json }}'
   - richdocuments enabled --value="yes"
   - richdocuments wopi_url --value="https://{{ app_domain_name }}/apps/richdocumentscode/proxy.php?req="
   - richdocuments public_wopi_url --value="https://{{ app_domain_name }}"

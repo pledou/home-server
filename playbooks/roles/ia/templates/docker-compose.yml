@@ -69,6 +69,21 @@ services:
      - speaches
      - chromadb
 
+  webui-api-proxy:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    image: nginx:alpine
+    depends_on:
+      - webui
+      - speaches
+    restart: always
+    networks:
+      network:
+        aliases:
+          - webui-api-proxy
+    volumes:
+      - ./webui-api-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+
 
   {% if gpu != 'intel' -%}
   ollama:
@@ -280,6 +295,15 @@ services:
   speaches:
     labels:
       - com.centurylinklabs.watchtower.enable=true
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.constraint-label=traefik_backend
+      - traefik.http.routers.ia-audio-https.rule=Host(`ia.{{ app_domain_name }}`) && PathPrefix(`/v1/audio`)
+      - traefik.http.routers.ia-audio-https.priority=100
+      - traefik.http.routers.ia-audio-https.entrypoints=https
+      - traefik.http.routers.ia-audio-https.tls=true
+      - traefik.http.routers.ia-audio-https.tls.certresolver=le
+      - traefik.http.services.ia-audio.loadbalancer.server.port=8000
     image: "{{ speaches_image }}:{{ speaches_cuda_version if gpu == 'nvidia' else speaches_cpu_version }}"
     pull_policy: always
     environment:
@@ -288,6 +312,7 @@ services:
       network:
         aliases:
           - speaches
+      traefik_backend:
     ports:
       - 8000:8000
     volumes:
