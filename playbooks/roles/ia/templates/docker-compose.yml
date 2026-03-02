@@ -47,6 +47,10 @@ services:
       AUDIO_STT_OPENAI_API_KEY: "openai-api-key"
       AUDIO_STT_MODEL: "{{ speaches_stt_model }}"
       ENABLE_ADMIN_EXPORT: False
+      {% if IA_openai_api_key is defined and IA_openai_api_key != "" %}
+      OPENAI_API_BASE_URLS:"{{ IA_openai_api_url }}}"
+      OPENAI_API_KEYS="{{ IA_openai_api_key }}"
+      {% endif %}
 
       # Vector Database for RAG
       VECTOR_DB: "chroma"

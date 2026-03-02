@@ -97,3 +97,6 @@ ollama_num_threads: >-
   {{ ((ollama_cpu_limit | float) | round(0, 'floor') | int)
      if (ollama_cpu_limit | float) >= 1.0
      else 1 }}
+
+IA_openai_api_key: ""
+IA_openai_api_url: "https://api.mistral.ai/v1"
