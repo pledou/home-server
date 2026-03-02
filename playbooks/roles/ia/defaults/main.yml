@@ -47,6 +47,7 @@ ollama_embeddings_intel_version: "{{ ollama_intel_version }}"
 # Embeddings resource limits (smaller than main ollama)
 ollama_embeddings_memory_limit_ratio: 0.15
 ollama_embeddings_min_memory_mb: 2048
+ollama_embeddings_shm_size_mb: 4096
 ollama_embeddings_min_cpus: 0.5
 ollama_embeddings_cpu_limit_raw: "{{ (ollama_detected_vcpus | float) * 0.25 }}"
 ollama_embeddings_cpu_limit: >-
@@ -54,11 +55,12 @@ ollama_embeddings_cpu_limit: >-
   {%- set min_cpus_float = ollama_embeddings_min_cpus | float -%}
   {{ (cpu_limit_float | round(2)) if (cpu_limit_float > min_cpus_float) else min_cpus_float }}
 ollama_embeddings_memory_limit_mb_raw: >-
-  {{ ((ollama_detected_mem_mb | int) * (ollama_embeddings_memory_limit_ratio | float)) | int }}
+  {{ (((ollama_detected_mem_mb | int) * (ollama_embeddings_memory_limit_ratio | float)) | int)
+     + (ollama_embeddings_shm_size_mb | int) }}
 ollama_embeddings_memory_limit_mb: >-
   {{ (ollama_embeddings_memory_limit_mb_raw | int)
-     if (ollama_embeddings_memory_limit_mb_raw | int) > (ollama_embeddings_min_memory_mb | int)
-     else (ollama_embeddings_min_memory_mb | int) }}
+     if (ollama_embeddings_memory_limit_mb_raw | int) > ((ollama_embeddings_min_memory_mb | int) + (ollama_embeddings_shm_size_mb | int))
+     else ((ollama_embeddings_min_memory_mb | int) + (ollama_embeddings_shm_size_mb | int)) }}
 ollama_embeddings_num_threads: >-
   {{ ((ollama_embeddings_cpu_limit | float) | round(0, 'floor') | int)
      if (ollama_embeddings_cpu_limit | float) >= 1.0
@@ -77,6 +79,7 @@ webui_secret_key: "{{ lookup('password', '/dev/null chars=ascii_letters,digits l
 
 ollama_memory_limit_ratio: 0.90
 ollama_min_memory_mb: 4096
+ollama_shm_size_mb: 16384
 ollama_min_cpus: 0.5
 ollama_reserved_cpus: 0.5
 
@@ -88,11 +91,13 @@ ollama_cpu_limit: >-
   {%- set cpu_limit_float = ollama_cpu_limit_raw | float -%}
   {%- set min_cpus_float = ollama_min_cpus | float -%}
   {{ (cpu_limit_float | round(2)) if (cpu_limit_float > min_cpus_float) else min_cpus_float }}
-ollama_memory_limit_mb_raw: "{{ ((ollama_detected_mem_mb | int) * (ollama_memory_limit_ratio | float)) | int }}"
+ollama_memory_limit_mb_raw: >-
+  {{ (((ollama_detected_mem_mb | int) * (ollama_memory_limit_ratio | float)) | int)
+     + (ollama_shm_size_mb | int) }}
 ollama_memory_limit_mb: >-
   {{ (ollama_memory_limit_mb_raw | int)
-     if (ollama_memory_limit_mb_raw | int) > (ollama_min_memory_mb | int)
-     else (ollama_min_memory_mb | int) }}
+     if (ollama_memory_limit_mb_raw | int) > ((ollama_min_memory_mb | int) + (ollama_shm_size_mb | int))
+     else ((ollama_min_memory_mb | int) + (ollama_shm_size_mb | int)) }}
 ollama_num_threads: >-
   {{ ((ollama_cpu_limit | float) | round(0, 'floor') | int)
      if (ollama_cpu_limit | float) >= 1.0
