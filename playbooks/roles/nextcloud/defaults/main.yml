@@ -38,10 +38,10 @@ nextcloud_defaultapp_list:
   - assistant
   - integration_openai # OpenAI-compatible provider app (Ollama/LocalAI/OpenAI)
 
-nextcloud_integration_openai_url: "http://webui-api-proxy:8080/api"
+nextcloud_integration_openai_url: "http://webui-api-proxy:8080/v1"
 nextcloud_integration_openai_default_completion_model_id: "ministral-3:3b"
 nextcloud_integration_openai_request_timeout: 600
-nextcloud_integration_openai_max_tokens: 2048
+nextcloud_integration_openai_max_tokens: 768
 nextcloud_context_chat_request_timeout: 900
 
 nextcloud_context_agent_tool_status:
@@ -60,7 +60,7 @@ nextcloud_context_agent_tool_status:
   weather: false
   doc-gen: false
   audio2text: true
-  duckduckgo: true
+  duckduckgo: false
   openproject: false
 
 nextcloud_exapp_list:

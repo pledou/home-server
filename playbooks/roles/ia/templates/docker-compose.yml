@@ -65,6 +65,8 @@ services:
     restart: always
     volumes:
       - open-webui:/app/backend/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - network
       - traefik_backend
