@@ -1,0 +1,53 @@
+{
+  "gateway": {
+    "mode": "local",
+    "port": 18789,
+    "bind": "lan",
+    "auth": {
+      "mode": "trusted-proxy",
+      "trustedProxy": {
+        "userHeader": "x-authentik-username"
+      }
+    }
+  },
+
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "ollama/{{ ia_openclaw_model }}"
+      },
+      "models": {
+        "ollama/{{ ia_openclaw_model }}": {
+          "alias": "local-ollama"
+        }
+      }
+    }
+  },
+
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "ollama": {
+        "baseUrl": "http://ollama-metrics:8080/v1",
+        "api": "openai-completions",
+        "injectNumCtxForOpenAICompat": true,
+        "models": [
+          {
+            "id": "{{ ia_openclaw_model }}",
+            "name": "{{ ia_openclaw_model }}",
+            "reasoning": false,
+            "input": ["text"],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 32768,
+            "maxTokens": 8192
+          }
+        ]
+      }
+    }
+  }
+}
