@@ -114,7 +114,6 @@ services:
       OPENCLAW_LOG_LEVEL: info
     volumes:
       - openclaw-home:/home/node/.openclaw
-      - ./openclaw.json:/home/node/.openclaw/openclaw.json:ro
     networks:
       - network
       - traefik_backend

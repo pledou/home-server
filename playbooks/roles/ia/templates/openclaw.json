@@ -3,11 +3,11 @@
     "mode": "local",
     "port": 18789,
     "bind": "lan",
+    "controlUi": {
+      "allowedOrigins": ["https://agent.{{ app_domain_name }}"]
+    },
     "auth": {
-      "mode": "trusted-proxy",
-      "trustedProxy": {
-        "userHeader": "x-authentik-username"
-      }
+      "mode": "none"
     }
   },
 
