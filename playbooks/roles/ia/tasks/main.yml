@@ -29,6 +29,15 @@
     group: "{{ ansible_user }}"
     mode: u=rwx,g=o=rx
 
+- name: Create OpenClaw state directory (node-owned)
+  become: true
+  ansible.builtin.file:
+    path: "{{ docker_volumes_path }}/openclaw"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: u=rwx,g=o=rx
+
 - name: Create docker-compose stack file
   ansible.builtin.template:
     src: docker-compose.yml
@@ -51,6 +60,12 @@
   ansible.builtin.template:
     src: webui-api-proxy.conf
     dest: /home/{{ ansible_user }}/home-server/stacks/ia/webui-api-proxy.conf
+    mode: u=rw,g=o=r
+
+- name: Create OpenClaw config
+  ansible.builtin.template:
+    src: openclaw.json
+    dest: /home/{{ ansible_user }}/home-server/stacks/ia/openclaw.json
     mode: u=rw,g=o=r
 
 - name: Deploy stack from a compose file
@@ -254,6 +269,13 @@
       when: authentik_api_token is defined
       ansible.builtin.include_tasks: "tasks/authentik_common.yml"
       vars:
+        provider_apps:
+          - provider:
+              name: "openclaw-provider"
+              external_host: "https://agent.{{ app_domain_name }}"
+            app:
+              name: "OpenClaw"
+              slug: "openclaw"
         oauth_apps:
           - provider:
               name: "webui-oauth-provider"
