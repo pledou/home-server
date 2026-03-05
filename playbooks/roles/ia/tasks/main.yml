@@ -62,10 +62,13 @@
     dest: /home/{{ ansible_user }}/home-server/stacks/ia/webui-api-proxy.conf
     mode: u=rw,g=o=r
 
-- name: Create OpenClaw config
+- name: Create OpenClaw config in persistent volume
+  become: true
   ansible.builtin.template:
     src: openclaw.json
-    dest: /home/{{ ansible_user }}/home-server/stacks/ia/openclaw.json
+    dest: "{{ docker_volumes_path }}/openclaw/openclaw.json"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
     mode: u=rw,g=o=r
 
 - name: Deploy stack from a compose file
