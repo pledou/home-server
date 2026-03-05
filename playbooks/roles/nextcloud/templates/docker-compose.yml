@@ -179,11 +179,10 @@ services:
       - traefik.docker.network=traefik_backend
       - traefik.constraint-label=traefik_backend
       - traefik.http.routers.exapps.rule=Host(`{{ app_domain_name }}`) && PathPrefix(`/exapps/`)
-      - traefik.http.routers.nginx-https.priority=1000
       - traefik.http.routers.exapps.entrypoints=https
       - traefik.http.routers.exapps.tls=true
       - traefik.http.routers.exapps.tls.certresolver=le
-      - traefik.http.routers.exapps.priority=50
+      - traefik.http.routers.exapps.priority=1000
       - traefik.http.routers.exapps.service=exapps-service
       - traefik.http.services.exapps-service.loadbalancer.server.port=8780
       - traefik.http.services.exapps-service.loadbalancer.serverstransport=exapps-transport
