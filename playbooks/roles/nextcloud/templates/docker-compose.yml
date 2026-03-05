@@ -31,6 +31,7 @@ services:
       - traefik.constraint-label=traefik_backend
       
       - traefik.http.routers.nginx-https.rule=Host(`{{ app_domain_name }}`)
+      - traefik.http.routers.nginx-https.priority=10
       - traefik.http.routers.nginx-https.entrypoints=https
       - traefik.http.routers.nginx-https.middlewares=nginx@docker,real-ip@docker
       - traefik.http.routers.nginx-https.tls=true
@@ -178,14 +179,17 @@ services:
       - traefik.docker.network=traefik_backend
       - traefik.constraint-label=traefik_backend
       - traefik.http.routers.exapps.rule=Host(`{{ app_domain_name }}`) && PathPrefix(`/exapps/`)
+      - traefik.http.routers.nginx-https.priority=1000
       - traefik.http.routers.exapps.entrypoints=https
       - traefik.http.routers.exapps.tls=true
       - traefik.http.routers.exapps.tls.certresolver=le
       - traefik.http.routers.exapps.priority=50
       - traefik.http.routers.exapps.service=exapps-service
       - traefik.http.services.exapps-service.loadbalancer.server.port=8780
-      - traefik.http.services.exapps-service.loadbalancer.serverstransport=exapps-transport@docker
-      - traefik.http.serverstransports.exapps-transport.forwardingtimeouts.responseheadertimeout=1800s
+      - traefik.http.services.exapps-service.loadbalancer.serverstransport=exapps-transport
+      - traefik.http.serversTransports.exapps-transport.forwardingTimeouts.responseHeaderTimeout=1800s
+      - traefik.http.serversTransports.exapps-transport.forwardingTimeouts.dialTimeout=30s
+      - traefik.http.serversTransports.exapps-transport.forwardingTimeouts.idleConnTimeout=1800s
 
 networks:
   traefik_backend:
