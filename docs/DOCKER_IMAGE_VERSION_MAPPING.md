@@ -75,7 +75,6 @@ This document maps Docker images used in Ansible templates to their correspondin
 | Service | Docker Image | Variable | Default Value |
 |---------|--------------|----------|---------------|
 | webui | `ghcr.io/open-webui/open-webui:{{ webui_version }}` | `webui_version` | `"main"` |
-| openclaw | `ghcr.io/openclaw/openclaw:{{ openclaw_version }}` | `openclaw_version` | `"latest"` |
 | ollama | `ollama/ollama:{{ ollama_version }}` | `ollama_version` | `"latest"` |
 | ollama (Intel) | `intelanalytics/ipex-llm-inference-cpp-xpu:{{ ollama_intel_version }}` | `ollama_intel_version` | `"latest"` |
 | speaches | `ghcr.io/speaches-ai/speaches:{{ speaches_cuda_version if gpu == 'nvidia' else speaches_cpu_version }}` | `speaches_cpu_version` / `speaches_cuda_version` | `"latest-cpu"` / `"latest-cuda"` |

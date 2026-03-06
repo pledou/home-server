@@ -3,7 +3,6 @@
 This role deploys the AI stack used by Open WebUI and Home Assistant integrations:
 
 - Open WebUI (chat + tools frontend)
-- OpenClaw (gateway + control UI, cohabitation mode)
 - Ollama (LLM inference)
 - Ollama Embeddings (dedicated instance for embeddings)
 - `speaches` (OpenAI-compatible audio API for STT/TTS)
@@ -97,7 +96,6 @@ curl https://ia.{{ app_domain_name }}/ollama/api/generate \
 | Access Method | URL | Auth | Use Case |
 |--------------|-----|------|----------|
 | **Open WebUI (Web)** | `https://ia.{{ app_domain_name }}` | OAuth (Authentik) | Web chat interface |
-| **OpenClaw (Web Control UI)** | `https://agent.{{ app_domain_name }}` | SSO via Authentik forward-auth | OpenClaw dashboard / gateway UI |
 | **Ollama API (Local)** | `http://<host>:8080/api` | None | Local network access (LLM) |
 | **Ollama API (Remote)** | `https://ia.{{ app_domain_name }}/ollama/api` | API Key | Distant/internet access |
 | **Ollama Embeddings** | `http://<host>:8082/api` | None | Local embeddings generation |
@@ -109,7 +107,6 @@ curl https://ia.{{ app_domain_name }}/ollama/api/generate \
 - **Home Assistant integration**: Use local Ollama (`http://<ia-host>:8080/v1`) for Home Agent
 - **Remote/distant API access**: Use Open WebUI API (`https://ia.{{ app_domain_name }}/ollama/api`) with API token
 - **Web chat interface**: Use Open WebUI (`https://ia.{{ app_domain_name }}`)
-- **OpenClaw gateway UI**: Use OpenClaw (`https://agent.{{ app_domain_name }}`)
 - **Local development/testing**: Use direct Ollama (`http://<host>:8080/api`)
 - **Voice integration**: Speaches is exposed on port 8000 (OpenAI-compatible)
 - **Vector database/RAG**: ChromaDB is exposed on port 8001

@@ -91,35 +91,6 @@ services:
     volumes:
       - ./webui-api-proxy.conf:/etc/nginx/conf.d/default.conf:ro
 
-  openclaw:
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
-      - traefik.enable=true
-      - traefik.docker.network=traefik_backend
-      - traefik.constraint-label=traefik_backend
-      - traefik.http.routers.openclaw-https.rule=Host(`agent.{{ app_domain_name }}`)
-      - traefik.http.routers.openclaw-https.entrypoints=https
-      - traefik.http.routers.openclaw-https.tls=true
-      - traefik.http.routers.openclaw-https.tls.certresolver=le
-      - traefik.http.routers.openclaw-https.middlewares=authentik@docker
-      - traefik.http.services.openclaw.loadbalancer.server.port=18789
-    image: "{{ openclaw_image }}:{{ openclaw_version }}"
-    restart: unless-stopped
-    expose:
-      - 18789
-    environment:
-      OPENCLAW_HOME: /home/node/.openclaw
-      OPENCLAW_CONFIG_PATH: /home/node/.openclaw/openclaw.json
-      OPENCLAW_STATE_DIR: /home/node/.openclaw
-      OPENCLAW_LOG_LEVEL: info
-    volumes:
-      - openclaw-home:/home/node/.openclaw
-    networks:
-      - network
-      - traefik_backend
-    depends_on:
-      - ollama
-
 
   ollama:
     labels:
@@ -393,12 +364,6 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/chromadb"
-  openclaw-home:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: "{{ docker_volumes_path }}/openclaw"
 
 networks:
   network:
