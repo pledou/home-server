@@ -76,6 +76,9 @@ services:
     image: "{{ unbound_image }}:{{ unbound_version }}"
     networks:
       backend:
+      monitoring_backend:
+        aliases:
+          - unbound-exporter
     expose:
       - 53
     ports:
@@ -83,6 +86,15 @@ services:
       - "53:53/udp"
     volumes:
       - unbound:/etc/unbound
+    restart: unless-stopped
+
+  unbound-exporter:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    image: "{{ unbound_exporter_image }}:{{ unbound_exporter_version }}"
+    network_mode: service:unbound
+    depends_on:
+      - unbound
     restart: unless-stopped
   
   doh-proxy:
@@ -140,6 +152,8 @@ networks:
   backend:
     enable_ipv6: true
     attachable: true
+  monitoring_backend:
+    external: true
 
 volumes:
   unbound:

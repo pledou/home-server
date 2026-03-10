@@ -43,6 +43,9 @@ scrape_configs:
   - job_name: traefik
     static_configs:
       - targets: ['traefik-traefik-1:8082']
+  - job_name: unbound
+    static_configs:
+      - targets: ['unbound-exporter:9167']
   - job_name: nextcloud-exporter
     scrape_interval: 90s
     static_configs:

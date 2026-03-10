@@ -31,6 +31,7 @@ grafana_dashboard_updates:
   - gnet_id: 14837 # authentik
   - gnet_id: 21743 # cadvisor-exporter-docker-containers-overview
   - gnet_id: 23005 # Watchtower
+  - gnet_id: 18077 # Unbound (Prometheus + Loki)
 
 # Alerting configuration
 # These should be overridden in group_vars or host_vars

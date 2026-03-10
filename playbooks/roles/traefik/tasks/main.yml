@@ -137,6 +137,10 @@
         cidrs: ["any"]
       - name: "DNS"
         port: "53"
+        cidrs: "{{ local_networks }}"
+        when: "{{ unbound is defined and unbound }}"
+      - name: "DotS"
+        port: "853"
         cidrs: ["any"]
         when: "{{ unbound is defined and unbound }}"
   community.general.ufw:
@@ -170,7 +174,6 @@
     project_src: /home/{{ ansible_user }}/home-server/stacks/traefik
 
 - name: Configure Authentik providers and applications for Home Assistant services
-  delegate_to: localhost
   become: false
   when: authentik_api_token is defined
   block:
