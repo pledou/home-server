@@ -103,6 +103,17 @@
     GIT_TERMINAL_PROMPT: "0" # reports "terminal prompts disabled" on missing password
   when: unbound is defined and unbound
 
+- name: Restore unbound_exporter git repo
+  become: true
+  ansible.builtin.git:
+    repo: "{{ unbound_exporter_git_repo }}"
+    dest: "/home/{{ ansible_user }}/home-server/stacks/traefik/unbound_exporter"
+    version: "{{ unbound_exporter_git_version }}"
+    single_branch: true
+  environment:
+    GIT_TERMINAL_PROMPT: "0" # reports "terminal prompts disabled" on missing password
+  when: unbound is defined and unbound
+
 - name: Docker_sysctl_fix_proxy
   become: true
   ansible.posix.sysctl:

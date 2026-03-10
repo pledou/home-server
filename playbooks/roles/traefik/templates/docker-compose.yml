@@ -71,6 +71,7 @@ services:
       - traefik.tcp.routers.dot.rule=HostSNI(`dns.{{ app_domain_name }}`)
       - traefik.tcp.routers.dot.entrypoints=dot
       - traefik.tcp.routers.dot.tls=true
+      - traefik.tcp.routers.dot.tls.certresolver=le
       - traefik.tcp.routers.dot.service=unbound-dot
       - traefik.tcp.services.unbound-dot.loadbalancer.server.port=53
     image: "{{ unbound_image }}:{{ unbound_version }}"
@@ -91,8 +92,16 @@ services:
   unbound-exporter:
     labels:
       - com.centurylinklabs.watchtower.enable=true
+    build:
+      context: ./unbound_exporter
+      dockerfile: Dockerfile
     image: "{{ unbound_exporter_image }}:{{ unbound_exporter_version }}"
     network_mode: service:unbound
+    command:
+      - -unbound.host=tcp://127.0.0.1:8953
+      - -unbound.ca=
+      - -unbound.cert=
+      - -unbound.key=
     depends_on:
       - unbound
     restart: unless-stopped
