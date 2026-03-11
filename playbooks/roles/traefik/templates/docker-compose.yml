@@ -102,6 +102,7 @@ services:
       - -unbound.ca=
       - -unbound.cert=
       - -unbound.key=
+      - -web.listen-address=0.0.0.0:9167
     depends_on:
       - unbound
     restart: unless-stopped
