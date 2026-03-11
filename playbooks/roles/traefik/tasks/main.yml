@@ -23,6 +23,35 @@
     mode: u=rw,g=o=r
   when: unbound is defined and unbound
 
+- name: Detect DHCP upstream DNS server
+  become: true
+  ansible.builtin.shell: |
+    set -o pipefail
+    awk '/^nameserver/{print $2}' /run/systemd/resolve/resolv.conf /etc/resolv.conf 2>/dev/null \
+      | grep -E '^[0-9]+(\.[0-9]+){3}$' \
+      | grep -Ev '^(127\.|0\.)' \
+      | head -n1
+  args:
+    executable: /bin/bash
+  register: dhcp_upstream_dns
+  changed_when: false
+  failed_when: false
+  when:
+    - unbound is defined and unbound
+    - unbound_forward_dns is not defined
+
+- name: Set unbound upstream DNS from DHCP or fallback
+  ansible.builtin.set_fact:
+    unbound_forward_dns: >-
+      {{
+        (dhcp_upstream_dns.stdout | trim)
+        if (dhcp_upstream_dns.stdout | trim | length > 0)
+      }}
+  when:
+    - unbound is defined and unbound
+    - unbound_forward_dns is not defined
+    - dhcp_upstream_dns is succeeded
+
 - name: Copy unbound configuration templates
   become: true
   ansible.builtin.template:
@@ -34,7 +63,43 @@
     - a-records.conf
     - srv-records.conf
     - forward-records.conf
+    - horizon-online.conf
+    - horizon-offline.conf
   when: unbound is defined and unbound
+
+- name: Initialize active horizon config to online mode
+  become: true
+  ansible.builtin.copy:
+    src: "{{ docker_volumes_path }}/unbound/horizon-online.conf"
+    dest: "{{ docker_volumes_path }}/unbound/horizon-active.conf"
+    remote_src: true
+    force: false
+    mode: u=rw,g=o=r
+  when:
+    - unbound is defined and unbound
+    - unbound_offline_fallback_enabled | bool
+
+- name: Install unbound horizon switcher script
+  become: true
+  ansible.builtin.template:
+    src: unbound-horizon-switch.sh.j2
+    dest: /usr/local/bin/unbound-horizon-switch.sh
+    mode: u=rwx,g=rx,o=rx
+  when:
+    - unbound is defined and unbound
+    - unbound_offline_fallback_enabled | bool
+
+- name: Schedule unbound horizon switcher
+  become: true
+  ansible.builtin.cron:
+    name: unbound horizon online/offline switch
+    minute: "*"
+    job: "/usr/local/bin/unbound-horizon-switch.sh"
+    user: root
+    state: present
+  when:
+    - unbound is defined and unbound
+    - unbound_offline_fallback_enabled | bool
 
 - name: Create docker-compose stack file
   vars:

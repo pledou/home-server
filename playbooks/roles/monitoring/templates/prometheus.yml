@@ -36,7 +36,7 @@ scrape_configs:
     metrics_path: /v1/metrics
     bearer_token: "{{ watchtower_api_token }}"
     static_configs:
-      - targets: ['monitoring-watchtower-1:8080']
+      - targets: ['watchtower:8080']
   - job_name: node
     static_configs:
       - targets: ['monitoring-node-exporter-1:9100']
