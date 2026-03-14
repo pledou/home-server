@@ -68,6 +68,7 @@ services:
     labels:
       - com.centurylinklabs.watchtower.enable=true
       - traefik.enable=true
+      - traefik.docker.network=traefik_backend
       - traefik.tcp.routers.dot.rule=HostSNI(`dns.{{ app_domain_name }}`)
       - traefik.tcp.routers.dot.entrypoints=dot
       - traefik.tcp.routers.dot.tls=true
@@ -111,6 +112,7 @@ services:
     labels:
       - com.centurylinklabs.watchtower.enable=false
       - traefik.enable=true
+      - traefik.docker.network=traefik_backend
       - traefik.http.routers.doh.rule=Host(`dns.{{ app_domain_name }}`) && Path(`/dns-query`)
       - traefik.http.routers.doh.entrypoints=https
       - traefik.http.routers.doh.tls=true
