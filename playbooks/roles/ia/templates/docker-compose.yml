@@ -144,7 +144,7 @@ services:
       resources:
         reservations:
           devices:
-            - driver: {% if gpu == 'intel' %}intel{% else %}nvidia{% endif %}
+            - driver: {{ 'intel' if gpu == 'intel' else 'nvidia' }}
               device_ids: ['all']
               capabilities: [gpu]
     {% endif %}
@@ -304,8 +304,6 @@ services:
       - ./model_aliases.json:/home/ubuntu/speaches/model_aliases.json:ro
     restart: unless-stopped
     {% if gpu == 'nvidia' %}
-    {#- Set nvidia runtime if it's not the default #}
-    runtime: nvidia
     deploy:
       resources:
         reservations:
