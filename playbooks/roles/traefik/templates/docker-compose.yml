@@ -68,14 +68,19 @@ services:
     labels:
       - com.centurylinklabs.watchtower.enable=true
       - traefik.enable=true
+      - traefik.docker.network=traefik_backend
       - traefik.tcp.routers.dot.rule=HostSNI(`dns.{{ app_domain_name }}`)
       - traefik.tcp.routers.dot.entrypoints=dot
       - traefik.tcp.routers.dot.tls=true
+      - traefik.tcp.routers.dot.tls.certresolver=le
       - traefik.tcp.routers.dot.service=unbound-dot
       - traefik.tcp.services.unbound-dot.loadbalancer.server.port=53
     image: "{{ unbound_image }}:{{ unbound_version }}"
     networks:
       backend:
+      monitoring_backend:
+        aliases:
+          - unbound-exporter
     expose:
       - 53
     ports:
@@ -84,11 +89,30 @@ services:
     volumes:
       - unbound:/etc/unbound
     restart: unless-stopped
+
+  unbound-exporter:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    build:
+      context: ./unbound_exporter
+      dockerfile: Dockerfile
+    image: "{{ unbound_exporter_image }}:{{ unbound_exporter_version }}"
+    network_mode: service:unbound
+    command:
+      - -unbound.host=tcp://127.0.0.1:8953
+      - -unbound.ca=
+      - -unbound.cert=
+      - -unbound.key=
+      - -web.listen-address=0.0.0.0:9167
+    depends_on:
+      - unbound
+    restart: unless-stopped
   
   doh-proxy:
     labels:
       - com.centurylinklabs.watchtower.enable=false
       - traefik.enable=true
+      - traefik.docker.network=traefik_backend
       - traefik.http.routers.doh.rule=Host(`dns.{{ app_domain_name }}`) && Path(`/dns-query`)
       - traefik.http.routers.doh.entrypoints=https
       - traefik.http.routers.doh.tls=true
@@ -140,6 +164,8 @@ networks:
   backend:
     enable_ipv6: true
     attachable: true
+  monitoring_backend:
+    external: true
 
 volumes:
   unbound:

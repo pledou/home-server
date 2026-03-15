@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+UNBOUND_DIR="{{ docker_volumes_path }}/unbound"
+ACTIVE_FILE="${UNBOUND_DIR}/horizon-active.conf"
+ONLINE_FILE="${UNBOUND_DIR}/horizon-online.conf"
+OFFLINE_FILE="${UNBOUND_DIR}/horizon-offline.conf"
+FORWARD_RECORDS_FILE="${UNBOUND_DIR}/forward-records.conf"
+STATE_DIR="/var/lib/unbound-horizon"
+STATE_FILE="${STATE_DIR}/state"
+PROJECT_NAME="{{ unbound_compose_project_name }}"
+
+mkdir -p "${STATE_DIR}"
+
+is_online=1
+if [[ -f "${FORWARD_RECORDS_FILE}" ]]; then
+  while IFS= read -r raw_target; do
+    target="$(echo "${raw_target}" | sed -E 's/^[[:space:]]*forward-addr:[[:space:]]*//' | sed -E 's/#.*$//')"
+
+    endpoint="${target%%@*}"
+    if [[ "${target}" == *"@"* ]]; then
+      port_part="${target#*@}"
+      port="${port_part%%#*}"
+    else
+      port="53"
+    fi
+
+    # /dev/tcp in bash does not support raw IPv6 addresses.
+    if [[ "${endpoint}" == *":"* ]]; then
+      continue
+    fi
+
+    if timeout 2 bash -c "cat < /dev/null > /dev/tcp/${endpoint}/${port}" >/dev/null 2>&1; then
+      is_online=0
+      break
+    fi
+  done < <(grep -E '^[[:space:]]*forward-addr:[[:space:]]*' "${FORWARD_RECORDS_FILE}" || true)
+fi
+
+if [[ ${is_online} -eq 1 ]]; then
+  # Fallback if no usable forward-addr is present in the generated config.
+  if ping -c 1 -W 2 1.1.1.1 >/dev/null 2>&1; then
+    is_online=0
+  fi
+fi
+
+if [[ ${is_online} -eq 0 ]]; then
+  desired="online"
+  desired_file="${ONLINE_FILE}"
+else
+  desired="offline"
+  desired_file="${OFFLINE_FILE}"
+fi
+
+current="unknown"
+if [[ -f "${STATE_FILE}" ]]; then
+  current="$(cat "${STATE_FILE}")"
+fi
+
+if [[ ! -f "${ACTIVE_FILE}" ]] || ! cmp -s "${desired_file}" "${ACTIVE_FILE}"; then
+  cp "${desired_file}" "${ACTIVE_FILE}"
+
+  container_id="$(docker ps \
+    --filter "label=com.docker.compose.project=${PROJECT_NAME}" \
+    --filter "label=com.docker.compose.service=unbound" \
+    --format '{{"{{"}}.ID{{"}}"}}' | head -n 1)"
+
+  if [[ -n "${container_id}" ]]; then
+    # Reload Unbound config without restarting the process to keep runtime cache.
+    docker kill --signal=HUP "${container_id}" >/dev/null
+  fi
+fi
+
+if [[ "${current}" != "${desired}" ]]; then
+  echo "${desired}" > "${STATE_FILE}"
+fi

@@ -175,7 +175,6 @@ myelectricaldata_name: "Home"
 myelectricaldata_plan: "Base" # "Base" or "HC/HP" or "Tempo"
 
 unbound: true
-# unbound_forward_dns: 192.168.1.254 # DNS server to forward requests to
 
 #Configuration of NUT
 nut_mode: netserver
