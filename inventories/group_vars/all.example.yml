@@ -94,8 +94,6 @@ authentik_api_token: !vault |
                      $ANSIBLE_VAULT;1.1;AES256
                      YOUR_ENCRYPTED_AUTHENTIK_API_TOKEN_HERE
 
-gpu: "none" # "nvidia" or "intel" used for ollama service
-
 mqtt_user: "your_mqtt_user"
 zigbee2mqtt_device_id: "usb-YOUR_ZIGBEE_DEVICE_ID"
 zigbee2mqtt_device_type: "zstack"

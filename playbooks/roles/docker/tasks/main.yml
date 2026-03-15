@@ -38,6 +38,65 @@
     force_apt_get: true
     update_cache: true
 
+- name: Detect NVIDIA device on host
+  ansible.builtin.stat:
+    path: /dev/nvidiactl
+  register: docker_nvidia_device
+
+- name: Check host NVIDIA driver availability
+  ansible.builtin.command:
+    cmd: nvidia-smi -L
+  register: docker_nvidia_smi_check
+  changed_when: false
+  failed_when: false
+  when: docker_nvidia_device.stat.exists | default(false)
+
+- name: Compute Docker NVIDIA runtime toggle
+  ansible.builtin.set_fact:
+    docker_enable_nvidia_runtime_effective: >-
+      {{
+        (docker_nvidia_device.stat.exists | default(false))
+        and (docker_nvidia_smi_check.rc | default(1) | int) == 0
+      }}
+
+- name: Compute NVIDIA repository architecture
+  ansible.builtin.set_fact:
+    docker_nvidia_repo_arch: >-
+      {{
+        {
+          'x86_64': 'amd64',
+          'amd64': 'amd64',
+          'aarch64': 'arm64',
+          'arm64': 'arm64'
+        }.get(ansible_architecture, ansible_architecture)
+      }}
+  when: docker_enable_nvidia_runtime_effective
+
+- name: Install NVIDIA Container Toolkit GPG key
+  become: true
+  ansible.builtin.apt_key:
+    url: https://nvidia.github.io/libnvidia-container/gpgkey
+    state: present
+  when: docker_enable_nvidia_runtime_effective
+
+- name: Add NVIDIA Container Toolkit repository
+  become: true
+  ansible.builtin.apt_repository:
+    validate_certs: true
+    update_cache: true
+    repo: >-
+      deb [arch={{ docker_nvidia_repo_arch }}]
+      https://nvidia.github.io/libnvidia-container/stable/deb/{{ docker_nvidia_repo_arch }} /
+  when: docker_enable_nvidia_runtime_effective
+
+- name: Install NVIDIA Container Toolkit
+  become: true
+  ansible.builtin.apt:
+    name: nvidia-container-toolkit
+    state: present
+    update_cache: true
+  when: docker_enable_nvidia_runtime_effective
+
 - name: Add user to "docker" group
   become: true
   ansible.builtin.user:
