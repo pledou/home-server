@@ -82,6 +82,7 @@ services:
       - '--collector.time'
       - '--collector.uname'
       - '--collector.thermal_zone'
+      - '--collector.hwmon'
     networks:
       - backend
     restart: always
@@ -179,6 +180,36 @@ services:
     networks:
       - backend
     restart: unless-stopped
+
+{% if monitoring_nvidia_device.stat.exists | default(false) %}
+  nvidia-gpu-exporter:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    image: "{{ nvidia_gpu_exporter_image }}:{{ nvidia_gpu_exporter_version }}"
+    # Explicit field list: driver 580+ added fields with "[us]"/"[ms]" unit suffixes
+    # in their names, which are invalid Prometheus metric names and crash the exporter.
+    # Only query the stable, well-known fields that work across all driver versions.
+    command:
+      - "--query-field-names=timestamp,index,name,driver_version,temperature.gpu,fan.speed,\
+        utilization.gpu,utilization.memory,\
+        memory.total,memory.free,memory.used,\
+        power.draw,power.limit,\
+        clocks.current.graphics,clocks.current.sm,clocks.current.memory,\
+        pcie.link.gen.current,pcie.link.gen.max,\
+        pstate"
+    restart: unless-stopped
+    networks:
+      backend:
+        aliases:
+          - nvidia-gpu-exporter
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['all']
+              capabilities: [gpu]
+{% endif %}
 
   cadvisor:
     labels:

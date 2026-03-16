@@ -57,3 +57,8 @@ scrape_configs:
     scrape_interval: 15s
     static_configs:
       - targets: ['ollama-metrics:8080','ollama-embeddings-metrics:8082']
+{% if monitoring_nvidia_device.stat.exists | default(false) %}
+  - job_name: nvidia-gpu
+    static_configs:
+      - targets: ['nvidia-gpu-exporter:9835']
+{% endif %}
