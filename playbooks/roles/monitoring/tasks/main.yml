@@ -107,7 +107,7 @@
       block:
         - name: Create grafana-admin group
           ansible.builtin.uri:
-            url: "https://auth.{{ app_domain_name }}/api/v3/core/groups/"
+            url: "{{ authentik_api_base_url }}/api/v3/core/groups/"
             method: POST
             headers:
               Authorization: "Bearer {{ authentik_api_token }}"
@@ -123,7 +123,7 @@
 
         - name: Create grafana-user group
           ansible.builtin.uri:
-            url: "https://auth.{{ app_domain_name }}/api/v3/core/groups/"
+            url: "{{ authentik_api_base_url }}/api/v3/core/groups/"
             method: POST
             headers:
               Authorization: "Bearer {{ authentik_api_token }}"
@@ -139,7 +139,7 @@
 
         - name: Create grafana-viewer group
           ansible.builtin.uri:
-            url: "https://auth.{{ app_domain_name }}/api/v3/core/groups/"
+            url: "{{ authentik_api_base_url }}/api/v3/core/groups/"
             method: POST
             headers:
               Authorization: "Bearer {{ authentik_api_token }}"

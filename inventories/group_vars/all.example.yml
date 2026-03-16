@@ -9,6 +9,7 @@ pg_backup_retention_days: 7
 duckdns_nonstatic: false # update duckdns ip binding
 duckdns_subdomain: your_subdomain
 app_domain_name: "{{ duckdns_subdomain }}.duckdns.org"
+authentik_api_base_url: "https://auth.{{ app_domain_name }}"
 docker_volumes_path: /opt
 docker_volume_device: /dev/disk/by-id/YOUR_DISK_ID
 
