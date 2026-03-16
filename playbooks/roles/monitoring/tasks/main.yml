@@ -46,6 +46,11 @@
     - grafana-provisioning/datasources
     - grafana-provisioning/dashboards
 
+- name: Detect NVIDIA device presence on host
+  ansible.builtin.stat:
+    path: /dev/nvidiactl
+  register: monitoring_nvidia_device
+
 - name: Deploy Prometheus configuration
   become: true
   ansible.builtin.template:
