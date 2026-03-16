@@ -4,7 +4,7 @@
 
 - name: "Create Forward Auth provider: {{ provider_app.provider.name }}"
   ansible.builtin.uri:
-    url: "https://auth.{{ app_domain_name }}/api/v3/providers/proxy/"
+    url: "{{ authentik_api_base_url }}/api/v3/providers/proxy/"
     method: POST
     headers:
       Authorization: "Bearer {{ authentik_api_token }}"
@@ -40,7 +40,7 @@
 
 - name: "Create application: {{ provider_app.app.name }}"
   ansible.builtin.uri:
-    url: "https://auth.{{ app_domain_name }}/api/v3/core/applications/"
+    url: "{{ authentik_api_base_url }}/api/v3/core/applications/"
     method: POST
     headers:
       Authorization: "Bearer {{ authentik_api_token }}"

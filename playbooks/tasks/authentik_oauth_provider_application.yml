@@ -25,7 +25,7 @@
 
 - name: "Lookup scope mappings by scope_name"
   ansible.builtin.uri:
-    url: "https://auth.{{ app_domain_name }}/api/v3/propertymappings/provider/scope/?scope_name={{ item | urlencode }}"
+    url: "{{ authentik_api_base_url }}/api/v3/propertymappings/provider/scope/?scope_name={{ item | urlencode }}"
     method: GET
     headers:
       Authorization: "Bearer {{ authentik_api_token }}"
@@ -47,7 +47,7 @@
 
 - name: "Create missing provider scope mappings"
   ansible.builtin.uri:
-    url: "https://auth.{{ app_domain_name }}/api/v3/propertymappings/provider/scope/"
+    url: "{{ authentik_api_base_url }}/api/v3/propertymappings/provider/scope/"
     method: POST
     headers:
       Authorization: "Bearer {{ authentik_api_token }}"
@@ -68,7 +68,7 @@
 
 - name: "Lookup newly created scope mappings"
   ansible.builtin.uri:
-    url: "https://auth.{{ app_domain_name }}/api/v3/propertymappings/provider/scope/?scope_name={{ item | urlencode }}"
+    url: "{{ authentik_api_base_url }}/api/v3/propertymappings/provider/scope/?scope_name={{ item | urlencode }}"
     method: GET
     headers:
       Authorization: "Bearer {{ authentik_api_token }}"
@@ -101,7 +101,7 @@
 
 - name: "Check if OAuth provider already exists: {{ oauth_app.provider.name }}"
   ansible.builtin.uri:
-    url: "https://auth.{{ app_domain_name }}/api/v3/providers/oauth2/?name={{ oauth_app.provider.name | urlencode }}"
+    url: "{{ authentik_api_base_url }}/api/v3/providers/oauth2/?name={{ oauth_app.provider.name | urlencode }}"
     method: GET
     headers:
       Authorization: "Bearer {{ authentik_api_token }}"
@@ -113,7 +113,7 @@
 
 - name: "Create OAuth2/OpenID Connect provider: {{ oauth_app.provider.name }}"
   ansible.builtin.uri:
-    url: "https://auth.{{ app_domain_name }}/api/v3/providers/oauth2/"
+    url: "{{ authentik_api_base_url }}/api/v3/providers/oauth2/"
     method: POST
     headers:
       Authorization: "Bearer {{ authentik_api_token }}"
@@ -133,7 +133,7 @@
 
 - name: "Update existing OAuth provider if needed: {{ oauth_app.provider.name }}"
   ansible.builtin.uri:
-    url: "https://auth.{{ app_domain_name }}/api/v3/providers/oauth2/{{ existing_oauth_provider.json.results[0].pk }}/"
+    url: "{{ authentik_api_base_url }}/api/v3/providers/oauth2/{{ existing_oauth_provider.json.results[0].pk }}/"
     method: PATCH
     headers:
       Authorization: "Bearer {{ authentik_api_token }}"
@@ -170,7 +170,7 @@
 
 - name: "Create application: {{ oauth_app.app.name }}"
   ansible.builtin.uri:
-    url: "https://auth.{{ app_domain_name }}/api/v3/core/applications/"
+    url: "{{ authentik_api_base_url }}/api/v3/core/applications/"
     method: POST
     headers:
       Authorization: "Bearer {{ authentik_api_token }}"

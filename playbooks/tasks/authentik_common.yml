@@ -10,7 +10,7 @@
 
 - name: Wait for Authentik to be ready
   ansible.builtin.uri:
-    url: "https://auth.{{ app_domain_name }}/api/v3/admin/version/"
+    url: "{{ authentik_api_base_url }}/api/v3/admin/version/"
     method: GET
     headers:
       Authorization: "Bearer {{ authentik_api_token }}"
@@ -23,7 +23,7 @@
 
 - name: Get default authorization flow
   ansible.builtin.uri:
-    url: "https://auth.{{ app_domain_name }}/api/v3/flows/instances/?slug=default-provider-authorization-implicit-consent"
+    url: "{{ authentik_api_base_url }}/api/v3/flows/instances/?slug=default-provider-authorization-implicit-consent"
     method: GET
     headers:
       Authorization: "Bearer {{ authentik_api_token }}"
@@ -33,7 +33,7 @@
 
 - name: Get default invalidation flow
   ansible.builtin.uri:
-    url: "https://auth.{{ app_domain_name }}/api/v3/flows/instances/?slug=default-provider-invalidation-flow"
+    url: "{{ authentik_api_base_url }}/api/v3/flows/instances/?slug=default-provider-invalidation-flow"
     method: GET
     headers:
       Authorization: "Bearer {{ authentik_api_token }}"
@@ -61,7 +61,7 @@
 
 - name: Get embedded outpost
   ansible.builtin.uri:
-    url: "https://auth.{{ app_domain_name }}/api/v3/outposts/instances/"
+    url: "{{ authentik_api_base_url }}/api/v3/outposts/instances/"
     method: GET
     headers:
       Authorization: "Bearer {{ authentik_api_token }}"
@@ -72,7 +72,7 @@
 
 - name: Update embedded outpost to include proxy providers
   ansible.builtin.uri:
-    url: "https://auth.{{ app_domain_name }}/api/v3/outposts/instances/{{ item.pk }}/"
+    url: "{{ authentik_api_base_url }}/api/v3/outposts/instances/{{ item.pk }}/"
     method: PATCH
     headers:
       Authorization: "Bearer {{ authentik_api_token }}"
