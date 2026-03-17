@@ -79,7 +79,7 @@ webui_secret_key: "{{ lookup('password', '/dev/null chars=ascii_letters,digits l
 
 ollama_memory_limit_ratio: 0.90
 ollama_min_memory_mb: 4096
-ollama_shm_size_mb: 10240 # Sifficient for 8b, 13b models
+# ollama_shm_size_mb: 10240 # Sifficient for 8b, 13b models
 ollama_min_cpus: 0.5
 ollama_reserved_cpus: 0.5
 
