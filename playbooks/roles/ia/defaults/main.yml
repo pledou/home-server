@@ -83,6 +83,8 @@ ollama_shm_size_mb: 10240 # Sifficient for 8b, 13b models
 ollama_min_cpus: 0.5
 ollama_reserved_cpus: 0.5
 
+ollama_shm_size_mb: 20480 # Sufficient for 8b, 13b, 20b models
+
 ollama_detected_vcpus: "{{ ansible_facts.processor_vcpus | default(ansible_processor_vcpus) | default(2) | int }}"
 ollama_detected_mem_mb: "{{ ansible_facts.memtotal_mb | default(ansible_memtotal_mb) | default(8192) | int }}"
 

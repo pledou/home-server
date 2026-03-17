@@ -116,7 +116,7 @@ services:
       {% if gpu == 'intel' %}
       - DEVICE=iGPU
       {% endif %}
-      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_KEEP_ALIVE={{ '24h' if gpu == 'none' else '2h' }}
       - OLLAMA_NUM_THREADS={{ ollama_num_threads }}
       - OLLAMA_HOST=0.0.0.0
       {% if gpu == 'intel' %}
