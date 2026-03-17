@@ -14,7 +14,15 @@ RUN sed -E -i "s/Buckets:[[:space:]]*\[\]float64\{[^}]*\},/Buckets: []float64{ $
 
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /ollama-metrics .
 
-FROM scratch
+FROM alpine:3.20
 
-COPY --from=builder /ollama-metrics /ollama-metrics
-ENTRYPOINT ["/ollama-metrics"]
+RUN addgroup -S ollama && adduser -S -G ollama -h /home/ollama ollama
+
+COPY --from=builder /ollama-metrics /usr/local/bin/ollama-metrics
+
+USER ollama
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+	CMD wget -qO- "http://127.0.0.1:${PORT:-8080}/metrics" >/dev/null || exit 1
+
+ENTRYPOINT ["/usr/local/bin/ollama-metrics"]
