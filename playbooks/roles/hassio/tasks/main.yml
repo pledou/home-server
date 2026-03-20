@@ -219,7 +219,6 @@
   ansible.builtin.include_tasks: "postdeploy_ai_integrations.yml"
 
 - name: Configure Authentik providers and applications for Home Assistant services
-  delegate_to: localhost
   become: false
   when: authentik_api_token is defined
   block:

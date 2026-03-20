@@ -167,6 +167,7 @@
     oauth_provider_pk: "{{ oauth_provider_result.json.pk }}"
     oauth_provider_client_id: "{{ oauth_provider_result.json.client_id }}"
     oauth_provider_client_secret: "{{ oauth_provider_result.json.client_secret }}"
+    current_oauth_provider_name: "{{ oauth_app.provider.name }}"
   when:
     - authentik_api_token is defined
     - oauth_app.provider is defined
@@ -178,6 +179,7 @@
     oauth_provider_pk: "{{ existing_oauth_provider.json.results[0].pk }}"
     oauth_provider_client_id: "{{ existing_oauth_provider.json.results[0].client_id }}"
     oauth_provider_client_secret: "{{ existing_oauth_provider.json.results[0].client_secret }}"
+    current_oauth_provider_name: "{{ oauth_app.provider.name }}"
   when:
     - authentik_api_token is defined
     - oauth_app.provider is defined
@@ -210,6 +212,7 @@
     - authentik_api_token is defined
     - oauth_provider_pk is defined
     - oauth_app.app is defined
+    - current_oauth_provider_name == oauth_app.provider.name
 
 - name: "Display OAuth provider details: {{ oauth_app.provider.name }}"
   ansible.builtin.debug:

@@ -249,7 +249,7 @@
     state: present
     project_src: /home/{{ ansible_user }}/home-server/stacks/traefik
 
-- name: Configure Authentik providers and applications for Home Assistant services
+- name: Configure Authentik providers and applications for Traefik services
   become: false
   when: authentik_api_token is defined
   block:
