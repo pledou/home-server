@@ -14,12 +14,9 @@
 
 - name: Install apps & backup
   hosts: docker_server
-  pre_tasks:
-    - name: Detect and initialize GPU runtime
-      ansible.builtin.include_role:
-        name: gpu
-      tags: ['docker-apps', 'monitoring', 'ia', 'hassio', 'gpu']
   roles:
+    - role: gpu
+      tags: ['docker-apps', 'monitoring', 'ia', 'hassio', 'gpu']
     - role: authentik
       tags: ['authentik', 'docker-apps']
     - role: traefik
