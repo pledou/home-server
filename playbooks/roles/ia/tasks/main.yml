@@ -29,52 +29,9 @@
     group: "{{ ansible_user }}"
     mode: u=rwx,g=o=rx
 
-- name: Detect NVIDIA device presence on host
-  ansible.builtin.stat:
-    path: /dev/nvidiactl
-  register: ia_nvidia_device
-
-- name: Check NVIDIA GPU accessibility from Docker
-  ansible.builtin.command:
-    cmd: docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
-  register: ia_nvidia_docker_check
-  changed_when: false
-  failed_when: false
-  when: ia_nvidia_device.stat.exists | default(false)
-
-- name: Detect Intel GPU device presence
-  ansible.builtin.stat:
-    path: /dev/dri/renderD128
-  register: ia_intel_render_device
-
-- name: Choose effective IA GPU mode
-  ansible.builtin.set_fact:
-    ia_gpu_effective: >-
-      {{
-        'nvidia'
-        if (
-          (ia_nvidia_device.stat.exists | default(false))
-          and (ia_nvidia_docker_check.rc | default(1) | int) == 0
-        )
-        else ('intel' if (ia_intel_render_device.stat.exists | default(false)) else 'none')
-      }}
-
-- name: Report IA NVIDIA fallback reason
-  ansible.builtin.debug:
-    msg: >-
-      NVIDIA device was detected on host {{ inventory_hostname }}, but Docker GPU access failed.
-      IA stack will fallback to intel if available, otherwise none.
-      docker nvidia test rc={{ ia_nvidia_docker_check.rc | default('n/a') }}
-      stderr={{ ia_nvidia_docker_check.stderr | default('') | trim }}
-      If stderr contains "no known GPU vendor found", install/configure NVIDIA Container Toolkit
-      and rerun the docker role (for example: --tags docker).
-  when:
-    - ia_nvidia_device.stat.exists | default(false)
-    - (ia_nvidia_docker_check.rc | default(1) | int) != 0
-
 - name: Report detected IA GPU mode
   ansible.builtin.debug:
-    msg: "IA GPU mode selected: effective={{ ia_gpu_effective }}"
+    msg: "IA GPU mode selected: effective={{ gpu_mode_effective | default('none') }}"
 
 - name: Create docker-compose stack file
   ansible.builtin.template:
@@ -82,7 +39,7 @@
     dest: /home/{{ ansible_user }}/home-server/stacks/ia/docker-compose.yml
     mode: u=rwx,g=o=rx
   vars:
-    gpu: "{{ ia_gpu_effective }}"
+    gpu: "{{ gpu_mode_effective | default('none') }}"
 
 - name: Create Speaches model aliases file
   ansible.builtin.template:

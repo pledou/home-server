@@ -1,0 +1,3 @@
+---
+gpu_attempt_recovery: true
+gpu_fail_if_nvidia_unhealthy: false
