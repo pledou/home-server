@@ -257,7 +257,7 @@ services:
     build:
       context: .
       dockerfile: ./ollama-metrics.Dockerfile
-    image: "{{ ollama_metrics_image }}:{{ ollama_metrics_version }}"
+    image: "{{ ollama_embeddings_metrics_image }}:{{ ollama_embeddings_metrics_version }}"
     environment:
       - OLLAMA_HOST=http://ollama-embeddings:11434
       - PORT=8082

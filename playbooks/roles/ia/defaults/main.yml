@@ -20,6 +20,8 @@ speaches_postdeploy_models:
   - "{{ speaches_tts_model }}"
 ollama_metrics_image: "ghcr.io/norskhelsenett/ollama-metrics"
 ollama_metrics_version: "latest"
+ollama_embeddings_metrics_image: "ghcr.io/norskhelsenett/ollama-embeddings-metrics"
+ollama_embeddings_metrics_version: "{{ ollama_metrics_version }}"
 ollama_metrics_repo_url: "https://github.com/NorskHelsenett/ollama-metrics.git"
 ollama_metrics_repo_ref: "main"
 ollama_metrics_request_duration_buckets:
