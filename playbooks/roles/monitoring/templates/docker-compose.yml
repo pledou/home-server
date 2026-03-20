@@ -181,7 +181,7 @@ services:
       - backend
     restart: unless-stopped
 
-{% if monitoring_nvidia_device.stat.exists | default(false) %}
+{% if gpu_nvidia_available | default(false) %}
   nvidia-gpu-exporter:
     labels:
       - com.centurylinklabs.watchtower.enable=true

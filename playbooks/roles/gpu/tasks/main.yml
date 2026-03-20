@@ -1,0 +1,92 @@
+---
+- name: Detect NVIDIA device presence on host
+  ansible.builtin.stat:
+    path: /dev/nvidiactl
+  register: gpu_nvidia_device
+
+- name: Check host NVIDIA driver availability
+  ansible.builtin.command:
+    cmd: nvidia-smi -L
+  register: gpu_nvidia_smi_check
+  changed_when: false
+  failed_when: false
+  when: gpu_nvidia_device.stat.exists | default(false)
+
+- name: Try to recover NVIDIA runtime when driver appears unloaded
+  become: true
+  when:
+    - gpu_attempt_recovery | bool
+    - gpu_nvidia_device.stat.exists | default(false)
+    - (gpu_nvidia_smi_check.rc | default(1) | int) != 0
+  block:
+    - name: Load NVIDIA kernel module
+      ansible.builtin.command:
+        cmd: modprobe nvidia
+      changed_when: false
+      failed_when: false
+
+    - name: Load NVIDIA UVM kernel module
+      ansible.builtin.command:
+        cmd: modprobe nvidia_uvm
+      changed_when: false
+      failed_when: false
+
+    - name: Ensure nvidia-persistenced service is started
+      ansible.builtin.service:
+        name: nvidia-persistenced
+        state: started
+        enabled: true
+      failed_when: false
+
+    - name: Re-check NVIDIA driver availability
+      ansible.builtin.command:
+        cmd: nvidia-smi -L
+      register: gpu_nvidia_smi_recheck
+      changed_when: false
+      failed_when: false
+
+
+- name: Detect Intel GPU device presence
+  ansible.builtin.stat:
+    path: /dev/dri/renderD128
+  register: gpu_intel_render_device
+
+- name: Compute effective GPU facts
+  ansible.builtin.set_fact:
+    gpu_nvidia_available: >-
+      {{
+        (gpu_nvidia_device.stat.exists | default(false))
+        and ((gpu_nvidia_smi_recheck.rc | default(gpu_nvidia_smi_check.rc | default(1))) | int) == 0
+      }}
+    gpu_intel_available: "{{ gpu_intel_render_device.stat.exists | default(false) }}"
+    gpu_mode_effective: >-
+      {{
+        'nvidia'
+        if (
+          (gpu_nvidia_device.stat.exists | default(false))
+          and ((gpu_nvidia_smi_recheck.rc | default(gpu_nvidia_smi_check.rc | default(1))) | int) == 0
+        )
+        else ('intel' if (gpu_intel_render_device.stat.exists | default(false)) else 'none')
+      }}
+
+- name: Report NVIDIA runtime issue
+  ansible.builtin.debug:
+    msg: >-
+      NVIDIA device was detected on host {{ inventory_hostname }}, but nvidia-smi is unavailable.
+      rc={{ gpu_nvidia_smi_recheck.rc | default(gpu_nvidia_smi_check.rc | default('n/a')) }}
+      stderr={{ gpu_nvidia_smi_recheck.stderr | default(gpu_nvidia_smi_check.stderr | default('')) | trim }}
+  when:
+    - gpu_nvidia_device.stat.exists | default(false)
+    - not (gpu_nvidia_available | default(false))
+
+- name: Fail when NVIDIA runtime is required but unhealthy
+  ansible.builtin.fail:
+    msg: >-
+      NVIDIA device is present but driver/runtime is not usable on host {{ inventory_hostname }}.
+      nvidia-smi failed with rc={{ gpu_nvidia_smi_recheck.rc | default(gpu_nvidia_smi_check.rc | default('n/a')) }}
+      stderr={{ gpu_nvidia_smi_recheck.stderr | default(gpu_nvidia_smi_check.stderr | default('')) | trim }}.
+      Resolve host NVIDIA driver state, then rerun.
+  when:
+    - gpu_fail_if_nvidia_unhealthy | bool
+    - gpu_nvidia_device.stat.exists | default(false)
+    - not (gpu_nvidia_available | default(false))
