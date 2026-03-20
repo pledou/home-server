@@ -2,7 +2,18 @@
 ---
 # Task file for creating/updating a single Authentik provider
 
-- name: "Create Forward Auth provider: {{ provider_app.provider.name }}"
+# Reset iteration-scoped variable to prevent cross-iteration/cross-role contamination.
+# provider_pk is a global Ansible fact; _current_provider_pk is reset here each time
+# this file is included so a stale value from a previous iteration can never bleed through.
+- name: "Reset iteration state: {{ provider_app.provider.name }}"
+  ansible.builtin.set_fact:
+    _current_provider_pk: ""
+    existing_app: {}
+    existing_provider: {"json": {"results": []}}
+    existing_provider_matches: []
+  when: authentik_api_token is defined
+
+- name: "Check if Forward Auth provider exists: {{ provider_app.provider.name }}"
   ansible.builtin.uri:
     url: "{{ authentik_api_base_url }}/api/v3/providers/proxy/?name={{ provider_app.provider.name | urlencode }}"
     method: GET
@@ -10,6 +21,17 @@
       Authorization: "Bearer {{ authentik_api_token }}"
     validate_certs: true
   register: existing_provider
+  when:
+    - authentik_api_token is defined
+
+- name: "Filter exact provider name matches: {{ provider_app.provider.name }}"
+  ansible.builtin.set_fact:
+    existing_provider_matches: >-
+      {{
+        (existing_provider.json.results | default([]))
+        | selectattr('name', 'equalto', provider_app.provider.name)
+        | list
+      }}
   when:
     - authentik_api_token is defined
 
@@ -27,59 +49,60 @@
       invalidation_flow: "{{ invalidation_flow_result.json.results[0].pk }}"
       external_host: "{{ provider_app.provider.external_host }}"
       mode: "{{ provider_app.provider.mode | default('forward_single') }}"
-    status_code: [201, 400]
+    status_code: [201]
   register: provider_result
-  failed_when:
-    - provider_result.status == 400
-    - "'already exists' not in (provider_result.json | string | lower)"
   changed_when: provider_result.status == 201
   when:
     - authentik_api_token is defined
-    - existing_provider.json.results | length == 0
-
-- name: "Update existing Forward Auth provider if needed: {{ provider_app.provider.name }}"
-  ansible.builtin.uri:
-    url: "https://auth.{{ app_domain_name }}/api/v3/providers/proxy/{{ existing_provider.json.results[0].pk }}/"
-    method: PATCH
-    headers:
-      Authorization: "Bearer {{ authentik_api_token }}"
-      Content-Type: "application/json"
-    body_format: json
-    body:
-      name: "{{ provider_app.provider.name }}"
-      authorization_flow: "{{ auth_flow_result.json.results[0].pk }}"
-      invalidation_flow: "{{ invalidation_flow_result.json.results[0].pk }}"
-      external_host: "{{ provider_app.provider.external_host }}"
-      mode: "{{ provider_app.provider.mode | default('forward_single') }}"
-    status_code: [200, 400]
-  register: provider_update_result
-  when:
-    - authentik_api_token is defined
-    - existing_provider.json.results | length > 0
+    - existing_provider_matches | length == 0
 
 - name: "Set provider PK from created provider: {{ provider_app.provider.name }}"
   ansible.builtin.set_fact:
-    provider_pk: "{{ provider_result.json.pk }}"
+    _current_provider_pk: "{{ provider_result.json.pk }}"
   when:
     - authentik_api_token is defined
     - provider_result is defined
+    - not (provider_result.skipped | default(false))
+    - provider_result.json is defined
     - provider_result.json.pk is defined
+
 - name: "Set provider PK from existing provider: {{ provider_app.provider.name }}"
   ansible.builtin.set_fact:
-    provider_pk: "{{ existing_provider.json.results[0].pk }}"
+    _current_provider_pk: "{{ existing_provider_matches[0].pk }}"
   when:
     - authentik_api_token is defined
-    - existing_provider.json.results | length > 0
+    - existing_provider_matches | length > 0
+
+- name: "DEBUG _current_provider_pk: {{ provider_app.provider.name }}"
+  ansible.builtin.debug:
+    msg: "_current_provider_pk = '{{ _current_provider_pk }}'"
+  when: authentik_api_token is defined
+
 - name: "Ensure provider PK is defined: {{ provider_app.provider.name }}"
   ansible.builtin.fail:
     msg: "Could not determine provider PK for {{ provider_app.provider.name }}"
   when:
     - authentik_api_token is defined
-    - provider_pk is not defined
+    - _current_provider_pk == ""
+
 - name: "Add provider PK to list: {{ provider_app.provider.name }}"
   ansible.builtin.set_fact:
-    authentik_provider_pks: "{{ authentik_provider_pks | default([]) + [provider_pk] }}"
-  when: provider_pk is defined
+    authentik_provider_pks: "{{ authentik_provider_pks | default([]) + [_current_provider_pk] }}"
+  when:
+    - authentik_api_token is defined
+    - _current_provider_pk != ""
+
+- name: "Check if application exists: {{ provider_app.app.name }}"
+  ansible.builtin.uri:
+    url: "{{ authentik_api_base_url }}/api/v3/core/applications/?slug={{ provider_app.app.slug | urlencode }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    validate_certs: true
+  register: existing_app
+  when:
+    - authentik_api_token is defined
+    - _current_provider_pk != ""
 
 - name: "Create application: {{ provider_app.app.name }}"
   ansible.builtin.uri:
@@ -92,14 +115,52 @@
     body:
       name: "{{ provider_app.app.name }}"
       slug: "{{ provider_app.app.slug }}"
-      provider: "{{ provider_pk | trim }}"
+      provider: "{{ _current_provider_pk | int }}"
       open_in_new_tab: true
-    status_code: [201, 400]
+    status_code: [201]
   register: app_result
-  failed_when:
-    - app_result.status == 400
-    - "'already exists' not in (app_result.json | string | lower)"
   changed_when: app_result.status == 201
   when:
     - authentik_api_token is defined
-    - provider_pk is defined
+    - _current_provider_pk != ""
+    - existing_app.json.results | length == 0
+
+- name: "Delete mislinked application: {{ provider_app.app.name }}"
+  ansible.builtin.uri:
+    url: "{{ authentik_api_base_url }}/api/v3/core/applications/{{ provider_app.app.slug }}/"
+    method: DELETE
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    status_code: [204, 404]
+  register: app_delete_by_slug_result
+  changed_when: app_delete_by_slug_result.status == 204
+  when:
+    - authentik_api_token is defined
+    - _current_provider_pk != ""
+    - existing_app.json.results | length > 0
+    - (existing_app.json.results[0].provider | int) != (_current_provider_pk | int)
+
+- name: "Recreate application after mismatch deletion: {{ provider_app.app.name }}"
+  ansible.builtin.uri:
+    url: "{{ authentik_api_base_url }}/api/v3/core/applications/"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      name: "{{ provider_app.app.name }}"
+      slug: "{{ provider_app.app.slug }}"
+      provider: "{{ _current_provider_pk | int }}"
+      open_in_new_tab: true
+    status_code: [201]
+  register: app_recreate_result
+  changed_when: true
+  retries: 5
+  delay: 2
+  until: app_recreate_result.status == 201
+  when:
+    - authentik_api_token is defined
+    - _current_provider_pk != ""
+    - existing_app.json.results | length > 0
+    - (existing_app.json.results[0].provider | int) != (_current_provider_pk | int)

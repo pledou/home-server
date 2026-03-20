@@ -47,7 +47,7 @@ services:
       - traefik.enable=true
       - traefik.docker.network=traefik_backend
       - traefik.constraint-label=traefik_backend
-      - traefik.http.routers.authentik-https.rule=Host(`auth.{{app_domain_name}}`) || HostRegexp(`{subdomain:[a-z]}.{{app_domain_name}}}`) && PathPrefix(`/outpost.goauthentik.io/`)
+      - traefik.http.routers.authentik-https.rule=Host(`auth.{{app_domain_name}}`) || HostRegexp(`{subdomain:[a-z0-9-]+}.{{app_domain_name}}}`) && PathPrefix(`/outpost.goauthentik.io/`)
       - traefik.http.routers.authentik-https.entrypoints=https
       - traefik.http.routers.authentik-https.tls=true
       - traefik.http.routers.authentik-https.tls.certresolver=le
