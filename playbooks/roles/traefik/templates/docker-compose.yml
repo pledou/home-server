@@ -151,7 +151,7 @@ services:
 {% if duckdns_nonstatic %}
     command: /bin/sh -c "while true; do wget -O - 'https://www.duckdns.org/update?domains={{ duckdns_subdomain }}&token={{ traefik_duckdns_token }}&ip='; sleep 1200; done"
 {% else %}
-    command: /bin/sh -c "wget -O - 'https://www.duckdns.org/update?domains={{ duckdns_subdomain }}&token={{ traefik_duckdns_token }}&ip=&ipv6={{ my_ipv6_network.split('::')[0] }}:{{ eui64 }}'"
+    command: /bin/sh -c "wget -O - 'https://www.duckdns.org/update?domains={{ duckdns_subdomain }}&token={{ traefik_duckdns_token }}&ip='; wget -O - 'https://www.duckdns.org/update?domains={{ duckdns_subdomain }}&token={{ traefik_duckdns_token }}&ipv6={{ my_ipv6_network.split('::')[0] }}:{{ eui64 }}'"
 {% endif %}
     image: "{{ alpine_image }}:{{ alpine_version }}"
     networks:
