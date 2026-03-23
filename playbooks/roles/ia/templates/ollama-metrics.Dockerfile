@@ -1,4 +1,4 @@
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 ARG OLLAMA_METRICS_REPO_URL="{{ ollama_metrics_repo_url }}"
 ARG OLLAMA_METRICS_REPO_REF="{{ ollama_metrics_repo_ref }}"
@@ -14,7 +14,7 @@ RUN sed -E -i "s/Buckets:[[:space:]]*\[\]float64\{[^}]*\},/Buckets: []float64{ $
 
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /ollama-metrics .
 
-FROM alpine:3.20
+FROM alpine:3.23
 
 RUN addgroup -S ollama && adduser -S -G ollama -h /home/ollama ollama
 
