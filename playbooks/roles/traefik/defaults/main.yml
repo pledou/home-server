@@ -12,4 +12,4 @@ unbound_exporter_version: "v0.5.0"
 unbound_offline_fallback_enabled: true
 unbound_compose_project_name: "traefik"
 alpine_image: "alpine"
-alpine_version: "3.19"
+alpine_version: "3.23"
