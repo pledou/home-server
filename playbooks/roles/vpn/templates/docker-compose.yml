@@ -1,0 +1,165 @@
+---
+# VPN stack: strongSwan IKEv2/EAP-RADIUS + FreeRADIUS + Authentik LDAP outpost
+# Authentication flow:
+#   client → strongSwan (EAP-RADIUS) → FreeRADIUS (LDAP) → Authentik LDAP outpost → Authentik
+
+services:
+
+  # --------------------------------------------------------------------------
+  # strongSwan — IKEv2 VPN server
+  # Uses swanctl (vici) config style; no ipsec.conf.
+  # Listens on UDP 500 (IKE) and UDP 4500 (NAT-T).
+  # --------------------------------------------------------------------------
+  strongswan:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    image: "{{ vpn_strongswan_image }}:{{ vpn_strongswan_version }}"
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.accept_redirects=0
+      - net.ipv4.conf.all.send_redirects=0
+    ports:
+      - "{{ vpn_listen_port_ike }}:500/udp"
+      - "{{ vpn_listen_port_nat_t }}:4500/udp"
+    volumes:
+      - strongswan_config:/etc/swanctl
+{% if vpn_use_traefik_cert | bool %}
+      # Re-use the Let's Encrypt cert managed by Traefik (read-only)
+      - traefik_certs:/etc/swanctl/x509:ro
+{% endif %}
+      - strongswan_ipsec_d:{{ docker_volumes_path }}/vpn-strongswan/ipsec.d:ro
+    configs:
+      - source: swanctl_conf
+        target: /etc/swanctl/swanctl.conf
+        mode: 0600
+    networks:
+      vpn_internal:
+    depends_on:
+      freeradius:
+        condition: service_healthy
+
+  # --------------------------------------------------------------------------
+  # FreeRADIUS — RADIUS server
+  # Receives EAP-MSCHAPv2 / EAP-TTLS requests from strongSwan and validates
+  # credentials via the LDAP module pointing at Authentik's LDAP outpost.
+  # --------------------------------------------------------------------------
+  freeradius:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    image: "{{ vpn_freeradius_image }}:{{ vpn_freeradius_version }}"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "radwho", "-r"]
+      start_period: 10s
+      interval: 30s
+      retries: 3
+      timeout: 5s
+    volumes:
+      - "{{ docker_volumes_path }}/vpn-freeradius/mods-enabled/ldap:/etc/freeradius/mods-enabled/ldap:ro"
+      - "{{ docker_volumes_path }}/vpn-freeradius/clients.conf.d/strongswan.conf:/etc/freeradius/clients.conf.d/strongswan.conf:ro"
+    networks:
+      vpn_internal:
+      authentik_backend:
+
+  # --------------------------------------------------------------------------
+  # Authentik LDAP outpost
+  # Exposes Authentik user directory over LDAP so FreeRADIUS can bind and
+  # search users.  Uses the same Docker network as the main Authentik stack.
+  # --------------------------------------------------------------------------
+  authentik-ldap:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    image: "ghcr.io/goauthentik/ldap:{{ authentik_version | default('2026.2') }}"
+    restart: unless-stopped
+    environment:
+      AUTHENTIK_HOST: "https://auth.{{ app_domain_name }}"
+      AUTHENTIK_INSECURE: "false"
+      AUTHENTIK_TOKEN: "{{ vpn_authentik_ldap_outpost_token }}"
+    networks:
+      vpn_internal:
+        aliases:
+          - authentik-ldap
+      authentik_backend:
+
+configs:
+  swanctl_conf:
+    content: |
+      connections {
+        ikev2-eap-radius {
+          version = 2
+          proposals = {{ vpn_ike_proposal }}
+          local_addrs  = %any
+          remote_addrs = %any
+
+          local {
+            auth = pubkey
+            certs = server-cert.pem
+            id = {{ vpn_server_address }}
+          }
+          remote {
+            auth = eap-radius
+            eap_id = %any
+          }
+          children {
+            vpn-client {
+              esp_proposals = {{ vpn_esp_proposal }}
+              local_ts  = 0.0.0.0/0
+              remote_ts = dynamic
+              mode = tunnel
+            }
+          }
+        }
+      }
+      pools {
+        vpn-pool {
+          addrs = {{ vpn_client_pool }}
+          dns = {{ vpn_dns_servers | join(', ') }}
+        }
+      }
+      secrets {
+        # No PSK — cert-based server auth + EAP user auth
+      }
+      # EAP-RADIUS plugin configuration
+      # /etc/strongswan.d/charon-systemd.conf or environment variable approach
+      # is used instead; see charon-radius section below.
+      charon-systemd {
+        load = nonce pem x509 revocation constraints pubkey pkcs1 pkcs8 pkcs12 pgp dnskey sshkey pem openssl fips-prf random kernel-netlink resolve socket-default vici updown eap-identity eap-radius xauth-generic counters
+      }
+      plugins {
+        eap-radius {
+          secret = {{ vpn_radius_secret }}
+          server = freeradius
+          port = 1812
+          nas-identifier = {{ vpn_server_address }}
+        }
+      }
+
+networks:
+  vpn_internal:
+    attachable: true
+  authentik_backend:
+    external: true
+    name: authentik_backend
+
+volumes:
+  strongswan_config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/vpn-strongswan"
+  strongswan_ipsec_d:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/vpn-strongswan/ipsec.d"
+{% if vpn_use_traefik_cert | bool %}
+  traefik_certs:
+    external: true
+    name: traefik_traefik-public-certificates
+{% endif %}

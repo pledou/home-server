@@ -1,0 +1,17 @@
+[Interface]
+Address = {{ vpn_address }}
+ListenPort = {{ vpn_listen_port }}
+PrivateKey = {{ vpn_private_key }}
+{% if vpn_dns | length > 0 %}DNS = {{ vpn_dns | join(', ') }}
+{% endif %}{% for cmd in vpn_post_up %}PostUp = {{ cmd }}
+{% endfor %}{% for cmd in vpn_post_down %}PostDown = {{ cmd }}
+{% endfor %}
+{% for peer in vpn_peers %}[Peer]
+# {{ peer.name | default('peer') }}
+PublicKey = {{ peer.public_key }}
+AllowedIPs = {{ peer.allowed_ips | join(', ') }}
+{% if peer.preshared_key is defined and peer.preshared_key | length > 0 %}PresharedKey = {{ peer.preshared_key }}
+{% endif %}{% if peer.endpoint is defined and peer.endpoint | length > 0 %}Endpoint = {{ peer.endpoint }}
+{% endif %}{% if peer.persistent_keepalive is defined %}PersistentKeepalive = {{ peer.persistent_keepalive }}
+{% endif %}
+{% endfor %}

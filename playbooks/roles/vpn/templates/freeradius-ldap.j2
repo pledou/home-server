@@ -1,0 +1,62 @@
+# FreeRADIUS LDAP module — backed by Authentik LDAP outpost
+# Deployed to: /etc/freeradius/mods-enabled/ldap
+# Authentik LDAP outpost uses schema:
+#   users: ou=users,<base_dn>
+#   bind:  cn=<user>,ou=users,<base_dn>
+
+ldap {
+    server = "{{ vpn_authentik_ldap_host }}"
+    port = {{ vpn_authentik_ldap_port }}
+
+    # Service account created in Authentik → Directory → Service Accounts
+    identity = "{{ vpn_authentik_ldap_bind_dn }}"
+    password = "{{ vpn_authentik_ldap_bind_password }}"
+
+    base_dn = "{{ vpn_authentik_ldap_base_dn }}"
+
+    # Authentik LDAP user object filter
+    filter = "(cn=%{%{Stripped-User-Name}:-%{User-Name}})"
+    user {
+        base_dn = "ou=users,{{ vpn_authentik_ldap_base_dn }}"
+        filter = "(cn=%{%{Stripped-User-Name}:-%{User-Name}})"
+        scope = "sub"
+        # Extract the user password for PAP / MSCHAPV2 / EAP-TTLS-PAP
+        password_attribute = userPassword
+    }
+
+    group {
+        base_dn = "ou=groups,{{ vpn_authentik_ldap_base_dn }}"
+        filter = "(objectClass=groupOfUniqueNames)"
+        membership_attribute = isMemberOf
+    }
+
+    options {
+        chase_referrals = no
+        rebind = no
+        # Max wait time reachable before falling back
+        timeout = 4
+        timelimit = 3
+        idle = 60
+        probes = 3
+        interval = 3
+        ldap_debug = 0x0028
+    }
+
+    tls {
+        # TLS is not mandatory because FreeRADIUS and the LDAP outpost
+        # communicate inside the Docker internal network.
+        # Set start_tls = yes and ca_file if you want encryption.
+        start_tls = no
+    }
+
+    pool {
+        start = ${thread[pool].start_servers}
+        min = ${thread[pool].min_spare_servers}
+        max = ${thread[pool].max_servers}
+        spare = ${thread[pool].max_spare_servers}
+        uses = 0
+        retry_delay = 30
+        lifetime = 0
+        idle_timeout = 60
+    }
+}

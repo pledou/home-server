@@ -1,0 +1,47 @@
+---
+# VPN role defaults — strongSwan IKEv2/EAP-RADIUS stack
+vpn_enabled: false
+
+# ---- Network ---------------------------------------------------------------
+# Public IP/hostname clients will connect to (required when vpn_enabled=true)
+vpn_server_address: "vpn.{{ app_domain_name }}"  # You can override with a public IP if needed
+vpn_client_pool: "10.8.0.0/24" # Virtual IP pool handed to clients
+vpn_listen_port_ike: 500
+vpn_listen_port_nat_t: 4500
+
+# ---- strongSwan ------------------------------------------------------------
+vpn_strongswan_image: "strongswan/strongswan"
+vpn_strongswan_version: "5.9.14"
+
+# IKEv2 proposals — chosen for broad native client compatibility
+vpn_ike_proposal: "aes256-sha384-ecp384,aes256-sha256-modp2048"
+vpn_esp_proposal: "aes256gcm128-ecp384,aes256-sha256-modp2048"
+
+# DNS servers pushed to clients
+vpn_dns_servers:
+  - "1.1.1.1"
+  - "1.0.0.1"
+
+# ---- TLS / Certificates ----------------------------------------------------
+# Path pairs are inside the container produced by Docker Compose bind-mounts.
+# Traefik-issued Let's Encrypt certs are re-used if vpn_use_traefik_cert=true.
+vpn_use_traefik_cert: true
+
+# ---- FreeRADIUS ------------------------------------------------------------
+vpn_freeradius_image: "freeradius/freeradius-server"
+vpn_freeradius_version: "3.2"
+vpn_radius_secret: ""           # Shared secret between strongSwan and FreeRADIUS
+
+# ---- Authentik LDAP outpost ------------------------------------------------
+# Authentik exposes an LDAP outpost so FreeRADIUS can validate user credentials.
+# The LDAP outpost listens on port 389 (plaintext) inside the Docker network.
+vpn_authentik_verify_certs: true
+vpn_authentik_ldap_service_account_name: "ldapservice"
+vpn_authentik_ldap_provider_name: "vpn-ldap-provider"
+vpn_authentik_ldap_outpost_name: "vpn-ldap-outpost"
+vpn_authentik_ldap_base_dn: "dc=ldap,dc=goauthentik,dc=io"
+vpn_authentik_ldap_bind_dn: "cn=ldapservice,ou=serviceaccounts,dc=ldap,dc=goauthentik,dc=io"
+vpn_authentik_ldap_outpost_token: ""
+vpn_authentik_ldap_bind_password: ""  # Authentik service-account password (vault-encrypted)
+vpn_authentik_ldap_host: "authentik-ldap"  # Docker service name of the LDAP outpost container
+vpn_authentik_ldap_port: 389

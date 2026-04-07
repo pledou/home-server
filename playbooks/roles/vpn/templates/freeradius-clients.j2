@@ -1,0 +1,13 @@
+# FreeRADIUS client definition for strongSwan
+# Deployed to: /etc/freeradius/clients.conf.d/strongswan.conf
+
+client strongswan {
+    # strongSwan contacts FreeRADIUS from inside the vpn_internal Docker network.
+    # Using 0.0.0.0/0 is safe because the container is not publicly reachable;
+    # the shared secret is the only authentication for RADIUS messages.
+    ipaddr = 0.0.0.0
+    netmask = 0
+    secret = {{ vpn_radius_secret }}
+    nas_type = other
+    shortname = strongswan
+}

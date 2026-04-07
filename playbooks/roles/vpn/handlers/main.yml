@@ -1,0 +1,6 @@
+---
+- name: Restart VPN stack
+  community.docker.docker_compose_v2:
+    state: present
+    project_src: "/home/{{ ansible_user }}/home-server/stacks/vpn"
+    recreate: always

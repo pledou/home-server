@@ -1,0 +1,134 @@
+---
+
+- name: Retrive secret
+  ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
+  vars:
+    secrets:
+      - name: vpn_radius_secret
+        length: 64
+      - name: vpn_authentik_ldap_bind_password
+        length: 64
+
+- name: Validate generated VPN secrets
+  ansible.builtin.assert:
+    that:
+      - vpn_radius_secret | length > 0
+      - vpn_authentik_ldap_bind_password | length > 0
+    fail_msg: "Failed to load or generate VPN secrets"
+
+- name: Retrive secret for LDAP outpost token
+  ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
+  vars:
+    secrets:
+      - name: vpn_authentik_ldap_outpost_token
+        length: 64
+
+- name: Ensure Authentik API token is configured for API automation
+  ansible.builtin.assert:
+    that:
+      - authentik_api_token is defined
+      - authentik_api_token | length > 0
+    fail_msg: "authentik_api_token is required to create LDAP outpost/service account via API"
+
+- name: Create Authentik LDAP provider, outpost and service account
+  ansible.builtin.include_tasks: authentik_ldap_api.yml
+
+# ---- Stack directory -------------------------------------------------------
+- name: Ensure stack directory exists
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}/home-server/stacks/vpn"
+    state: directory
+    mode: u=rwx,g=o=rx
+
+# ---- Configuration directories for bind-mount volumes ----------------------
+- name: Create VPN volume directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ docker_volumes_path }}/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0750'
+  loop:
+    - vpn-strongswan
+    - vpn-strongswan/ipsec.d
+    - vpn-strongswan/ipsec.d/cacerts
+    - vpn-strongswan/ipsec.d/certs
+    - vpn-strongswan/ipsec.d/private
+    - vpn-freeradius
+    - vpn-freeradius/mods-enabled
+    - vpn-freeradius/clients.conf.d
+
+# ---- FreeRADIUS LDAP module ------------------------------------------------
+- name: Deploy FreeRADIUS LDAP module configuration
+  become: true
+  ansible.builtin.template:
+    src: freeradius-ldap.j2
+    dest: "{{ docker_volumes_path }}/vpn-freeradius/mods-enabled/ldap"
+    owner: root
+    group: root
+    mode: '0640'
+
+# ---- FreeRADIUS clients (strongSwan NAS) -----------------------------------
+- name: Deploy FreeRADIUS clients configuration
+  become: true
+  ansible.builtin.template:
+    src: freeradius-clients.j2
+    dest: "{{ docker_volumes_path }}/vpn-freeradius/clients.conf.d/strongswan.conf"
+    owner: root
+    group: root
+    mode: '0640'
+
+# ---- Docker Compose stack --------------------------------------------------
+- name: Deploy VPN Docker Compose stack
+  ansible.builtin.template:
+    src: docker-compose.yml
+    dest: "/home/{{ ansible_user }}/home-server/stacks/vpn/docker-compose.yml"
+    mode: u=rwx,g=o=rx
+
+# ---- UFW -------------------------------------------------------------------
+- name: Allow IKEv2 UDP 500 through UFW
+  become: true
+  community.general.ufw:
+    rule: allow
+    port: "{{ vpn_listen_port_ike }}"
+    proto: udp
+    comment: "strongSwan IKEv2"
+
+- name: Allow IKEv2 NAT-T UDP 4500 through UFW
+  become: true
+  community.general.ufw:
+    rule: allow
+    port: "{{ vpn_listen_port_nat_t }}"
+    proto: udp
+    comment: "strongSwan IKEv2 NAT-T"
+
+# ---- Enable IP forwarding --------------------------------------------------
+- name: Enable IPv4 forwarding for VPN routing
+  become: true
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    state: present
+    sysctl_set: true
+
+# ---- Deploy stack ----------------------------------------------------------
+- name: Try to pull latest VPN images (continue on failure)
+  community.docker.docker_compose_v2:
+    pull: "always"
+    state: present
+    project_src: "/home/{{ ansible_user }}/home-server/stacks/vpn"
+  ignore_errors: true
+  register: vpn_pull_result
+
+- name: Warning - using local VPN images
+  ansible.builtin.debug:
+    msg: "WARNING: Could not pull latest VPN images. Deploying with existing local images."
+  when:
+    - vpn_pull_result is failed
+
+- name: Deploy VPN stack from compose file
+  community.docker.docker_compose_v2:
+    pull: "never"
+    state: present
+    project_src: "/home/{{ ansible_user }}/home-server/stacks/vpn"

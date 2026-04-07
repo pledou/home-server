@@ -1,0 +1,273 @@
+---
+- name: Wait for Authentik API to be ready
+  ansible.builtin.uri:
+    url: "{{ authentik_api_base_url }}/api/v3/admin/version/"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    validate_certs: "{{ vpn_authentik_verify_certs }}"
+  register: vpn_authentik_version
+  until: vpn_authentik_version.status == 200
+  retries: 10
+  delay: 30
+
+- name: Get service account if it already exists
+  ansible.builtin.uri:
+    url: "{{ authentik_api_base_url }}/api/v3/core/users/?username={{ vpn_authentik_ldap_service_account_name | urlencode }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    validate_certs: "{{ vpn_authentik_verify_certs }}"
+  register: vpn_authentik_service_account_lookup
+
+- name: Filter exact service account match
+  ansible.builtin.set_fact:
+    vpn_authentik_service_account_matches: >-
+      {{
+        (vpn_authentik_service_account_lookup.json.results | default([]))
+        | selectattr('username', 'equalto', vpn_authentik_ldap_service_account_name)
+        | list
+      }}
+
+- name: Create service account for LDAP binds
+  ansible.builtin.uri:
+    url: "{{ authentik_api_base_url }}/api/v3/core/users/service_account/"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      name: "{{ vpn_authentik_ldap_service_account_name }}"
+      create_group: false
+      expiring: false
+    status_code: [200, 201]
+    validate_certs: "{{ vpn_authentik_verify_certs }}"
+  when: vpn_authentik_service_account_matches | length == 0
+
+- name: Refresh service account after creation
+  ansible.builtin.uri:
+    url: "{{ authentik_api_base_url }}/api/v3/core/users/?username={{ vpn_authentik_ldap_service_account_name | urlencode }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    validate_certs: "{{ vpn_authentik_verify_certs }}"
+  register: vpn_authentik_service_account_lookup_refreshed
+
+- name: Set service account PK
+  ansible.builtin.set_fact:
+    vpn_authentik_service_account_pk: "{{ (vpn_authentik_service_account_lookup_refreshed.json.results | first).pk }}"
+
+- name: Set service account password
+  ansible.builtin.uri:
+    url: "{{ authentik_api_base_url }}/api/v3/core/users/{{ vpn_authentik_service_account_pk }}/set_password/"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      password: "{{ vpn_authentik_ldap_bind_password }}"
+    status_code: [200, 204]
+    validate_certs: "{{ vpn_authentik_verify_certs }}"
+
+- name: Get default authorization flow
+  ansible.builtin.uri:
+    url: "{{ authentik_api_base_url }}/api/v3/flows/instances/?slug=default-provider-authorization-implicit-consent"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    validate_certs: "{{ vpn_authentik_verify_certs }}"
+  register: vpn_auth_flow_result
+
+- name: Get default invalidation flow
+  ansible.builtin.uri:
+    url: "{{ authentik_api_base_url }}/api/v3/flows/instances/?slug=default-provider-invalidation-flow"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    validate_certs: "{{ vpn_authentik_verify_certs }}"
+  register: vpn_invalidation_flow_result
+
+- name: Ensure LDAP provider exists
+  block:
+    - name: Check LDAP provider by name
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/providers/ldap/?name={{ vpn_authentik_ldap_provider_name | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_ldap_provider_lookup
+
+    - name: Filter exact LDAP provider match
+      ansible.builtin.set_fact:
+        vpn_ldap_provider_matches: >-
+          {{
+            (vpn_ldap_provider_lookup.json.results | default([]))
+            | selectattr('name', 'equalto', vpn_authentik_ldap_provider_name)
+            | list
+          }}
+
+    - name: Create LDAP provider
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/providers/ldap/"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          name: "{{ vpn_authentik_ldap_provider_name }}"
+          authorization_flow: "{{ vpn_auth_flow_result.json.results[0].pk }}"
+          invalidation_flow: "{{ vpn_invalidation_flow_result.json.results[0].pk }}"
+          base_dn: "{{ vpn_authentik_ldap_base_dn }}"
+          bind_mode: "direct"
+          search_mode: "direct"
+          mfa_support: false
+        status_code: [201]
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      when: vpn_ldap_provider_matches | length == 0
+
+    - name: Re-read LDAP provider
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/providers/ldap/?name={{ vpn_authentik_ldap_provider_name | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_ldap_provider_lookup_refreshed
+
+    - name: Set LDAP provider PK
+      ansible.builtin.set_fact:
+        vpn_ldap_provider_pk: "{{ (vpn_ldap_provider_lookup_refreshed.json.results | first).pk }}"
+
+- name: Get outpost default settings
+  ansible.builtin.uri:
+    url: "{{ authentik_api_base_url }}/api/v3/outposts/instances/default_settings/"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    validate_certs: "{{ vpn_authentik_verify_certs }}"
+  register: vpn_outpost_default_settings
+
+- name: Ensure LDAP outpost exists
+  block:
+    - name: Check LDAP outpost by name
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/outposts/instances/?name__iexact={{ vpn_authentik_ldap_outpost_name | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_ldap_outpost_lookup
+
+    - name: Filter exact LDAP outpost match
+      ansible.builtin.set_fact:
+        vpn_ldap_outpost_matches: >-
+          {{
+            (vpn_ldap_outpost_lookup.json.results | default([]))
+            | selectattr('name', 'equalto', vpn_authentik_ldap_outpost_name)
+            | list
+          }}
+
+    - name: Create LDAP outpost
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/outposts/instances/"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          name: "{{ vpn_authentik_ldap_outpost_name }}"
+          type: "ldap"
+          providers:
+            - "{{ vpn_ldap_provider_pk }}"
+          service_connection: null
+          config: "{{ vpn_outpost_default_settings.json.config }}"
+        status_code: [201]
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      when: vpn_ldap_outpost_matches | length == 0
+
+    - name: Re-read LDAP outpost
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/outposts/instances/?name__iexact={{ vpn_authentik_ldap_outpost_name | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_ldap_outpost_lookup_refreshed
+
+    - name: Set LDAP outpost facts
+      ansible.builtin.set_fact:
+        vpn_ldap_outpost_obj: "{{ vpn_ldap_outpost_lookup_refreshed.json.results | first }}"
+        vpn_authentik_ldap_outpost_uuid_hex: "{{ ((vpn_ldap_outpost_lookup_refreshed.json.results | first).pk | string) | replace('-', '') }}"
+
+    - name: Ensure LDAP provider attached to outpost
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/outposts/instances/{{ vpn_ldap_outpost_obj.pk }}/"
+        method: PATCH
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          providers: "{{ (vpn_ldap_outpost_obj.providers + [vpn_ldap_provider_pk | int]) | unique }}"
+        status_code: [200]
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+
+- name: Resolve outpost internal user
+  ansible.builtin.uri:
+    url: "{{ authentik_api_base_url }}/api/v3/core/users/?username=ak-outpost-{{ vpn_authentik_ldap_outpost_uuid_hex }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    validate_certs: "{{ vpn_authentik_verify_certs }}"
+  register: vpn_outpost_user_lookup
+
+- name: Set outpost internal user PK
+  ansible.builtin.set_fact:
+    vpn_outpost_user_pk: "{{ (vpn_outpost_user_lookup.json.results | first).pk }}"
+
+- name: Ensure outpost token exists
+  block:
+    - name: Check outpost token by identifier
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/core/tokens/?identifier={{ vpn_ldap_outpost_obj.token_identifier | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_outpost_token_lookup
+
+    - name: Create outpost token when missing
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/core/tokens/"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          identifier: "{{ vpn_ldap_outpost_obj.token_identifier }}"
+          user: "{{ vpn_outpost_user_pk }}"
+          intent: "api"
+          expiring: false
+          description: "Autogenerated token for VPN LDAP outpost"
+        status_code: [201]
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      when: (vpn_outpost_token_lookup.json.results | default([]) | length) == 0
+
+- name: Set deterministic key for outpost token
+  ansible.builtin.uri:
+    url: "{{ authentik_api_base_url }}/api/v3/core/tokens/{{ vpn_ldap_outpost_obj.token_identifier | urlencode }}/set_key/"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      key: "{{ vpn_authentik_ldap_outpost_token }}"
+    status_code: [200, 204]
+    validate_certs: "{{ vpn_authentik_verify_certs }}"
