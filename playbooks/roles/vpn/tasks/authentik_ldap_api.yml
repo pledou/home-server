@@ -101,6 +101,21 @@
       - vpn_invalidation_flow_result.json.results | length > 0
     fail_msg: "Default invalidation flow 'default-provider-invalidation-flow' not found in Authentik"
 
+- name: Get LDAP bind flow
+  ansible.builtin.uri:
+    url: "{{ authentik_api_base_url }}/api/v3/flows/instances/?slug={{ vpn_authentik_ldap_bind_flow_slug | urlencode }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    validate_certs: "{{ vpn_authentik_verify_certs }}"
+  register: vpn_ldap_bind_flow_result
+
+- name: Validate LDAP bind flow exists
+  ansible.builtin.assert:
+    that:
+      - vpn_ldap_bind_flow_result.json.results | length > 0
+    fail_msg: "LDAP bind flow '{{ vpn_authentik_ldap_bind_flow_slug }}' not found in Authentik; service account binds will fail"
+
 - name: Ensure LDAP provider exists
   block:
     - name: Check LDAP provider by name
@@ -133,6 +148,7 @@
           name: "{{ vpn_authentik_ldap_provider_name }}"
           authorization_flow: "{{ vpn_auth_flow_result.json.results[0].pk }}"
           invalidation_flow: "{{ vpn_invalidation_flow_result.json.results[0].pk }}"
+          bind_flow: "{{ vpn_ldap_bind_flow_result.json.results[0].pk }}"
           base_dn: "{{ vpn_authentik_ldap_base_dn }}"
           bind_mode: "direct"
           search_mode: "direct"
@@ -153,6 +169,20 @@
     - name: Set LDAP provider PK
       ansible.builtin.set_fact:
         vpn_ldap_provider_pk: "{{ (vpn_ldap_provider_lookup_refreshed.json.results | first).pk }}"
+
+    - name: Ensure LDAP provider bind_flow is set (idempotent update for pre-existing providers)
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/providers/ldap/{{ vpn_ldap_provider_pk }}/"
+        method: PATCH
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          bind_flow: "{{ vpn_ldap_bind_flow_result.json.results[0].pk }}"
+        status_code: [200]
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      when: vpn_ldap_provider_matches | length > 0
 
 - name: Ensure LDAP application exists for provider
   block:
