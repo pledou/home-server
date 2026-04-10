@@ -391,3 +391,96 @@
       key: "{{ vpn_authentik_ldap_outpost_runtime_token | default(vpn_authentik_ldap_outpost_token) }}"
     status_code: [200, 204]
     validate_certs: "{{ vpn_authentik_verify_certs }}"
+
+# ---- Access group -----------------------------------------------------------
+- name: Ensure VPN access group exists and is bound to LDAP application
+  block:
+    - name: Lookup VPN access group by name
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/core/groups/?name={{ vpn_authentik_access_group | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_access_group_lookup
+
+    - name: Filter exact VPN access group match
+      ansible.builtin.set_fact:
+        vpn_access_group_matches: >-
+          {{
+            (vpn_access_group_lookup.json.results | default([]))
+            | selectattr('name', 'equalto', vpn_authentik_access_group)
+            | list
+          }}
+
+    - name: Create VPN access group
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/core/groups/"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          name: "{{ vpn_authentik_access_group }}"
+          is_superuser: false
+        status_code: [201]
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      when: vpn_access_group_matches | length == 0
+
+    - name: Re-read VPN access group
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/core/groups/?name={{ vpn_authentik_access_group | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_access_group_lookup_refreshed
+
+    - name: Set VPN access group PK
+      ansible.builtin.set_fact:
+        vpn_access_group_pk: >-
+          {{
+            (vpn_access_group_lookup_refreshed.json.results
+            | selectattr('name', 'equalto', vpn_authentik_access_group)
+            | list | first).pk
+          }}
+
+    - name: Get LDAP application PK
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/core/applications/?slug={{ vpn_authentik_ldap_application_slug | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_ldap_app_lookup
+
+    - name: Set LDAP application PK
+      ansible.builtin.set_fact:
+        vpn_ldap_app_pk: "{{ (vpn_ldap_app_lookup.json.results | first).pk }}"
+
+    - name: Check existing group policy binding on LDAP application
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/policies/bindings/?target={{ vpn_ldap_app_pk }}&group={{ vpn_access_group_pk }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_policy_binding_lookup
+
+    - name: Bind VPN access group to LDAP application
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/policies/bindings/"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          target: "{{ vpn_ldap_app_pk }}"
+          group: "{{ vpn_access_group_pk }}"
+          enabled: true
+          order: 0
+        status_code: [201]
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      when: vpn_policy_binding_lookup.json.results | default([]) | length == 0

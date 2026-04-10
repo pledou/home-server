@@ -13,7 +13,10 @@ services:
   strongswan:
     labels:
       - com.centurylinklabs.watchtower.enable=true
-    image: "{{ vpn_strongswan_image }}:{{ vpn_strongswan_version }}"
+    build:
+      context: .
+      dockerfile: strongswan.Dockerfile
+    image: "vpn-strongswan-local:latest"
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
@@ -64,6 +67,9 @@ services:
     networks:
       vpn_internal:
       authentik_backend:
+    depends_on:
+      authentik-ldap:
+        condition: service_started
 
   # --------------------------------------------------------------------------
   # Authentik LDAP outpost
@@ -73,12 +79,12 @@ services:
   authentik-ldap:
     labels:
       - com.centurylinklabs.watchtower.enable=true
-    image: "ghcr.io/goauthentik/ldap:{{ authentik_version | default('2026.2') }}"
+    image: "{{ vpn_authentik_ldap_image }}:{{ vpn_authentik_ldap_version }}"
     restart: unless-stopped
     environment:
       AUTHENTIK_HOST: "https://auth.{{ app_domain_name }}"
       AUTHENTIK_INSECURE: "false"
-      AUTHENTIK_TOKEN: "{{ vpn_authentik_ldap_outpost_token }}"
+      AUTHENTIK_TOKEN: "{{ vpn_authentik_ldap_outpost_runtime_token | default(vpn_authentik_ldap_outpost_token) }}"
     networks:
       vpn_internal:
         aliases:

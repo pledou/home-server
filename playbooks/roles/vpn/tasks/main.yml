@@ -80,11 +80,15 @@
     mode: '0640'
 
 # ---- Docker Compose stack --------------------------------------------------
-- name: Deploy VPN Docker Compose stack
+- name: Deploy VPN stack files
   ansible.builtin.template:
-    src: docker-compose.yml
-    dest: "/home/{{ ansible_user }}/home-server/stacks/vpn/docker-compose.yml"
-    mode: u=rwx,g=o=rx
+    src: "{{ item.src }}"
+    dest: "/home/{{ ansible_user }}/home-server/stacks/vpn/{{ item.src }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { src: docker-compose.yml,      mode: 'u=rwx,g=rx,o=rx' }
+    - { src: strongswan.Dockerfile,   mode: 'u=rw,g=r,o=r' }
+    - { src: strongswan-startup.sh,   mode: 'u=rwx,g=rx,o=rx' }
 
 # ---- UFW -------------------------------------------------------------------
 - name: Allow IKEv2 UDP 500 through UFW
