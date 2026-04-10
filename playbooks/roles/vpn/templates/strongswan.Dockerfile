@@ -10,9 +10,9 @@ FROM ubuntu:22.04
 ENV VERSION=5.9.14
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN DEV_PACKAGES="wget bzip2 make gcc libssl-dev libgmp-dev" && \
+RUN DEV_PACKAGES="wget bzip2 build-essential libssl-dev libgmp-dev" && \
     apt-get -y update && \
-    apt-get -y install --no-install-recommends iproute2 iputils-ping $DEV_PACKAGES && \
+    apt-get -y install --no-install-recommends ca-certificates iproute2 iputils-ping $DEV_PACKAGES && \
     mkdir /strongswan-build && \
     cd /strongswan-build && \
     wget https://download.strongswan.org/strongswan-${VERSION}.tar.bz2 && \
