@@ -15,10 +15,10 @@ ldap {
     base_dn = "{{ vpn_authentik_ldap_base_dn }}"
 
     # Authentik LDAP user object filter
-    filter = "(cn=%{%{Stripped-User-Name}:-%{User-Name}})"
+    filter = "{% raw %}(cn=%{%{Stripped-User-Name}:-%{User-Name}}){% endraw %}"
     user {
         base_dn = "ou=users,{{ vpn_authentik_ldap_base_dn }}"
-        filter = "(cn=%{%{Stripped-User-Name}:-%{User-Name}})"
+        filter = "{% raw %}(cn=%{%{Stripped-User-Name}:-%{User-Name}}){% endraw %}"
         scope = "sub"
         # Extract the user password for PAP / MSCHAPV2 / EAP-TTLS-PAP
         password_attribute = userPassword
