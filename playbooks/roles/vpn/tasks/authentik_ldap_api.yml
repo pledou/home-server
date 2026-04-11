@@ -478,32 +478,6 @@
         validate_certs: "{{ vpn_authentik_verify_certs }}"
       when: vpn_policy_binding_lookup.json.results | default([]) | length == 0
 
-    - name: Check existing service-account policy binding on LDAP provider
-      ansible.builtin.uri:
-        url: "{{ authentik_api_base_url }}/api/v3/policies/bindings/?target={{ vpn_ldap_provider_pk }}&user={{ vpn_authentik_service_account_pk }}"
-        method: GET
-        headers:
-          Authorization: "Bearer {{ authentik_api_token }}"
-        validate_certs: "{{ vpn_authentik_verify_certs }}"
-      register: vpn_service_account_provider_policy_binding_lookup
-
-    - name: Bind LDAP service account to LDAP provider
-      ansible.builtin.uri:
-        url: "{{ authentik_api_base_url }}/api/v3/policies/bindings/"
-        method: POST
-        headers:
-          Authorization: "Bearer {{ authentik_api_token }}"
-          Content-Type: "application/json"
-        body_format: json
-        body:
-          target: "{{ vpn_ldap_provider_pk }}"
-          user: "{{ vpn_authentik_service_account_pk }}"
-          enabled: true
-          order: 0
-        status_code: [201]
-        validate_certs: "{{ vpn_authentik_verify_certs }}"
-      when: vpn_service_account_provider_policy_binding_lookup.json.results | default([]) | length == 0
-
     - name: Check existing service-account policy binding on LDAP application
       ansible.builtin.uri:
         url: "{{ authentik_api_base_url }}/api/v3/policies/bindings/?target={{ vpn_ldap_app_pk }}&user={{ vpn_authentik_service_account_pk }}"
