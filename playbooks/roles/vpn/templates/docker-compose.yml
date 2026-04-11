@@ -76,7 +76,7 @@ services:
       authentik_backend:
     depends_on:
       authentik-ldap:
-        condition: service_started
+        condition: service_healthy
 
   # --------------------------------------------------------------------------
   # Authentik LDAP outpost
