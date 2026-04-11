@@ -24,7 +24,7 @@
     ACCESS_GROUP: "{{ vpn_authentik_access_group }}"
     DEBUG: "{{ '1' if ansible_verbosity >= 2 else '0' }}"
   register: vpn_ldap_provision
-  changed_when: (vpn_ldap_provision.stdout | from_json).changed
+  changed_when: (vpn_ldap_provision.stdout_lines | last | from_json).changed
 
 - name: Set Authentik LDAP provisioning facts
   ansible.builtin.set_fact:
@@ -34,4 +34,4 @@
     vpn_authentik_ldap_outpost_uuid_hex: "{{ result.outpost_uuid_hex }}"
     vpn_authentik_ldap_outpost_runtime_token: "{{ result.runtime_token }}"
   vars:
-    result: "{{ vpn_ldap_provision.stdout | from_json }}"
+    result: "{{ vpn_ldap_provision.stdout_lines | last | from_json }}"
