@@ -301,13 +301,6 @@
       ansible.builtin.set_fact:
         vpn_authentik_ldap_outpost_runtime_token: "{{ (vpn_authentik_ldap_outpost_token ~ ':' ~ vpn_ldap_outpost_obj.pk) | hash('sha256') }}"
 
-    - name: Debug LDAP outpost token details
-      ansible.builtin.debug:
-        msg:
-          - "LDAP outpost UUID: {{ vpn_ldap_outpost_obj.pk }}"
-          - "LDAP outpost token identifier (API): {{ vpn_ldap_outpost_obj.token_identifier }}"
-          - "LDAP outpost token key used by container: {{ vpn_authentik_ldap_outpost_runtime_token | default(vpn_authentik_ldap_outpost_token) }}"
-
     - name: Ensure LDAP provider attached to outpost
       ansible.builtin.uri:
         url: "{{ authentik_api_base_url }}/api/v3/outposts/instances/{{ vpn_ldap_outpost_obj.pk }}/"
