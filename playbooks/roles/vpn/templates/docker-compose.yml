@@ -1,3 +1,4 @@
+#jinja2: lstrip_blocks: True, trim_blocks: True
 ---
 # VPN stack: strongSwan IKEv2/EAP-RADIUS + FreeRADIUS + Authentik LDAP outpost
 # Authentication flow:
@@ -30,10 +31,10 @@ services:
       - "{{ vpn_listen_port_nat_t }}:4500/udp"
     volumes:
       - strongswan_config:/etc/swanctl
-{% if vpn_use_traefik_cert | bool %}
+    {% if vpn_use_traefik_cert | bool %}
       # acme.json from Traefik — read-only; startup script extracts PEM into /etc/swanctl/x509/ and /etc/swanctl/private/
       - traefik_certs:/etc/swanctl/acme:ro
-{% endif %}
+    {% endif %}
       - strongswan_ipsec_d:{{ docker_volumes_path }}/vpn-strongswan/ipsec.d:ro
     environment:
       RADIUS_SERVER: "freeradius"
@@ -171,8 +172,8 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/vpn-strongswan/ipsec.d"
-{% if vpn_use_traefik_cert | bool %}
+  {% if vpn_use_traefik_cert | bool %}
   traefik_certs:
     external: true
     name: traefik_traefik-public-certificates
-{% endif %}
+  {% endif %}
