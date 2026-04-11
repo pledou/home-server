@@ -50,7 +50,7 @@ every ~1 h).
 
 | Variable | Default | Description |
 |---|---|---|
-| `vpn_server_address` | `vpn.{{ app_domain_name }}` | Public hostname clients connect to |
+| `vpn_server_address` | `{{ app_domain_name }}` | Public hostname clients connect to |
 | `vpn_client_pool` | `10.8.0.0/24` | Virtual IP pool for clients |
 | `vpn_authentik_access_group` | `vpn-users` | Authentik group that grants VPN access |
 | `vpn_authentik_ldap_outpost_name` | `vpn-ldap-outpost` | Authentik LDAP outpost name |

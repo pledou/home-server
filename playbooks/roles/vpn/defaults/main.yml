@@ -3,7 +3,7 @@
 
 # ---- Network ---------------------------------------------------------------
 # Public IP/hostname clients will connect to (required when vpn_enabled=true)
-vpn_server_address: "vpn.{{ app_domain_name }}"  # You can override with a public IP if needed
+vpn_server_address: "{{ app_domain_name }}"  # You can override with a public IP if needed
 vpn_client_pool: "10.8.0.0/24" # Virtual IP pool handed to clients
 vpn_listen_port_ike: 500
 vpn_listen_port_nat_t: 4500
