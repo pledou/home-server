@@ -79,3 +79,25 @@ ansible-playbook -i inventories/inventory.yml playbooks/install.yml \
 | VPN type | IKEv2 |
 | Authentication | Username + Password (EAP-MSCHAPv2) |
 | Certificate | Server cert is the domain's Let's Encrypt cert — trust the CA, no custom cert needed |
+
+### Windows clients
+
+The built-in Windows IKEv2 profile is not compatible with this role out of the box.
+By default it proposes weak or mismatched IPsec policies, which causes the French
+client error `Erreur de correspondance de strategie`.
+
+Enable DH group 14 / AES-256 for IKE first:
+
+```powershell
+New-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\Rasman\Parameters' -Name 'NegotiateDH2048_AES256' -PropertyType DWord -Value 2 -Force
+```
+
+Then align the Windows VPN connection with the server's IPsec policy:
+
+```powershell
+Set-VpnConnectionIPsecConfiguration -ConnectionName 'My VPN' -AuthenticationTransformConstants SHA256128 -CipherTransformConstants AES256 -EncryptionMethod AES256 -IntegrityCheckMethod SHA256 -DHGroup Group14 -PfsGroup PFS2048 -Force
+```
+
+Disconnect/reconnect after applying these settings. If the connection was created
+before these changes, recreating the Windows VPN profile is often the fastest way
+to ensure the new policy is used.

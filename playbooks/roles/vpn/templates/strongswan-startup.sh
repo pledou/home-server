@@ -4,8 +4,8 @@ set -e
 # --------------------------------------------------------------------------
 # Extract TLS certificate from Traefik's acme.json
 # Reads ACME_JSON_PATH and tries each domain in VPN_CERT_DOMAIN_CANDIDATES.
-# Writes server-cert.pem to /etc/swanctl/x509/ and server-key.pem to
-# /etc/swanctl/private/ (both writable via the strongswan_config volume).
+# Writes the leaf cert to /etc/swanctl/x509/, any intermediate certs to
+# /etc/swanctl/x509ca/, and server-key.pem to /etc/swanctl/private/.
 # --------------------------------------------------------------------------
 if [ -n "${ACME_JSON_PATH:-}" ] && [ -f "$ACME_JSON_PATH" ]; then
     echo "[startup] Extracting certificate from Traefik acme.json..."
@@ -19,8 +19,19 @@ if [ -n "${ACME_JSON_PATH:-}" ] && [ -f "$ACME_JSON_PATH" ]; then
             "$ACME_JSON_PATH" 2>/dev/null)
         if [ -n "$CERT" ] && [ -n "$KEY" ]; then
             echo "[startup] Found certificate for domain: $DOMAIN"
-            mkdir -p /etc/swanctl/x509 /etc/swanctl/private
-            printf '%s' "$CERT" | base64 -d > /etc/swanctl/x509/server-cert.pem
+            mkdir -p /etc/swanctl/x509 /etc/swanctl/x509ca /etc/swanctl/private /tmp/strongswan-certs
+            rm -f /etc/swanctl/x509/server-cert.pem /etc/swanctl/x509ca/*.pem /tmp/strongswan-certs/*.pem
+            printf '%s' "$CERT" | base64 -d > /tmp/strongswan-certs/fullchain.pem
+            awk '
+                /-----BEGIN CERTIFICATE-----/ { cert++; file=sprintf("/tmp/strongswan-certs/cert-%02d.pem", cert) }
+                file { print > file }
+                /-----END CERTIFICATE-----/ { close(file); file="" }
+            ' /tmp/strongswan-certs/fullchain.pem
+            cp /tmp/strongswan-certs/cert-01.pem /etc/swanctl/x509/server-cert.pem
+            for CERT_FILE in /tmp/strongswan-certs/cert-*.pem; do
+                [ "$CERT_FILE" = "/tmp/strongswan-certs/cert-01.pem" ] && continue
+                cp "$CERT_FILE" "/etc/swanctl/x509ca/$(basename "$CERT_FILE")"
+            done
             printf '%s' "$KEY"  | base64 -d > /etc/swanctl/private/server-key.pem
             chmod 600 /etc/swanctl/private/server-key.pem
             echo "[startup] Certificate extracted successfully."
