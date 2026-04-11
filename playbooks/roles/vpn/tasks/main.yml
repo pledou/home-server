@@ -51,6 +51,8 @@
     mode: '0750'
   loop:
     - vpn-strongswan
+    - vpn-strongswan/x509
+    - vpn-strongswan/private
     - vpn-strongswan/ipsec.d
     - vpn-strongswan/ipsec.d/cacerts
     - vpn-strongswan/ipsec.d/certs

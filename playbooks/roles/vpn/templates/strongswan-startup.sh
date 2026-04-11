@@ -1,6 +1,40 @@
 #!/bin/sh
 set -e
 
+# --------------------------------------------------------------------------
+# Extract TLS certificate from Traefik's acme.json
+# Reads ACME_JSON_PATH and tries each domain in VPN_CERT_DOMAIN_CANDIDATES.
+# Writes server-cert.pem to /etc/swanctl/x509/ and server-key.pem to
+# /etc/swanctl/private/ (both writable via the strongswan_config volume).
+# --------------------------------------------------------------------------
+if [ -n "${ACME_JSON_PATH:-}" ] && [ -f "$ACME_JSON_PATH" ]; then
+    echo "[startup] Extracting certificate from Traefik acme.json..."
+    EXTRACTED=0
+    for DOMAIN in $(echo "${VPN_CERT_DOMAIN_CANDIDATES:-}" | tr ',' '\n'); do
+        CERT=$(jq -r --arg d "$DOMAIN" \
+            '[to_entries[] | .value.Certificates[]?] | map(select(.domain.main==$d)) | first | .certificate // empty' \
+            "$ACME_JSON_PATH" 2>/dev/null)
+        KEY=$(jq -r --arg d "$DOMAIN" \
+            '[to_entries[] | .value.Certificates[]?] | map(select(.domain.main==$d)) | first | .key // empty' \
+            "$ACME_JSON_PATH" 2>/dev/null)
+        if [ -n "$CERT" ] && [ -n "$KEY" ]; then
+            echo "[startup] Found certificate for domain: $DOMAIN"
+            mkdir -p /etc/swanctl/x509 /etc/swanctl/private
+            printf '%s' "$CERT" | base64 -d > /etc/swanctl/x509/server-cert.pem
+            printf '%s' "$KEY"  | base64 -d > /etc/swanctl/private/server-key.pem
+            chmod 600 /etc/swanctl/private/server-key.pem
+            echo "[startup] Certificate extracted successfully."
+            EXTRACTED=1
+            break
+        fi
+    done
+    if [ "$EXTRACTED" -eq 0 ]; then
+        echo "[startup] WARNING: No matching certificate found in acme.json for: ${VPN_CERT_DOMAIN_CANDIDATES:-}"
+    fi
+else
+    echo "[startup] ACME_JSON_PATH not set or file not found — skipping cert extraction."
+fi
+
 echo "[startup] Starting charon daemon..."
 # charon reads /etc/strongswan.conf and all /etc/strongswan.d/*.conf
 # It also honours CHARON_ARGS for debug flags

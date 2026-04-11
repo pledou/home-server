@@ -31,10 +31,17 @@ services:
     volumes:
       - strongswan_config:/etc/swanctl
 {% if vpn_use_traefik_cert | bool %}
-      # Re-use the Let's Encrypt cert managed by Traefik (read-only)
-      - traefik_certs:/etc/swanctl/x509:ro
+      # acme.json from Traefik — read-only; startup script extracts PEM into /etc/swanctl/x509/ and /etc/swanctl/private/
+      - traefik_certs:/etc/swanctl/acme:ro
 {% endif %}
       - strongswan_ipsec_d:{{ docker_volumes_path }}/vpn-strongswan/ipsec.d:ro
+    environment:
+      RADIUS_SERVER: "freeradius"
+      RADIUS_PORT: "1812"
+      RADIUS_SECRET: "{{ vpn_radius_secret }}"
+      RADIUS_NAS_IDENTIFIER: "{{ vpn_server_address }}"
+      VPN_CERT_DOMAIN_CANDIDATES: "{{ vpn_server_address }},*.{{ app_domain_name }},{{ app_domain_name }}"
+      ACME_JSON_PATH: "/etc/swanctl/acme/acme.json"
     configs:
       - source: swanctl_conf
         target: /etc/swanctl/swanctl.conf

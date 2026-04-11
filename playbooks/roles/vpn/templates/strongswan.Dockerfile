@@ -12,7 +12,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN DEV_PACKAGES="wget bzip2 build-essential libssl-dev libgmp-dev" && \
     apt-get -y update && \
-    apt-get -y install --no-install-recommends ca-certificates iproute2 iputils-ping $DEV_PACKAGES && \
+    apt-get -y install --no-install-recommends ca-certificates iproute2 iputils-ping jq $DEV_PACKAGES && \
     mkdir /strongswan-build && \
     cd /strongswan-build && \
     wget https://download.strongswan.org/strongswan-${VERSION}.tar.bz2 && \
