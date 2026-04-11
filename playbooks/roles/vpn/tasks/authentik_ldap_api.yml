@@ -101,20 +101,326 @@
       - vpn_invalidation_flow_result.json.results | length > 0
     fail_msg: "Default invalidation flow 'default-provider-invalidation-flow' not found in Authentik"
 
-- name: Get LDAP bind flow
-  ansible.builtin.uri:
-    url: "{{ authentik_api_base_url }}/api/v3/flows/instances/?slug={{ vpn_authentik_ldap_bind_flow_slug | urlencode }}"
-    method: GET
-    headers:
-      Authorization: "Bearer {{ authentik_api_token }}"
-    validate_certs: "{{ vpn_authentik_verify_certs }}"
-  register: vpn_ldap_bind_flow_result
+- name: Ensure dedicated LDAP bind flow exists
+  block:
+    - name: Check LDAP bind flow by slug
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/flows/instances/?slug={{ vpn_authentik_ldap_bind_flow_slug | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_ldap_bind_flow_lookup
 
-- name: Validate LDAP bind flow exists
-  ansible.builtin.assert:
-    that:
-      - vpn_ldap_bind_flow_result.json.results | length > 0
-    fail_msg: "LDAP bind flow '{{ vpn_authentik_ldap_bind_flow_slug }}' not found in Authentik; service account binds will fail"
+    - name: Filter exact LDAP bind flow match
+      ansible.builtin.set_fact:
+        vpn_ldap_bind_flow_matches: >-
+          {{
+            (vpn_ldap_bind_flow_lookup.json.results | default([]))
+            | selectattr('slug', 'equalto', vpn_authentik_ldap_bind_flow_slug)
+            | list
+          }}
+
+    - name: Create dedicated LDAP bind flow
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/flows/instances/"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          name: "{{ vpn_authentik_ldap_bind_flow_name }}"
+          title: "{{ vpn_authentik_ldap_bind_flow_title }}"
+          slug: "{{ vpn_authentik_ldap_bind_flow_slug }}"
+          designation: "authentication"
+          layout: "stacked"
+          compatibility_mode: false
+          denied_action: "message"
+          authentication: "none"
+        status_code: [201]
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      when: vpn_ldap_bind_flow_matches | length == 0
+
+    - name: Re-read LDAP bind flow
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/flows/instances/?slug={{ vpn_authentik_ldap_bind_flow_slug | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_ldap_bind_flow_lookup_refreshed
+
+    - name: Set LDAP bind flow facts
+      ansible.builtin.set_fact:
+        vpn_ldap_bind_flow_obj: "{{ (vpn_ldap_bind_flow_lookup_refreshed.json.results | first) }}"
+        vpn_ldap_bind_flow_pk: "{{ (vpn_ldap_bind_flow_lookup_refreshed.json.results | first).pk }}"
+
+    - name: Ensure LDAP bind flow settings are correct
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/flows/instances/{{ vpn_authentik_ldap_bind_flow_slug | urlencode }}/"
+        method: PATCH
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          name: "{{ vpn_authentik_ldap_bind_flow_name }}"
+          title: "{{ vpn_authentik_ldap_bind_flow_title }}"
+          designation: "authentication"
+          layout: "stacked"
+          compatibility_mode: false
+          denied_action: "message"
+          authentication: "none"
+        status_code: [200]
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+
+    - name: Check LDAP bind identification stage by name
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/stages/identification/?name={{ vpn_authentik_ldap_bind_identification_stage_name | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_ldap_bind_identification_stage_lookup
+
+    - name: Filter exact LDAP bind identification stage match
+      ansible.builtin.set_fact:
+        vpn_ldap_bind_identification_stage_matches: >-
+          {{
+            (vpn_ldap_bind_identification_stage_lookup.json.results | default([]))
+            | selectattr('name', 'equalto', vpn_authentik_ldap_bind_identification_stage_name)
+            | list
+          }}
+
+    - name: Create LDAP bind identification stage
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/stages/identification/"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          name: "{{ vpn_authentik_ldap_bind_identification_stage_name }}"
+          user_fields:
+            - "username"
+          case_insensitive_matching: true
+          show_matched_user: false
+          pretend_user_exists: false
+          enable_remember_me: false
+        status_code: [201]
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      when: vpn_ldap_bind_identification_stage_matches | length == 0
+
+    - name: Re-read LDAP bind identification stage
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/stages/identification/?name={{ vpn_authentik_ldap_bind_identification_stage_name | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_ldap_bind_identification_stage_lookup_refreshed
+
+    - name: Set LDAP bind identification stage PK
+      ansible.builtin.set_fact:
+        vpn_ldap_bind_identification_stage_pk: "{{ (vpn_ldap_bind_identification_stage_lookup_refreshed.json.results | first).pk }}"
+
+    - name: Check LDAP bind password stage by name
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/stages/password/?name={{ vpn_authentik_ldap_bind_password_stage_name | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_ldap_bind_password_stage_lookup
+
+    - name: Filter exact LDAP bind password stage match
+      ansible.builtin.set_fact:
+        vpn_ldap_bind_password_stage_matches: >-
+          {{
+            (vpn_ldap_bind_password_stage_lookup.json.results | default([]))
+            | selectattr('name', 'equalto', vpn_authentik_ldap_bind_password_stage_name)
+            | list
+          }}
+
+    - name: Create LDAP bind password stage
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/stages/password/"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          name: "{{ vpn_authentik_ldap_bind_password_stage_name }}"
+          backends:
+            - "authentik.core.auth.InbuiltBackend"
+          failed_attempts_before_cancel: 5
+          allow_show_password: false
+        status_code: [201]
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      when: vpn_ldap_bind_password_stage_matches | length == 0
+
+    - name: Re-read LDAP bind password stage
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/stages/password/?name={{ vpn_authentik_ldap_bind_password_stage_name | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_ldap_bind_password_stage_lookup_refreshed
+
+    - name: Set LDAP bind password stage PK
+      ansible.builtin.set_fact:
+        vpn_ldap_bind_password_stage_pk: "{{ (vpn_ldap_bind_password_stage_lookup_refreshed.json.results | first).pk }}"
+
+    - name: Check LDAP bind login stage by name
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/stages/user_login/?name={{ vpn_authentik_ldap_bind_login_stage_name | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_ldap_bind_login_stage_lookup
+
+    - name: Filter exact LDAP bind login stage match
+      ansible.builtin.set_fact:
+        vpn_ldap_bind_login_stage_matches: >-
+          {{
+            (vpn_ldap_bind_login_stage_lookup.json.results | default([]))
+            | selectattr('name', 'equalto', vpn_authentik_ldap_bind_login_stage_name)
+            | list
+          }}
+
+    - name: Create LDAP bind login stage
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/stages/user_login/"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          name: "{{ vpn_authentik_ldap_bind_login_stage_name }}"
+        status_code: [201]
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      when: vpn_ldap_bind_login_stage_matches | length == 0
+
+    - name: Re-read LDAP bind login stage
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/stages/user_login/?name={{ vpn_authentik_ldap_bind_login_stage_name | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_ldap_bind_login_stage_lookup_refreshed
+
+    - name: Set LDAP bind login stage PK
+      ansible.builtin.set_fact:
+        vpn_ldap_bind_login_stage_pk: "{{ (vpn_ldap_bind_login_stage_lookup_refreshed.json.results | first).pk }}"
+
+    - name: Check LDAP bind flow-stage bindings
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/flows/bindings/?target={{ vpn_ldap_bind_flow_pk }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_ldap_bind_flow_bindings_lookup
+
+    - name: Set LDAP bind flow binding facts
+      ansible.builtin.set_fact:
+        vpn_ldap_bind_identification_binding_matches: >-
+          {{
+            (vpn_ldap_bind_flow_bindings_lookup.json.results | default([]))
+            | selectattr('stage', 'equalto', vpn_ldap_bind_identification_stage_pk)
+            | list
+          }}
+        vpn_ldap_bind_password_binding_matches: >-
+          {{
+            (vpn_ldap_bind_flow_bindings_lookup.json.results | default([]))
+            | selectattr('stage', 'equalto', vpn_ldap_bind_password_stage_pk)
+            | list
+          }}
+        vpn_ldap_bind_login_binding_matches: >-
+          {{
+            (vpn_ldap_bind_flow_bindings_lookup.json.results | default([]))
+            | selectattr('stage', 'equalto', vpn_ldap_bind_login_stage_pk)
+            | list
+          }}
+
+    - name: Bind identification stage to LDAP bind flow
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/flows/bindings/"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          target: "{{ vpn_ldap_bind_flow_pk }}"
+          stage: "{{ vpn_ldap_bind_identification_stage_pk }}"
+          evaluate_on_plan: false
+          re_evaluate_policies: true
+          order: 10
+          invalid_response_action: "retry"
+        status_code: [201]
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      when: vpn_ldap_bind_identification_binding_matches | length == 0
+
+    - name: Bind password stage to LDAP bind flow
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/flows/bindings/"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          target: "{{ vpn_ldap_bind_flow_pk }}"
+          stage: "{{ vpn_ldap_bind_password_stage_pk }}"
+          evaluate_on_plan: false
+          re_evaluate_policies: true
+          order: 20
+          invalid_response_action: "retry"
+        status_code: [201]
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      when: vpn_ldap_bind_password_binding_matches | length == 0
+
+    - name: Bind user-login stage to LDAP bind flow
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/flows/bindings/"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          target: "{{ vpn_ldap_bind_flow_pk }}"
+          stage: "{{ vpn_ldap_bind_login_stage_pk }}"
+          evaluate_on_plan: false
+          re_evaluate_policies: true
+          order: 30
+          invalid_response_action: "retry"
+        status_code: [201]
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      when: vpn_ldap_bind_login_binding_matches | length == 0
+
+    - name: Get LDAP bind flow
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/flows/instances/?slug={{ vpn_authentik_ldap_bind_flow_slug | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_ldap_bind_flow_result
+
+    - name: Validate LDAP bind flow exists
+      ansible.builtin.assert:
+        that:
+          - vpn_ldap_bind_flow_result.json.results | length > 0
+        fail_msg: "LDAP bind flow '{{ vpn_authentik_ldap_bind_flow_slug }}' could not be created or retrieved"
 
 - name: Ensure LDAP provider exists
   block:

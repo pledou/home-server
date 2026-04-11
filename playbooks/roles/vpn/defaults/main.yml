@@ -38,7 +38,12 @@ vpn_authentik_ldap_application_slug: "vpn-ldap"
 vpn_authentik_ldap_outpost_name: "vpn-ldap-outpost"
 vpn_authentik_ldap_base_dn: "dc=ldap,dc=goauthentik,dc=io"
 vpn_authentik_ldap_bind_dn: "cn={{ vpn_authentik_ldap_service_account_name }},ou=users,{{ vpn_authentik_ldap_base_dn }}"
-vpn_authentik_ldap_bind_flow_slug: "default-authentication-flow"  # Authentication flow used for LDAP BIND requests
+vpn_authentik_ldap_bind_flow_name: "VPN LDAP Bind"
+vpn_authentik_ldap_bind_flow_title: "VPN LDAP Bind"
+vpn_authentik_ldap_bind_flow_slug: "vpn-ldap-bind-flow"  # Dedicated non-interactive flow used for LDAP BIND requests
+vpn_authentik_ldap_bind_identification_stage_name: "VPN LDAP Bind Identification"
+vpn_authentik_ldap_bind_password_stage_name: "VPN LDAP Bind Password"
+vpn_authentik_ldap_bind_login_stage_name: "VPN LDAP Bind Login"
 vpn_authentik_ldap_outpost_token: ""
 vpn_authentik_ldap_bind_password: ""  # Authentik service-account password (vault-encrypted)
 
