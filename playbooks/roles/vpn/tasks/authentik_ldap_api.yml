@@ -452,9 +452,9 @@
         body_format: json
         body:
           name: "{{ vpn_authentik_ldap_provider_name }}"
+          authentication_flow: "{{ vpn_ldap_bind_flow_result.json.results[0].pk }}"
           authorization_flow: "{{ vpn_auth_flow_result.json.results[0].pk }}"
           invalidation_flow: "{{ vpn_invalidation_flow_result.json.results[0].pk }}"
-          bind_flow: "{{ vpn_ldap_bind_flow_result.json.results[0].pk }}"
           base_dn: "{{ vpn_authentik_ldap_base_dn }}"
           bind_mode: "direct"
           search_mode: "direct"
@@ -476,7 +476,7 @@
       ansible.builtin.set_fact:
         vpn_ldap_provider_pk: "{{ (vpn_ldap_provider_lookup_refreshed.json.results | first).pk }}"
 
-    - name: Ensure LDAP provider bind_flow is set (idempotent update for pre-existing providers)
+    - name: Ensure LDAP provider authentication_flow is set (idempotent update for pre-existing providers)
       ansible.builtin.uri:
         url: "{{ authentik_api_base_url }}/api/v3/providers/ldap/{{ vpn_ldap_provider_pk }}/"
         method: PATCH
@@ -485,10 +485,25 @@
           Content-Type: "application/json"
         body_format: json
         body:
-          bind_flow: "{{ vpn_ldap_bind_flow_result.json.results[0].pk }}"
+          authentication_flow: "{{ vpn_ldap_bind_flow_result.json.results[0].pk }}"
         status_code: [200]
         validate_certs: "{{ vpn_authentik_verify_certs }}"
-      when: vpn_ldap_provider_matches | length > 0
+
+    - name: Verify LDAP provider authentication_flow is set to dedicated bind flow
+      ansible.builtin.uri:
+        url: "{{ authentik_api_base_url }}/api/v3/providers/ldap/{{ vpn_ldap_provider_pk }}/"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ authentik_api_token }}"
+        validate_certs: "{{ vpn_authentik_verify_certs }}"
+      register: vpn_ldap_provider_after_patch
+
+    - name: Assert LDAP provider uses dedicated authentication flow
+      ansible.builtin.assert:
+        that:
+          - (vpn_ldap_provider_after_patch.json.authentication_flow | string) == (vpn_ldap_bind_flow_result.json.results[0].pk | string)
+        fail_msg: >-
+          LDAP provider authentication_flow does not match dedicated bind flow {{ vpn_authentik_ldap_bind_flow_slug }}
 
 - name: Ensure LDAP application exists for provider
   block:
