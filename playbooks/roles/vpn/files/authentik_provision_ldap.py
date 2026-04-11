@@ -316,10 +316,23 @@ def main() -> None:
         "name", prov_name,
         "/api/v3/providers/ldap/",
         {"name": prov_name, "authentication_flow": bind_flow_pk,
-         "authorization_flow": auth_flow_pk, "invalidation_flow": inv_flow_pk,
+         "authorization_flow": bind_flow_pk, "invalidation_flow": inv_flow_pk,
          "base_dn": base_dn, "bind_mode": "direct", "search_mode": "direct",
          "mfa_support": False},
     )
+
+    # LDAP outpost resolves bind flow from authorization_flow.
+    # Reconcile existing providers created with older values.
+    provider_patch: Dict[str, Any] = {}
+    if str(provider.get("authorization_flow")) != str(bind_flow_pk):
+        provider_patch["authorization_flow"] = bind_flow_pk
+    if str(provider.get("authentication_flow")) != str(bind_flow_pk):
+        provider_patch["authentication_flow"] = bind_flow_pk
+    if provider_patch:
+        info("Updating LDAP provider flow bindings…")
+        ak.patch(f"/api/v3/providers/ldap/{provider['pk']}/", provider_patch)
+        ak.changed = True
+        provider = ak.get(f"/api/v3/providers/ldap/{provider['pk']}/")
     prov_pk = provider["pk"]
 
     # ------------------------------------------------------------------
