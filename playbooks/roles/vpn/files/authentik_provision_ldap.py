@@ -239,7 +239,6 @@ def main() -> None:
     )
     if not auth_flow:
         die("Default authorization flow 'default-provider-authorization-implicit-consent' not found")
-    auth_flow_pk = auth_flow["pk"]
 
     inv_flow = ak.find(
         "/api/v3/flows/instances/?slug=default-provider-invalidation-flow",
@@ -422,6 +421,55 @@ def main() -> None:
         ak.changed = True
 
     # ------------------------------------------------------------------
+    # 8. RBAC role for LDAP full-directory search
+    # ------------------------------------------------------------------
+    # The LDAP bind account must have object-level permission
+    # `search_full_directory` on the LDAP provider; otherwise the outpost only
+    # returns the bind user itself and not the full directory.
+    role_name = f"{prov_name}-search-role"
+    info(f"RBAC role for LDAP search: {role_name}")
+    role = ak.ensure(
+        f"/api/v3/rbac/roles/?name={urllib.parse.quote(role_name)}",
+        "name", role_name,
+        "/api/v3/rbac/roles/",
+        {"name": role_name},
+    )
+    role_pk = role["pk"]
+
+    # Idempotent: adding an already-linked user is a no-op.
+    ak._call(
+        "POST",
+        f"/api/v3/rbac/roles/{urllib.parse.quote(str(role_pk))}/add_user/",
+        {"pk": int(sa_pk)},
+        ok=(200, 204),
+    )
+
+    role_perms = ak.get(f"/api/v3/rbac/permissions/roles/?uuid={urllib.parse.quote(str(role_pk))}")
+    has_search_perm = False
+    for perm in role_perms.get("results", []):
+        if (
+            str(perm.get("app_label")) == "authentik_providers_ldap"
+            and str(perm.get("model")) == "ldapprovider"
+            and str(perm.get("codename")) == "search_full_directory"
+            and str(perm.get("object_pk")) == str(prov_pk)
+        ):
+            has_search_perm = True
+            break
+
+    if not has_search_perm:
+        info("Assigning search_full_directory permission to LDAP service role…")
+        ak.post(
+            f"/api/v3/rbac/permissions/assigned_by_roles/{urllib.parse.quote(str(role_pk))}/assign/",
+            {
+                "permissions": ["search_full_directory"],
+                "model": "authentik_providers_ldap.ldapprovider",
+                "object_pk": str(prov_pk),
+            },
+            ok=(200,),
+        )
+        ak.changed = True
+
+    # ------------------------------------------------------------------
     # Output facts for Ansible
     # ------------------------------------------------------------------
     print(json.dumps({
@@ -434,6 +482,7 @@ def main() -> None:
         "outpost_uuid_hex": outpost_uuid_hex,
         "outpost_token_identifier": token_identifier,
         "runtime_token": runtime_token,
+        "search_role_pk": role_pk,
     }))
 
 
