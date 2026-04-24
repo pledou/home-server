@@ -50,6 +50,7 @@ services:
     environment:
       - POSTGRES_DB=nextcloud
       - POSTGRES_USER=nextcloud
+      - POSTGRES_HOST=pgbouncer
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
       - NEXTCLOUD_URL=https://{{app_domain_name}}
     restart: always
@@ -71,11 +72,36 @@ services:
         target: /tmp:exec
     working_dir: /var/www/html
     depends_on:
-      - ncdb
+      - pgbouncer
       - redis
       - elasticsearch
     secrets:
       - postgres_password
+
+  pgbouncer:
+    image: "{{ pgbouncer_image }}:{{ pgbouncer_version }}"
+    restart: always
+    user: root
+    networks:
+      - backend
+    entrypoint: /bin/sh -c 'export DB_PASSWORD=$$(tr -d "\n" < /run/secrets/postgres_password) && exec /entrypoint.sh /usr/bin/pgbouncer /etc/pgbouncer/pgbouncer.ini'
+    environment:
+      - DB_HOST=ncdb
+      - DB_PORT=5432
+      - DB_USER=nextcloud
+      - DB_NAME=nextcloud
+      - POOL_MODE=session
+      - MAX_CLIENT_CONN=200
+      - DEFAULT_POOL_SIZE=20
+      - LISTEN_PORT=5432
+      - AUTH_TYPE=scram-sha-256
+    secrets:
+      - postgres_password
+    depends_on:
+      ncdb:
+        condition: service_healthy
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
 
   redis:
     labels:
