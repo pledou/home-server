@@ -180,6 +180,13 @@
   failed_when: false
   changed_when: update_apps.rc == 0
 
+- name: Deploy HaRP Traefik dynamic configuration
+  become: true
+  ansible.builtin.template:
+    src: harp_dynamic.yml.j2
+    dest: "{{ docker_volumes_path }}/traefik-rules/harp.yml"
+    mode: u=rw,g=o=r
+
 - name: List AppAPI daemons
   ansible.builtin.command:
     cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app_api:daemon:list'
