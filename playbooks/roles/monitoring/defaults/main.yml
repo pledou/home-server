@@ -49,3 +49,9 @@ grafana_dashboard_updates:
 # alertmanager_smtp_user: "changeme"
 # alertmanager_smtp_password: "changeme"
 # alertmanager_smtp_require_tls: true
+
+# Filesystem periodic health check (host-level)
+monitoring_fscheck_enabled: true
+monitoring_fscheck_cron_minute: "15"
+monitoring_fscheck_cron_hour: "*/1"
+monitoring_fscheck_lookback_minutes: 70

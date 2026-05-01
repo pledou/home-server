@@ -93,3 +93,12 @@ groups:
     annotations:
       summary: "Filesystem {{ $labels.mountpoint }} critically full on {{ $labels.instance }}"
       description: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} is 90% full ({{ $value | humanizePercentage }} available). Immediate action required!"
+
+  - alert: filesystem_health_check_failed
+    expr: node_filesystem_health_check_failed > 0
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Filesystem health check failed on {{ $labels.instance }}"
+      description: "Filesystem error patterns were detected by periodic host checks on {{ $labels.instance }}. Review kernel logs and run fsck during maintenance if needed."

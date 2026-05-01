@@ -10,6 +10,77 @@ export AWS_SECRET_ACCESS_KEY="{{ aws_secret_access_key }}"
 # abort entire script if any command fails
 set -e
 
+BACKUP_NOTIFY_NEXTCLOUD="{{ 'true' if (alertmanager_nextcloud_conversation_token is defined and alertmanager_nextcloud_conversation_token) else 'false' }}"
+BACKUP_START_TS="$(date +%s)"
+NEXTCLOUD_MAINTENANCE_ENABLED=0
+BACKUP_STEPS=""
+
+send_backup_report() {
+	local backup_status="$1"
+	local details="$2"
+	local duration
+	local message
+	local container_name
+
+	[[ "${BACKUP_NOTIFY_NEXTCLOUD}" == "true" ]] || return 0
+
+	duration="$(( $(date +%s) - BACKUP_START_TS ))"
+	message="[BACKUP][${backup_status}] host=$(hostname -f 2>/dev/null || hostname) duration=${duration}s ${details}"
+
+	container_name="$(docker ps --format '{{ "{{" }}.Names{{ "}}" }}' | grep -E '^nextcloud-talk-bot$' | head -n1 || true)"
+	[[ -n "${container_name}" ]] || return 0
+
+	docker exec -e BACKUP_REPORT_MESSAGE="${message}" -i "${container_name}" python - <<'PY' >/dev/null 2>&1 || true
+import json
+import os
+import urllib.request
+
+message = os.environ.get("BACKUP_REPORT_MESSAGE", "")
+payload = json.dumps({"message": message}).encode("utf-8")
+request = urllib.request.Request(
+		"http://127.0.0.1:81/send_message",
+		data=payload,
+		headers={"Content-Type": "application/json"},
+		method="POST",
+)
+with urllib.request.urlopen(request, timeout=10):
+		pass
+PY
+}
+
+disable_nextcloud_maintenance() {
+	if [[ "${NEXTCLOUD_MAINTENANCE_ENABLED}" -eq 1 ]]; then
+		docker exec -u www-data nc-nextcloud-1 php occ maintenance:mode --off >/dev/null 2>&1 || true
+		NEXTCLOUD_MAINTENANCE_ENABLED=0
+	fi
+}
+
+on_exit() {
+	local exit_code="$?"
+
+	disable_nextcloud_maintenance
+
+	if [[ "${exit_code}" -eq 0 ]]; then
+		send_backup_report "OK" "Backup finished successfully | steps: ${BACKUP_STEPS}"
+	else
+		send_backup_report "KO" "Backup failed with exit code ${exit_code} | last step: ${BACKUP_STEPS}"
+	fi
+
+	return "${exit_code}"
+}
+
+log_step() {
+	local msg="$1"
+	local ts
+	ts="$(date '+%Y-%m-%d %H:%M:%S')"
+	echo "[${ts}] === ${msg} ==="
+	BACKUP_STEPS="${BACKUP_STEPS}${BACKUP_STEPS:+ > }${msg}"
+}
+
+trap on_exit EXIT
+
+log_step "Backup started"
+
 # unlock restic to keep automatic backups going
 /usr/local/bin/restic unlock --cleanup-cache
 {% if aws_access_key_id and aws_secret_access_key %}
@@ -17,17 +88,17 @@ set -e
 {% endif %}
 
 # TODO use dictionary of pg_dump to backup
+log_step "Dumping Kresus database"
 sudo docker exec kresus-k-db-1 pg_dumpall -c -U kresus -w > {{ docker_volumes_path }}/databases/db_dump_pgsql_kresus.sql
-sudo docker exec kresus-k-db1-1 pg_dumpall -c -U kresus -w > {{ docker_volumes_path }}/databases/db_dump_pgsql_kresus1.sql
-
-
-# Make sure nextcloud is enabled when we are done
-trap "docker exec -u www-data nc-nextcloud-1 php occ maintenance:mode --off" EXIT
 
 # set nextcloud to maintenance mode
+log_step "Enabling Nextcloud maintenance mode"
 docker exec -u www-data nc-nextcloud-1 php occ maintenance:mode --on
+NEXTCLOUD_MAINTENANCE_ENABLED=1
 
+log_step "Dumping Nextcloud database"
 sudo docker exec nc-ncdb-1 pg_dumpall -c -U nextcloud -w > {{ docker_volumes_path }}/databases/db_dump_pgsql_nextcloud.sql
+log_step "Backing up Nextcloud data (local)"
 /usr/local/bin/restic backup --tag min --verbose {{ docker_volumes_path }}/nextcloud-turnserver-data
 /usr/local/bin/restic backup --tag min --verbose {{ docker_volumes_path }}/nextcloud-www
 /usr/local/bin/restic backup --tag min --verbose {{ docker_volumes_path }}/nextcloud-config
@@ -38,12 +109,12 @@ sudo docker exec nc-ncdb-1 pg_dumpall -c -U nextcloud -w > {{ docker_volumes_pat
 {% endif %}
 
 # end maintenance mode
+log_step "Disabling Nextcloud maintenance mode"
 docker exec -u www-data nc-nextcloud-1 php occ maintenance:mode --off
-
-# delete trap
-trap "" EXIT
+NEXTCLOUD_MAINTENANCE_ENABLED=0
 
 # backup the data dir
+log_step "Backing up data volumes (secrets, homeassistant, traefik, databases)"
 # TODO use dictionary of dirs to backup
 /usr/local/bin/restic backup --tag min --verbose {{ docker_volumes_path }}/secrets
 
@@ -57,11 +128,12 @@ trap "" EXIT
 {% endif %}
 
 # clean up backup dir
+log_step "Running restic forget/prune (local)"
 /usr/local/bin/restic forget --tag max --keep-daily 7 --keep-weekly 5 --keep-monthly 12 --keep-yearly 75
 /usr/local/bin/restic forget --tag min --keep-daily 7 --keep-weekly 5
 /usr/local/bin/restic prune
 
 {% if aws_access_key_id and aws_secret_access_key %}
- /usr/local/bin/restic forget -r s3:{{ aws_bucket }} --keep-daily 7 --keep-weekly 5
- /usr/local/bin/restic prune -r s3:{{ aws_bucket }}
+log_step "Applying retention on AWS repository (without prune)"
+/usr/local/bin/restic forget -r s3:{{ aws_bucket }} --keep-daily 7 --keep-weekly 5
 {% endif %}
