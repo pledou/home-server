@@ -145,13 +145,12 @@ services:
         reservations:
           devices:
             - driver: {{ 'intel' if gpu == 'intel' else 'nvidia' }}
-              device_ids: ['all']
               capabilities: [gpu]
     {% endif %}
 
   ollama-metrics:
     labels:
-      - com.centurylinklabs.watchtower.enable=true
+      - com.centurylinklabs.watchtower.enable=false
     build:
       context: .
       dockerfile: ./ollama-metrics.Dockerfile
@@ -206,7 +205,6 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              device_ids: ['all']
               capabilities: [gpu]
     {% endif %}
   {% else %}
@@ -247,13 +245,12 @@ services:
         reservations:
           devices:
             - driver: intel
-              device_ids: ['all']
               capabilities: [gpu]
   {% endif %}
 
   ollama-embeddings-metrics:
     labels:
-      - com.centurylinklabs.watchtower.enable=true
+      - com.centurylinklabs.watchtower.enable=false
     build:
       context: .
       dockerfile: ./ollama-metrics.Dockerfile
@@ -310,7 +307,6 @@ services:
           devices:
             - driver: nvidia
               # device_ids: ['0', '1'] # Select a gpu, or use 'all' to use all available gpus
-              count: all
               capabilities: [gpu]
     {% endif %}
 
