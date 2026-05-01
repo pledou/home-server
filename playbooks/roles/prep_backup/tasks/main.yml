@@ -5,6 +5,58 @@
 - name: Install restic
   ansible.builtin.include_tasks: install_restic.yml
 
+- name: Install AWS CLI via snap
+  become: true
+  community.general.snap:
+    name: aws-cli
+    classic: true
+    state: present
+  when: aws_access_key_id is defined and aws_secret_access_key is defined
+
+- name: Configure S3 bucket lifecycle policy
+  become: true
+  when: aws_access_key_id is defined and aws_secret_access_key is defined
+  block:
+    - name: Create temporary file for S3 lifecycle policy
+      ansible.builtin.tempfile:
+        state: file
+        suffix: .json
+      register: s3_lifecycle_tmp_file
+
+    - name: Write S3 lifecycle policy to temporary file
+      ansible.builtin.copy:
+        dest: "{{ s3_lifecycle_tmp_file.path }}"
+        mode: '0600'
+        content: |
+          {
+            "Rules": [
+              {
+                "ID": "restic-data-to-glacier",
+                "Status": "Enabled",
+                "Filter": { "Prefix": "data/" },
+                "Transitions": [
+                  { "Days": 90, "StorageClass": "GLACIER" }
+                ]
+              }
+            ]
+          }
+
+    - name: Apply S3 bucket lifecycle policy
+      ansible.builtin.command: >
+        /snap/bin/aws s3api put-bucket-lifecycle-configuration
+        --bucket {{ aws_bucket_name }}
+        --lifecycle-configuration file://{{ s3_lifecycle_tmp_file.path }}
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+      register: s3_lifecycle
+      changed_when: s3_lifecycle.rc == 0
+
+    - name: Remove temporary S3 lifecycle policy file
+      ansible.builtin.file:
+        path: "{{ s3_lifecycle_tmp_file.path }}"
+        state: absent
+
 - name: Verify databases volume path
   become: true
   ansible.builtin.file:

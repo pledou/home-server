@@ -27,6 +27,8 @@ backup:
             backup_day: '*' # crontab settings for restic
             backup_hour: 4
             backup_minute: 0
+            aws_bucket_name: 'examplebackup'
+            aws_bucket: 's3.eu-north-1.amazonaws.com/{{aws_bucket_name}}'
             aws_access_key_id: !vault |
                                $ANSIBLE_VAULT;1.1;AES256
                                YOUR_ENCRYPTED_AWS_ACCESS_KEY_ID_HERE
