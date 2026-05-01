@@ -1,0 +1,19 @@
+AUTHENTIK_BASE=https://localhost:9443
+AUTHENTIK_TOKEN={{ authentik_api_token }}
+AUTHENTIK_VERIFY_CERTS=false
+SA_NAME={{ vpn_authentik_ldap_service_account_name }}
+SA_PASSWORD={{ vpn_authentik_ldap_bind_password }}
+BIND_FLOW_NAME={{ vpn_authentik_ldap_bind_flow_name }}
+BIND_FLOW_TITLE={{ vpn_authentik_ldap_bind_flow_title }}
+BIND_FLOW_SLUG={{ vpn_authentik_ldap_bind_flow_slug }}
+BIND_ID_STAGE_NAME={{ vpn_authentik_ldap_bind_identification_stage_name }}
+BIND_PW_STAGE_NAME={{ vpn_authentik_ldap_bind_password_stage_name }}
+BIND_LOGIN_STAGE_NAME={{ vpn_authentik_ldap_bind_login_stage_name }}
+PROVIDER_NAME={{ vpn_authentik_ldap_provider_name }}
+BASE_DN={{ vpn_authentik_ldap_base_dn }}
+APP_NAME={{ vpn_authentik_ldap_application_name }}
+APP_SLUG={{ vpn_authentik_ldap_application_slug }}
+OUTPOST_NAME={{ vpn_authentik_ldap_outpost_name }}
+OUTPOST_TOKEN_SEED={{ vpn_authentik_ldap_outpost_token }}
+ACCESS_GROUP={{ vpn_authentik_access_group }}
+DEBUG={{ '1' if ansible_verbosity >= 2 else '0' }}

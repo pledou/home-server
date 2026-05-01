@@ -90,6 +90,34 @@ def ssl_ctx(verify: bool) -> Optional[ssl.SSLContext]:
     return _noverify_ctx
 
 
+class _MethodPreservingRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Follow redirects while keeping the original HTTP method and body.
+
+    Python's default HTTPRedirectHandler converts POST to GET on 301/302/303
+    redirects. DRF returns 405 when it then receives a GET on a POST-only
+    endpoint, producing a confusing empty-body 405.  This handler preserves
+    the original method and body so the redirect is retried correctly.
+    """
+
+    def redirect_request(
+        self,
+        req: urllib.request.Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Any,
+        newurl: str,
+    ) -> urllib.request.Request:
+        dbg(f"  [redirect {code}] {req.get_method()} {req.full_url} → {newurl}")
+        new_req = urllib.request.Request(
+            newurl,
+            data=req.data,
+            headers=dict(req.headers),
+            method=req.get_method(),
+        )
+        return new_req
+
+
 # ---------------------------------------------------------------------------
 # API client
 # ---------------------------------------------------------------------------
@@ -116,8 +144,16 @@ class API:
         req = urllib.request.Request(url, data=data, headers=headers, method=method)
         dbg(f"{method} {url}" + (f"  ← {json.dumps(body)[:300]}" if body else ""))
 
+        ctx = ssl_ctx(self.verify)
+        if ctx is not None:
+            opener = urllib.request.build_opener(
+                _MethodPreservingRedirectHandler(),
+                urllib.request.HTTPSHandler(context=ctx),
+            )
+        else:
+            opener = urllib.request.build_opener(_MethodPreservingRedirectHandler())
         try:
-            resp = urllib.request.urlopen(req, context=ssl_ctx(self.verify))
+            resp = opener.open(req)
             text = resp.read().decode()
             parsed: Any = json.loads(text) if text.strip() else {}
             dbg(f"  → {resp.status}  {text[:300]}")
@@ -127,6 +163,10 @@ class API:
 
         except urllib.error.HTTPError as exc:
             body_text = exc.read().decode()
+            if exc.code == 405:
+                allowed = exc.headers.get("Allow", "unknown")
+                die(f"HTTP 405 (Method Not Allowed) for {method} {url} "
+                    f"— server allows: {allowed}. Body: {body_text!r}")
             die(f"HTTP {exc.code} for {method} {url}: {body_text}")
             return {}, exc.code  # never reached, silences type checker
 
