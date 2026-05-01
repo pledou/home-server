@@ -1,0 +1,43 @@
+#!/bin/bash
+set -euo pipefail
+
+METRICS_DIR="/var/lib/node_exporter/textfile_collector"
+METRICS_FILE="${METRICS_DIR}/filesystem_health.prom"
+TMP_FILE="${METRICS_FILE}.tmp"
+LOOKBACK_MINUTES={{ monitoring_fscheck_lookback_minutes }}
+
+# Look for common filesystem corruption/error signatures in kernel logs.
+ERROR_PATTERN='(EXT4-fs error|XFS \([^)]+\): Corruption|BTRFS error|Remounting filesystem read-only|Buffer I/O error on dev|I/O error, dev|blk_update_request: I/O error|FAT-fs \([^)]+\): error)'
+
+mkdir -p "${METRICS_DIR}"
+
+kernel_log_output=""
+if command -v journalctl >/dev/null 2>&1; then
+  kernel_log_output="$(journalctl -k --since "-${LOOKBACK_MINUTES} min" --no-pager 2>/dev/null || true)"
+else
+  kernel_log_output="$(dmesg 2>/dev/null | tail -n 500 || true)"
+fi
+
+error_count="$(printf '%s\n' "${kernel_log_output}" | grep -Eic "${ERROR_PATTERN}" || true)"
+error_count="${error_count:-0}"
+
+failed=0
+if [[ "${error_count}" -gt 0 ]]; then
+  failed=1
+fi
+
+last_run="$(date +%s)"
+
+cat > "${TMP_FILE}" <<EOF
+# HELP node_filesystem_health_check_failed Filesystem periodic health check status (1 means error detected).
+# TYPE node_filesystem_health_check_failed gauge
+node_filesystem_health_check_failed ${failed}
+# HELP node_filesystem_health_check_error_count Number of filesystem error log lines in the lookback window.
+# TYPE node_filesystem_health_check_error_count gauge
+node_filesystem_health_check_error_count ${error_count}
+# HELP node_filesystem_health_check_last_run_seconds Unix timestamp of the last filesystem health check run.
+# TYPE node_filesystem_health_check_last_run_seconds gauge
+node_filesystem_health_check_last_run_seconds ${last_run}
+EOF
+
+mv "${TMP_FILE}" "${METRICS_FILE}"

@@ -64,10 +64,13 @@ services:
       - /sys:/host/sys:ro
       - /:/rootfs:ro
       - /:/host:ro,rslave
+      - /var/lib/node_exporter/textfile_collector:/host/var/lib/node_exporter/textfile_collector:ro
     command: 
       - '--path.rootfs=/host'
       - '--path.procfs=/host/proc' 
       - '--path.sysfs=/host/sys'
+      - '--collector.textfile'
+      - '--collector.textfile.directory=/host/var/lib/node_exporter/textfile_collector'
       - --collector.filesystem.ignored-mount-points
       - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
       # Enable only essential collectors
@@ -202,12 +205,13 @@ services:
       backend:
         aliases:
           - nvidia-gpu-exporter
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
-              device_ids: ['all']
               capabilities: [gpu]
 {% endif %}
 

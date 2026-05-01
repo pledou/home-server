@@ -46,6 +46,35 @@
     - grafana-provisioning/datasources
     - grafana-provisioning/dashboards
 
+- name: Ensure node exporter textfile directory exists
+  become: true
+  ansible.builtin.file:
+    path: /var/lib/node_exporter/textfile_collector
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when: monitoring_fscheck_enabled | bool
+
+- name: Install periodic filesystem health check script
+  become: true
+  ansible.builtin.template:
+    src: filesystem-health-check.sh.j2
+    dest: /usr/local/bin/filesystem-health-check.sh
+    owner: root
+    group: root
+    mode: '0750'
+  when: monitoring_fscheck_enabled | bool
+
+- name: Schedule periodic filesystem health check
+  become: true
+  ansible.builtin.cron:
+    name: "monitoring filesystem health check"
+    minute: "{{ monitoring_fscheck_cron_minute }}"
+    hour: "{{ monitoring_fscheck_cron_hour }}"
+    job: "/usr/local/bin/filesystem-health-check.sh > /var/log/filesystem-health-check.log 2>&1"
+  when: monitoring_fscheck_enabled | bool
+
 - name: Deploy Prometheus configuration
   become: true
   ansible.builtin.template:
