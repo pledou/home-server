@@ -17,10 +17,10 @@
   roles:
     - role: gpu
       tags: ['docker-apps', 'monitoring', 'ia', 'hassio', 'gpu']
-    - role: authentik
-      tags: ['authentik', 'docker-apps']
     - role: traefik
       tags: ['traefik', 'docker-apps']
+    - role: authentik
+      tags: ['authentik', 'docker-apps']
     - role: monitoring
       tags: ['monitoring', 'docker-apps']
     - role: gitlab

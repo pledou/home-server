@@ -185,7 +185,9 @@ services:
       - 8971:8971/tcp  # Secured Web UI with Authentik, accessible from outside with traefik
     networks:
       - backend
+      {% if ia_chromadb_host is defined %}
       - ia_network
+      {% endif %}
       - traefik_backend
 
 volumes:
@@ -250,7 +252,9 @@ networks:
   backend:
   traefik_backend:
     external: true
+  {% if ia_chromadb_host is defined %}
   ia_network:
     external: true
+  {% endif %}
 
 

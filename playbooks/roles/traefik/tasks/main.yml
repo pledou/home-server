@@ -249,9 +249,25 @@
     state: present
     project_src: /home/{{ ansible_user }}/home-server/stacks/traefik
 
+- name: Check Authentik API availability
+  ansible.builtin.uri:
+    url: "{{ authentik_api_base_url }}/api/v3/admin/version/"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    status_code: 200
+    validate_certs: true
+  register: authentik_api_health
+  changed_when: false
+  failed_when: false
+  when: authentik_api_token is defined
+
 - name: Configure Authentik providers and applications for Traefik services
   become: false
-  when: authentik_api_token is defined
+  when:
+    - authentik_api_token is defined
+    - authentik_api_health is defined
+    - authentik_api_health.status | default(0) == 200
   block:
     - name: Configure Authentik providers and applications for Traefik services
       ansible.builtin.include_tasks: "tasks/authentik_common.yml"
@@ -263,3 +279,13 @@
             app:
               name: "Traefik Dashboard"
               slug: "traefik"
+
+- name: Skip Traefik Authentik configuration when API is unavailable
+  ansible.builtin.debug:
+    msg: >-
+      Authentik API unreachable at {{ authentik_api_base_url }}; skipping Traefik SSO setup for now.
+      Re-run with --tags traefik after Authentik is healthy.
+  when:
+    - authentik_api_token is defined
+    - authentik_api_health is defined
+    - authentik_api_health.status | default(0) != 200

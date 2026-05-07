@@ -167,7 +167,7 @@ networks:
     enable_ipv6: true
     attachable: true
   monitoring_backend:
-    external: true
+    name: monitoring_backend
 
 volumes:
   unbound:

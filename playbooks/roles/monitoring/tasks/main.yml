@@ -132,9 +132,25 @@
     database: passwd
     key: "{{ ansible_user }}"
 
+- name: Check Authentik API availability
+  ansible.builtin.uri:
+    url: "{{ authentik_api_base_url }}/api/v3/admin/version/"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ authentik_api_token }}"
+    status_code: 200
+    validate_certs: true
+  register: authentik_api_health
+  changed_when: false
+  failed_when: false
+  when: authentik_api_token is defined
+
 - name: Configure Authentik providers and applications for Monitoring
   become: false
-  when: authentik_api_token is defined
+  when:
+    - authentik_api_token is defined
+    - authentik_api_health is defined
+    - authentik_api_health.status | default(0) == 200
   block:
     - name: Create Grafana role-mapping groups in Authentik
       when: authentik_api_token is defined
@@ -225,6 +241,16 @@
               meta_launch_url: "https://grafana.{{ app_domain_name }}"
               meta_description: "Grafana monitoring and analytics platform"
               meta_publisher: "Grafana"
+
+- name: Skip Authentik configuration when API is unavailable
+  ansible.builtin.debug:
+    msg: >-
+      Authentik API unreachable at {{ authentik_api_base_url }}; skipping Monitoring SSO/group setup for now.
+      Re-run with --tags monitoring after Authentik/Traefik are healthy.
+  when:
+    - authentik_api_token is defined
+    - authentik_api_health is defined
+    - authentik_api_health.status | default(0) != 200
 
 - name: Clone Nextcloud Talk webhook bot repository
   ansible.builtin.git:
