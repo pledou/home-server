@@ -1,3 +1,4 @@
+#jinja2: lstrip_blocks: True, trim_blocks: True
 services:
 
   ncdb:
@@ -61,7 +62,9 @@ services:
     networks:
       - backend
       - traefik_backend
+      {% if ia_chromadb_host is defined %}
       - ia_network
+      {% endif %}
     volumes:
       - nextcloud-www:/var/www/html:Z
       - nextcloud-config:/var/www/html/config:Z
@@ -190,8 +193,10 @@ services:
 networks:
   traefik_backend:
     external: true
+  {% if ia_chromadb_host is defined %}
   ia_network:
     external: true
+  {% endif %}
   backend:
 
 volumes:
