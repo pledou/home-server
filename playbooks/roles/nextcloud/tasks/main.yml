@@ -147,7 +147,7 @@
       ansible.builtin.command:
         cmd: >
           docker exec --user www-data nc-nextcloud-1 php occ maintenance:install
-          --database psql --database-host nc-db --database-name nextcloud
+          --database psql --database-host ncdb --database-name nextcloud
           --database-user nextcloud --database-pass {{ database_user_secret }}
           --admin-user admin --admin-pass {{ nextcloud_admin_password }}
           --data-dir {{ docker_volumes_path }}/nextcloud-data
@@ -158,6 +158,27 @@
         cmd: 'docker exec --user www-data nc-nextcloud-1 php occ config:system:set {{ item }}'
       loop: '{{ nextcloud_system_config }}'
       changed_when: true
+
+- name: Run Nextcloud upgrade (if already installed)
+  when: config_php.stat.exists
+  ansible.builtin.command:
+    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ upgrade'
+  register: nc_upgrade
+  failed_when: false
+  changed_when: nc_upgrade.rc == 0
+
+- name: Add missing db objects
+  when: config_php.stat.exists
+  ansible.builtin.command:
+    cmd: >-
+      docker exec --user www-data nc-nextcloud-1 /bin/bash -c
+      "php occ db:add-missing-indices &&
+      php occ db:add-missing-columns &&
+      php occ db:add-missing-primary-keys &&
+      php occ db:convert-filecache-bigint"
+  register: add_db_objects
+  failed_when: false
+  changed_when: add_db_objects.rc == 0
 
 - name: Install apps
   become: true # necessary to read docker_volumes_path content
@@ -272,17 +293,4 @@
   register: context_chat_timeout
   failed_when: false
   changed_when: "'set to' in context_chat_timeout.stdout or 'Config value' in context_chat_timeout.stdout"
-
-- name: Add missing db objects
-  ansible.builtin.command:
-    cmd: >
-      docker exec --user www-data nc-nextcloud-1 /bin/bash -c
-      "php occ db:add-missing-indices;
-      php occ db:add-missing-columns;
-      php occ db:add-missing-primary-keys;
-      php occ db:convert-filecache-bigint;
-      php occ config:system:set maintenance_window_start --type=integer --value=1;"
-  register: add_db_objects
-  failed_when: false
-  changed_when: add_db_objects.rc == 0
 ...
