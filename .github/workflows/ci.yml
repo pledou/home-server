@@ -84,7 +84,7 @@ jobs:
           format: 'table'
       
       - name: Scan Dockerfiles with Hadolint
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         with:
           recursive: true
           ignore: DL3008,DL3009
