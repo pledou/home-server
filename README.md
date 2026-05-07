@@ -206,6 +206,26 @@ ansible-playbook playbooks/install.yml --tags ia
 ansible-playbook playbooks/install.yml --tags docker-apps
 ```
 
+First bootstrap order (recommended):
+
+```bash
+# 1) Base system and Docker
+ansible-playbook playbooks/install.yml --tags docker
+
+# 2) Reverse proxy and shared external networks
+ansible-playbook playbooks/install.yml --tags traefik
+
+# 3) Identity provider
+ansible-playbook playbooks/install.yml --tags authentik
+
+# 4) Monitoring stack and Authentik mappings
+ansible-playbook playbooks/install.yml --tags monitoring
+```
+
+Why this order:
+- `traefik` creates shared networks used by multiple stacks (`traefik_backend`, `monitoring_backend`).
+- `authentik` and `monitoring` may call the Authentik API, which is only reachable once `traefik` and `authentik` are up.
+
 ### Maintenance Tasks
 
 ```bash
