@@ -64,8 +64,10 @@ nextcloud_context_agent_tool_status:
   openproject: false
 
 nextcloud_exapp_list:
-  - context_chat_backend
-  - context_agent # Context Agent integration for enhanced automation capabilities
+  - name: context_chat_backend
+    options: "--mount {{ docker_volumes_path }}/context-chat-backend-data:/nc_app_context_chat_backend_data"
+  - name: context_agent # Context Agent integration for enhanced automation capabilities
+    options: ""
 
 nextcloud_system_config:
   - "overwrite.cli.url --value=https://{{ app_domain_name }}"

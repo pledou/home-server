@@ -185,10 +185,7 @@ services:
       - traefik.http.routers.exapps.priority=1000
       - traefik.http.routers.exapps.service=exapps-service
       - traefik.http.services.exapps-service.loadbalancer.server.port=8780
-      - traefik.http.services.exapps-service.loadbalancer.serverstransport=exapps-transport
-      - traefik.http.serversTransports.exapps-transport.forwardingTimeouts.responseHeaderTimeout=1800s
-      - traefik.http.serversTransports.exapps-transport.forwardingTimeouts.dialTimeout=30s
-      - traefik.http.serversTransports.exapps-transport.forwardingTimeouts.idleConnTimeout=1800s
+      - traefik.http.services.exapps-service.loadbalancer.serverstransport=exapps-transport@file
 
 networks:
   traefik_backend:

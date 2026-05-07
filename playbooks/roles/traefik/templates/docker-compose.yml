@@ -31,6 +31,8 @@ services:
       - --providers.docker
       - --providers.docker.watch
       - --providers.docker.exposedByDefault=false
+      - --providers.file.directory=/rules
+      - --providers.file.watch=true
       - --entrypoints.https.address=:443
       - --entrypoints.https.http3
       - --entrypoints.dot.address=:853

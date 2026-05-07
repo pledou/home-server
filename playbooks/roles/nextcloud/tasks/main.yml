@@ -43,6 +43,8 @@
       group: 999
       owner: 999
     - name: nextcloud-nginx-config
+    - name: context-chat-backend-data
+      mode: 'u=rwx,g=rx,o=rx'
     - name: nextcloud-elastic-data
       owner: 1000
 - name: Copy nginx configuration file
@@ -180,6 +182,13 @@
   failed_when: false
   changed_when: update_apps.rc == 0
 
+- name: Deploy HaRP Traefik dynamic configuration
+  become: true
+  ansible.builtin.template:
+    src: harp_dynamic.yml.j2
+    dest: "{{ docker_volumes_path }}/traefik-rules/harp.yml"
+    mode: u=rw,g=o=r
+
 - name: List AppAPI daemons
   ansible.builtin.command:
     cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app_api:daemon:list'
@@ -199,6 +208,19 @@
   when: appapi_daemon_list.rc == 0 and ('harp_proxy_host' not in appapi_daemon_list.stdout)
   changed_when: true
 
+- name: Create context_chat_backend bind-mount Docker volume (data on /opt)
+  become: true
+  ansible.builtin.command:
+    cmd: >
+      docker volume create --driver local
+      --opt type=none
+      --opt device={{ docker_volumes_path }}/context-chat-backend-data
+      --opt o=bind
+      nc_app_context_chat_backend_data
+  register: volume_create
+  changed_when: volume_create.rc == 0
+  failed_when: false
+
 - name: List registered ExApps
   ansible.builtin.command:
     cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app_api:app:list'
@@ -210,25 +232,27 @@
   ansible.builtin.command:
     cmd: >
       docker exec --user www-data nc-nextcloud-1 php occ app_api:app:register
-      --wait-finish {{ item }} harp_proxy_host
+      --wait-finish
+      {{ item.options }}
+      {{ item.name }} harp_proxy_host
   register: register_exapp
   loop: "{{ nextcloud_exapp_list }}"
-  when: appapi_exapp_list.rc == 0 and (item not in appapi_exapp_list.stdout)
+  when: appapi_exapp_list.rc == 0 and (item.name not in appapi_exapp_list.stdout)
   changed_when: true
   failed_when: register_exapp.rc != 0
 
 - name: Update already registered exapps
   ansible.builtin.command:
-    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app_api:app:update {{ item }} --enabled'
+    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app_api:app:update {{ item.name }} --enabled'
   register: update_exapp
   loop: "{{ nextcloud_exapp_list }}"
-  when: appapi_exapp_list.rc == 0 and (item in appapi_exapp_list.stdout)
+  when: appapi_exapp_list.rc == 0 and (item.name in appapi_exapp_list.stdout)
   failed_when: false
   changed_when: update_exapp.rc == 0
 
 - name: Enable exapps explicitly
   ansible.builtin.command:
-    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ -n app_api:app:enable {{ item }}'
+    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ -n app_api:app:enable {{ item.name }}'
   register: enable_exapp
   loop: "{{ nextcloud_exapp_list }}"
   changed_when: "'already enabled' not in (enable_exapp.stdout | lower)"

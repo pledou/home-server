@@ -166,7 +166,6 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - frigate_config:/config:rw
       - frigate_media:/media:rw
-      - /dev/bus/usb:/dev/bus/usb
       - {{ docker_volumes_path }}/frigate_config/proxy_trusted_headers.conf:/usr/local/nginx/conf/proxy_trusted_headers.conf:ro
     ## Uncomment this block for nvidia gpu support
     # deploy:
