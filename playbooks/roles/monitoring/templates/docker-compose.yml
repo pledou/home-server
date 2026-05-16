@@ -265,6 +265,19 @@ services:
       - backend
   {% endif %}
 
+  fail2ban-exporter:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    image: "{{ fail2ban_exporter_image }}:{{ fail2ban_exporter_version }}"
+    command:
+      - --web.listen-address=:9191
+      - --collector.f2b.socket=/var/run/fail2ban/fail2ban.sock
+    volumes:
+      - /var/run/fail2ban/fail2ban.sock:/var/run/fail2ban/fail2ban.sock:ro
+    networks:
+      - backend
+    restart: unless-stopped
+
   autoheal: # restart container when healthcheck is ko
     labels:
       - com.centurylinklabs.watchtower.enable=true

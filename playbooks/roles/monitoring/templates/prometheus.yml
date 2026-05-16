@@ -53,6 +53,9 @@ scrape_configs:
   - job_name: authentik
     static_configs:
       - targets: ['authentik-server-1:9300']
+  - job_name: fail2ban
+    static_configs:
+      - targets: ['fail2ban-exporter:9191']
   - job_name: ollama-metrics
     scrape_interval: 15s
     static_configs:

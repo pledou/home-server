@@ -1,0 +1,11 @@
+[INCLUDES]
+before = common.conf
+
+[Definition]
+# Match Traefik Combined Log Format lines that result in 401 / 403 / 429 responses.
+# Format: <IP> - <user> [timestamp] "METHOD /path HTTP/x.y" STATUS bytes "referer" "ua"
+failregex = ^<HOST> -\s+\S+\s+\[.*?\]\s+"[^"]+"\s+(401|403|429)\s+\d+
+
+ignoreregex =
+
+datepattern = \[%%d/%%b/%%Y:%%H:%%M:%%S %%z\]
