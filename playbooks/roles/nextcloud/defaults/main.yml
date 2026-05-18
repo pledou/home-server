@@ -14,6 +14,18 @@ redis_version: "8-alpine"
 nextcloud_image: "nextcloud"
 nextcloud_version: "32"
 
+# PHP-FPM tuning to reduce request starvation under periodic background load.
+nextcloud_php_fpm_pm_max_children: 48
+nextcloud_php_fpm_pm_start_servers: 6
+nextcloud_php_fpm_pm_min_spare_servers: 4
+nextcloud_php_fpm_pm_max_spare_servers: 12
+nextcloud_php_fpm_pm_max_requests: 500
+nextcloud_php_fpm_request_terminate_timeout: "300s"
+
+# Preview generation is useful for photo-heavy setups.
+# This schedule keeps it enabled, but prevents overlap and long runaway runs.
+nextcloud_preview_pregenerate_cron: "*/30 * * * * cd /var/www/html && flock -n /tmp/preview-pregenerate.lock timeout 20m php -f occ preview:pre-generate"
+
 nextcloud_defaultapp_list:
   - viewer
   - recognize
