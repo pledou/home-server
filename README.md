@@ -281,7 +281,7 @@ backup:
       prep_backup_aws_keep_weekly: 5
       prep_backup_aws_run_prune: false
       prep_backup_aws_lifecycle_enabled: true
-      prep_backup_aws_lifecycle_transition_days: 90
+      prep_backup_aws_lifecycle_transition_days: 0
       prep_backup_aws_lifecycle_storage_class: 'GLACIER'
       prep_backup_aws_lifecycle_data_expiration_days: 90
 ```
