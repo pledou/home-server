@@ -242,6 +242,7 @@
   changed_when: volume_create.rc == 0
   failed_when: false
 
+- name: List registered ExApps
   ansible.builtin.command:
     cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app_api:app:list'
   register: appapi_exapp_list
@@ -256,11 +257,7 @@
   when: appapi_exapp_list.rc == 0 and (item.name in appapi_exapp_list.stdout)
   failed_when: false
   changed_when: unregister_exapp.rc == 0
-
-- name: Wait for ExApps to fully unregister
-  ansible.builtin.pause:
-    seconds: 3
-  when: unregister_exapp is changed
+  notify: Wait_exapp_unregister
 
 - name: Register exapps on Harp daemon
   ansible.builtin.command:
@@ -275,6 +272,7 @@
   changed_when: true
   failed_when: register_exapp.rc != 0
 
+- name: Enable exapps
   ansible.builtin.command:
     cmd: 'docker exec --user www-data nc-nextcloud-1 php occ -n app_api:app:enable {{ item.name }}'
   register: enable_exapp

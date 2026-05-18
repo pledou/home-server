@@ -1,0 +1,6 @@
+# code: language=ansible
+---
+- name: Wait_exapp_unregister
+  ansible.builtin.wait_for:
+    timeout: 30
+  listen: wait_exapp_unregister
