@@ -3,4 +3,27 @@
 prep_backup_day: '*'
 prep_backup_minute: '0'
 prep_backup_hour: '1'
+
+# AWS restic retention (applied from backup script)
+prep_backup_aws_keep_daily: 7
+prep_backup_aws_keep_weekly: 5
+
+# Run prune on AWS repository after forget.
+# Keep this disabled when using cold Glacier classes that require object restore.
+prep_backup_aws_run_prune: false
+
+# S3 lifecycle policy for restic data packs in AWS bucket
+prep_backup_aws_lifecycle_enabled: true
+prep_backup_aws_lifecycle_data_prefix: 'data/'
+prep_backup_aws_lifecycle_transition_days: 90
+prep_backup_aws_lifecycle_storage_class: 'GLACIER'
+
+# Optional hard expiration for data objects (in days).
+# Set to 0 to disable expiration.
+prep_backup_aws_lifecycle_data_expiration_days: 0
+
+# Cleanup stale lock objects and failed multipart uploads
+prep_backup_aws_lifecycle_locks_prefix: 'locks/'
+prep_backup_aws_lifecycle_lock_expiration_days: 7
+prep_backup_aws_lifecycle_abort_multipart_days: 7
 ...

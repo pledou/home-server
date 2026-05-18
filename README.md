@@ -273,9 +273,23 @@ backup:
       backup_day: '*'
       backup_hour: 4
       backup_minute: 0
+      aws_bucket_name: 'your-bucket-name'
+      aws_bucket: 's3.eu-north-1.amazonaws.com/{{aws_bucket_name}}'
       aws_access_key_id: !vault | # For S3 backups
       aws_secret_access_key: !vault |
+      prep_backup_aws_keep_daily: 7
+      prep_backup_aws_keep_weekly: 5
+      prep_backup_aws_run_prune: false
+      prep_backup_aws_lifecycle_enabled: true
+      prep_backup_aws_lifecycle_transition_days: 90
+      prep_backup_aws_lifecycle_storage_class: 'GLACIER'
+      prep_backup_aws_lifecycle_data_expiration_days: 0
 ```
+
+Notes:
+- By default only restic pack files under data/ are transitioned to Glacier; this is intentional for repository consistency.
+- Set prep_backup_aws_run_prune to true only if your selected storage class supports direct reads without object restore.
+- If prep_backup_aws_lifecycle_data_expiration_days is 0, no AWS-side hard expiration is applied.
 
 ## 📁 Project Structure
 

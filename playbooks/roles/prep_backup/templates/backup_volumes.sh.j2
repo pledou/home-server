@@ -104,6 +104,7 @@ log_step "Backing up Nextcloud data (local)"
 /usr/local/bin/restic backup --tag min --verbose {{ docker_volumes_path }}/nextcloud-config
 /usr/local/bin/restic backup --tag max --verbose {{ docker_volumes_path }}/nextcloud-data
 {% if aws_access_key_id and aws_secret_access_key %}
+log_step "Backing up Nextcloud data (AWS)"
 /usr/local/bin/restic backup -r s3:{{ aws_bucket }} --verbose {{ docker_volumes_path }}/nextcloud-config
 /usr/local/bin/restic backup -r s3:{{ aws_bucket }} --verbose {{ docker_volumes_path }}/nextcloud-data
 {% endif %}
@@ -124,7 +125,8 @@ log_step "Backing up data volumes (secrets, homeassistant, traefik, databases)"
 
 /usr/local/bin/restic backup --tag min --verbose {{ docker_volumes_path }}/databases
 {% if aws_access_key_id and aws_secret_access_key %}
- /usr/local/bin/restic backup -r s3:{{ aws_bucket }} --verbose {{ docker_volumes_path }}/databases
+log_step "Backing up databases (AWS)"
+/usr/local/bin/restic backup -r s3:{{ aws_bucket }} --verbose {{ docker_volumes_path }}/databases
 {% endif %}
 
 # clean up backup dir
@@ -134,6 +136,12 @@ log_step "Running restic forget/prune (local)"
 /usr/local/bin/restic prune
 
 {% if aws_access_key_id and aws_secret_access_key %}
+{% if prep_backup_aws_run_prune | bool %}
+log_step "Applying retention on AWS repository (with prune)"
+/usr/local/bin/restic forget -r s3:{{ aws_bucket }} --keep-daily {{ prep_backup_aws_keep_daily }} --keep-weekly {{ prep_backup_aws_keep_weekly }}
+/usr/local/bin/restic prune -r s3:{{ aws_bucket }}
+{% else %}
 log_step "Applying retention on AWS repository (without prune)"
-/usr/local/bin/restic forget -r s3:{{ aws_bucket }} --keep-daily 7 --keep-weekly 5
+/usr/local/bin/restic forget -r s3:{{ aws_bucket }} --keep-daily {{ prep_backup_aws_keep_daily }} --keep-weekly {{ prep_backup_aws_keep_weekly }}
+{% endif %}
 {% endif %}

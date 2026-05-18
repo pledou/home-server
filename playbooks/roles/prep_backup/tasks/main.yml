@@ -15,7 +15,10 @@
 
 - name: Configure S3 bucket lifecycle policy
   become: true
-  when: aws_access_key_id is defined and aws_secret_access_key is defined
+  when:
+    - aws_access_key_id is defined
+    - aws_secret_access_key is defined
+    - prep_backup_aws_lifecycle_enabled | bool
   block:
     - name: Create temporary file for S3 lifecycle policy
       ansible.builtin.tempfile:
@@ -33,10 +36,20 @@
               {
                 "ID": "restic-data-to-glacier",
                 "Status": "Enabled",
-                "Filter": { "Prefix": "data/" },
+                "Filter": { "Prefix": "{{ prep_backup_aws_lifecycle_data_prefix }}" },
                 "Transitions": [
-                  { "Days": 90, "StorageClass": "GLACIER" }
-                ]
+                  { "Days": {{ prep_backup_aws_lifecycle_transition_days }}, "StorageClass": "{{ prep_backup_aws_lifecycle_storage_class }}" }
+                ],
+          {% if prep_backup_aws_lifecycle_data_expiration_days | int > 0 %}
+                "Expiration": { "Days": {{ prep_backup_aws_lifecycle_data_expiration_days }} },
+          {% endif %}
+                "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": {{ prep_backup_aws_lifecycle_abort_multipart_days }} }
+              },
+              {
+                "ID": "restic-lock-cleanup",
+                "Status": "Enabled",
+                "Filter": { "Prefix": "{{ prep_backup_aws_lifecycle_locks_prefix }}" },
+                "Expiration": { "Days": {{ prep_backup_aws_lifecycle_lock_expiration_days }} }
               }
             ]
           }
