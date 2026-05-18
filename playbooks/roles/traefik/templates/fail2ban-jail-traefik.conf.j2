@@ -1,0 +1,8 @@
+[traefik-auth]
+enabled  = true
+filter   = traefik
+logpath  = {{ traefik_accesslog_host_path }}/access.log
+maxretry = {{ traefik_fail2ban_maxretry }}
+findtime = {{ traefik_fail2ban_findtime }}
+bantime  = {{ traefik_fail2ban_bantime }}
+port     = http,https

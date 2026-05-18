@@ -44,6 +44,7 @@ services:
       - --entrypoints.https.http.tls.domains[0].sans=*.{{ app_domain_name }}
       - --entrypoints.https.forwardedheaders.insecure
       - --accesslog
+      - --accesslog.filepath=/var/log/traefik/access.log
       - --log
       - --log.level=INFO
       - --api
@@ -64,6 +65,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:rw
       - traefik-public-certificates:/certificates
       - traefik-rules:/rules
+      - "{{ traefik_accesslog_host_path }}:/var/log/traefik"
 
 {% if unbound %}
   unbound:

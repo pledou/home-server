@@ -6,4 +6,11 @@
     name: systemd-resolved
     state: restarted
     enabled: true
+
+- name: Restart fail2ban
+  become: true
+  ansible.builtin.systemd:
+    name: fail2ban
+    state: restarted
+    enabled: true
 ...

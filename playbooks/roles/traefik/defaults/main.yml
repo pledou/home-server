@@ -13,3 +13,14 @@ unbound_offline_fallback_enabled: true
 unbound_compose_project_name: "traefik"
 alpine_image: "alpine"
 alpine_version: "3.23"
+
+# Access log path on the host (mounted into the container for fail2ban)
+traefik_accesslog_host_path: "/var/log/traefik"
+
+# Buffering middleware – 0 means no limit, which avoids restricting Nextcloud large-file transfers
+traefik_max_response_body_bytes: 0
+
+# Fail2ban integration
+traefik_fail2ban_maxretry: 5
+traefik_fail2ban_findtime: 600
+traefik_fail2ban_bantime: 3600

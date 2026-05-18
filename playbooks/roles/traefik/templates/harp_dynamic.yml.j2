@@ -1,4 +1,10 @@
 http:
+{% if traefik_max_response_body_bytes | int > 0 %}
+  middlewares:
+    limit-response-body:
+      buffering:
+        maxResponseBodyBytes: {{ traefik_max_response_body_bytes }}
+{% endif %}
   serversTransports:
     exapps-transport:
       forwardingTimeouts:

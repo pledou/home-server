@@ -5,6 +5,14 @@
     path: "/home/{{ ansible_user }}/home-server/stacks/traefik"
     state: directory
     mode: u=rwx,g=o=rx
+
+- name: Create Traefik access log directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ traefik_accesslog_host_path }}"
+    state: directory
+    mode: u=rwx,g=rx,o=rx
+
 - name: Create traefik provisionning directories
   become: true
   ansible.builtin.file:
@@ -248,6 +256,35 @@
     build: "always"
     state: present
     project_src: /home/{{ ansible_user }}/home-server/stacks/traefik
+
+- name: Install fail2ban
+  become: true
+  ansible.builtin.package:
+    name: fail2ban
+    state: present
+
+- name: Deploy fail2ban filter for Traefik
+  become: true
+  ansible.builtin.template:
+    src: fail2ban-filter-traefik.conf.j2
+    dest: /etc/fail2ban/filter.d/traefik.conf
+    mode: u=rw,g=r,o=r
+  notify: Restart fail2ban
+
+- name: Deploy fail2ban jail for Traefik
+  become: true
+  ansible.builtin.template:
+    src: fail2ban-jail-traefik.conf.j2
+    dest: /etc/fail2ban/jail.d/traefik.conf
+    mode: u=rw,g=r,o=r
+  notify: Restart fail2ban
+
+- name: Enable and start fail2ban
+  become: true
+  ansible.builtin.systemd:
+    name: fail2ban
+    state: started
+    enabled: true
 
 - name: Check Authentik API availability
   ansible.builtin.uri:
