@@ -19,8 +19,8 @@ prep_backup_aws_lifecycle_transition_days: 90
 prep_backup_aws_lifecycle_storage_class: 'GLACIER'
 
 # Optional hard expiration for data objects (in days).
-# Set to 0 to disable expiration.
-prep_backup_aws_lifecycle_data_expiration_days: 0
+# Minimum for Glacier: 90 days. Set to 0 to disable expiration.
+prep_backup_aws_lifecycle_data_expiration_days: 90
 
 # Cleanup stale lock objects and failed multipart uploads
 prep_backup_aws_lifecycle_locks_prefix: 'locks/'
