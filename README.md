@@ -289,7 +289,7 @@ backup:
 Notes:
 - By default only restic pack files under data/ are transitioned to Glacier; this is intentional for repository consistency.
 - Set prep_backup_aws_run_prune to true only if your selected storage class supports direct reads without object restore.
-- prep_backup_aws_lifecycle_data_expiration_days: 90 is the minimum for Glacier. Objects transition to Glacier at 90 days and expire at 90 days (no storage cost beyond transition). Set higher (e.g., 180, 365) to keep backups longer.
+    - With prep_backup_aws_lifecycle_transition_days: 0 and prep_backup_aws_lifecycle_data_expiration_days: 90, objects go to Glacier immediately and expire at day 90 (minimum Glacier retention). Set higher (e.g., 180, 365) to keep backups longer.
 
 ## 📁 Project Structure
 

@@ -30,7 +30,7 @@ backup:
             aws_bucket_name: 'examplebackup'
             aws_bucket: 's3.eu-north-1.amazonaws.com/{{aws_bucket_name}}'
             prep_backup_aws_lifecycle_enabled: true
-            prep_backup_aws_lifecycle_transition_days: 90
+            prep_backup_aws_lifecycle_transition_days: 0
             prep_backup_aws_lifecycle_storage_class: 'GLACIER'
             prep_backup_aws_lifecycle_data_expiration_days: 90
             aws_access_key_id: !vault |
