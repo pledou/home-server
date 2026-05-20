@@ -33,6 +33,7 @@ nextcloud_defaultapp_list:
   - fulltextsearch
   - fulltextsearch_elasticsearch
   - files_fulltextsearch
+  - files_fulltextsearch_metadata
   - richdocuments
   - richdocumentscode
   - previewgenerator
