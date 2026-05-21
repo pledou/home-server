@@ -81,6 +81,8 @@
       dest: supervisord.conf
     - src: nextcloud/fulltextsearch.sh
       dest: fulltextsearch.sh
+    - src: elasticsearch.yml
+      dest: elasticsearch.yml
 - name: PostgreSQL upgrade check and backup for Nextcloud
   ansible.builtin.include_tasks: "tasks/upgrade_postgres_service.yml"
   vars:
