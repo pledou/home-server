@@ -251,15 +251,27 @@
   changed_when: false
   failed_when: false
 
-- name: Unregister stale exapps to force redeployment
+- name: List enabled Nextcloud apps
   ansible.builtin.command:
-    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app_api:app:unregister {{ item.name }}'
-  register: unregister_exapp
-  loop: "{{ nextcloud_exapp_list }}"
-  when: appapi_exapp_list.rc == 0 and (item.name in appapi_exapp_list.stdout)
+    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app:list --enabled'
+  register: nc_enabled_app_list
+  changed_when: false
   failed_when: false
-  changed_when: unregister_exapp.rc == 0
-  notify: Wait_exapp_unregister
+
+- name: Warn when exapps look stale (registered but disabled)
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: ExApp {{ item.name }} is registered but not enabled. This may indicate
+      a stale state. Deployment keeps normal mode and skips force cleanup.
+  loop: >-
+    {{
+      nextcloud_exapp_list
+      | selectattr('name', 'in', appapi_exapp_list.stdout | default(''))
+      | rejectattr('name', 'in', nc_enabled_app_list.stdout | default(''))
+      | list
+    }}
+  when: appapi_exapp_list.rc == 0 and nc_enabled_app_list.rc == 0
+  changed_when: false
 
 - name: Register exapps on Harp daemon
   ansible.builtin.command:
@@ -269,9 +281,14 @@
       {{ item.options }}
       {{ item.name }} harp_proxy_host
   register: register_exapp
-  loop: "{{ nextcloud_exapp_list }}"
+  loop: >-
+    {{
+      nextcloud_exapp_list
+      | rejectattr('name', 'in', appapi_exapp_list.stdout | default(''))
+      | list
+    }}
   when: appapi_exapp_list.rc == 0
-  changed_when: true
+  changed_when: register_exapp.rc == 0
   failed_when: register_exapp.rc != 0
 
 - name: Enable exapps
