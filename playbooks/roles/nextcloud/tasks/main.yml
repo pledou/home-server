@@ -231,6 +231,30 @@
   when: appapi_daemon_list.rc == 0 and ('harp_proxy_host' not in appapi_daemon_list.stdout)
   changed_when: true
 
+# HaRP automatically creates a Docker volume named `nc_app_{appid}_data` and mounts it at
+# `/{volume_name}` inside every ExApp container (hardcoded in docker_exapp_create in haproxy_agent.py).
+# The `--mount` option in `occ app_api:app:register` adds EXTRA mounts and cannot override this default
+# path — passing the same target path causes Docker to reject with "Duplicate mount point".
+#
+# However, HaRP checks if the volume already exists before creating it:
+#   if volume exists → use as-is
+#   if not         → create a plain Docker volume (data lands in /var/lib/docker/volumes/)
+#
+# By pre-creating the volume as a bind-mount to /opt/, we ensure HaRP reuses it,
+# keeping ExApp data on the host filesystem for backups.
+- name: Create context_chat_backend bind-mount Docker volume (data on /opt)
+  become: true
+  ansible.builtin.command:
+    cmd: >
+      docker volume create --driver local
+      --opt type=none
+      --opt device={{ docker_volumes_path }}/context-chat-backend-data
+      --opt o=bind
+      nc_app_context_chat_backend_data
+  register: volume_create
+  changed_when: volume_create.rc == 0
+  failed_when: false
+
 - name: List registered ExApps
   ansible.builtin.command:
     cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app_api:app:list'
