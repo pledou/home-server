@@ -231,19 +231,6 @@
   when: appapi_daemon_list.rc == 0 and ('harp_proxy_host' not in appapi_daemon_list.stdout)
   changed_when: true
 
-- name: Create context_chat_backend bind-mount Docker volume (data on /opt)
-  become: true
-  ansible.builtin.command:
-    cmd: >
-      docker volume create --driver local
-      --opt type=none
-      --opt device={{ docker_volumes_path }}/context-chat-backend-data
-      --opt o=bind
-      nc_app_context_chat_backend_data
-  register: volume_create
-  changed_when: volume_create.rc == 0
-  failed_when: false
-
 - name: List registered ExApps
   ansible.builtin.command:
     cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app_api:app:list'

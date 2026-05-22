@@ -78,7 +78,7 @@ nextcloud_context_agent_tool_status:
 
 nextcloud_exapp_list:
   - name: context_chat_backend
-    options: "--mount nc_app_context_chat_backend_data:/nc_app_context_chat_backend_data"
+    options: "--mount {{ docker_volumes_path }}/context-chat-backend-data:/nc_app_context_chat_backend_data"
   - name: context_agent # Context Agent integration for enhanced automation capabilities
     options: ""
 
