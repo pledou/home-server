@@ -302,6 +302,17 @@
   changed_when: register_exapp.rc == 0
   failed_when: register_exapp.rc != 0
 
+# context_chat_backend uses CC_EM_BASE_URL=http://ollama-embeddings:11434 for embeddings.
+# The ExApp container is placed on nc_backend by HaRP, so we explicitly attach it to ia_network
+# to allow hostname resolution of 'ollama-embeddings'. The network connect is idempotent
+# (failed_when: false) and must run even when the app was already registered.
+- name: Connect context_chat_backend ExApp to ia_network for Ollama Embeddings access
+  ansible.builtin.command:
+    cmd: docker network connect ia_network nc_app_context_chat_backend
+  register: nc_ia_connect
+  changed_when: nc_ia_connect.rc == 0
+  failed_when: false
+
 - name: Enable exapps
   ansible.builtin.command:
     cmd: 'docker exec --user www-data nc-nextcloud-1 php occ -n app_api:app:enable {{ item.name }}'
