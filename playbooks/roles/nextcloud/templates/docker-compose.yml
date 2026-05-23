@@ -123,6 +123,7 @@ services:
         hard: -1
     volumes:
       - elastic_data:/usr/share/elasticsearch/data:rw
+      - ./elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
 
   turn_server:
     labels:

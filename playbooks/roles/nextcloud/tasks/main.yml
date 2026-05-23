@@ -81,6 +81,8 @@
       dest: supervisord.conf
     - src: nextcloud/fulltextsearch.sh
       dest: fulltextsearch.sh
+    - src: elasticsearch.yml
+      dest: elasticsearch.yml
 - name: PostgreSQL upgrade check and backup for Nextcloud
   ansible.builtin.include_tasks: "tasks/upgrade_postgres_service.yml"
   vars:
@@ -229,6 +231,17 @@
   when: appapi_daemon_list.rc == 0 and ('harp_proxy_host' not in appapi_daemon_list.stdout)
   changed_when: true
 
+# HaRP automatically creates a Docker volume named `nc_app_{appid}_data` and mounts it at
+# `/{volume_name}` inside every ExApp container (hardcoded in docker_exapp_create in haproxy_agent.py).
+# The `--mount` option in `occ app_api:app:register` adds EXTRA mounts and cannot override this default
+# path — passing the same target path causes Docker to reject with "Duplicate mount point".
+#
+# However, HaRP checks if the volume already exists before creating it:
+#   if volume exists → use as-is
+#   if not         → create a plain Docker volume (data lands in /var/lib/docker/volumes/)
+#
+# By pre-creating the volume as a bind-mount to /opt/, we ensure HaRP reuses it,
+# keeping ExApp data on the host filesystem for backups.
 - name: Create context_chat_backend bind-mount Docker volume (data on /opt)
   become: true
   ansible.builtin.command:
@@ -249,6 +262,28 @@
   changed_when: false
   failed_when: false
 
+- name: List enabled Nextcloud apps
+  ansible.builtin.command:
+    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app:list --enabled'
+  register: nc_enabled_app_list
+  changed_when: false
+  failed_when: false
+
+- name: Warn when exapps look stale (registered but disabled)
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: ExApp {{ item.name }} is registered but not enabled. This may indicate
+      a stale state. Deployment keeps normal mode and skips force cleanup.
+  loop: >-
+    {{
+      nextcloud_exapp_list
+      | selectattr('name', 'in', appapi_exapp_list.stdout | default(''))
+      | rejectattr('name', 'in', nc_enabled_app_list.stdout | default(''))
+      | list
+    }}
+  when: appapi_exapp_list.rc == 0 and nc_enabled_app_list.rc == 0
+  changed_when: false
+
 - name: Register exapps on Harp daemon
   ansible.builtin.command:
     cmd: >
@@ -257,21 +292,28 @@
       {{ item.options }}
       {{ item.name }} harp_proxy_host
   register: register_exapp
-  loop: "{{ nextcloud_exapp_list }}"
-  when: appapi_exapp_list.rc == 0 and (item.name not in appapi_exapp_list.stdout)
-  changed_when: true
+  loop: >-
+    {{
+      nextcloud_exapp_list
+      | rejectattr('name', 'in', appapi_exapp_list.stdout | default(''))
+      | list
+    }}
+  when: appapi_exapp_list.rc == 0
+  changed_when: register_exapp.rc == 0
   failed_when: register_exapp.rc != 0
 
-- name: Update already registered exapps
+# context_chat_backend uses CC_EM_BASE_URL=http://ollama-embeddings:11434 for embeddings.
+# The ExApp container is placed on nc_backend by HaRP, so we explicitly attach it to ia_network
+# to allow hostname resolution of 'ollama-embeddings'. The network connect is idempotent
+# (failed_when: false) and must run even when the app was already registered.
+- name: Connect context_chat_backend ExApp to ia_network for Ollama Embeddings access
   ansible.builtin.command:
-    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app_api:app:update {{ item.name }} --enabled'
-  register: update_exapp
-  loop: "{{ nextcloud_exapp_list }}"
-  when: appapi_exapp_list.rc == 0 and (item.name in appapi_exapp_list.stdout)
+    cmd: docker network connect ia_network nc_app_context_chat_backend
+  register: nc_ia_connect
+  changed_when: nc_ia_connect.rc == 0
   failed_when: false
-  changed_when: update_exapp.rc == 0
 
-- name: Enable exapps explicitly
+- name: Enable exapps
   ansible.builtin.command:
     cmd: 'docker exec --user www-data nc-nextcloud-1 php occ -n app_api:app:enable {{ item.name }}'
   register: enable_exapp

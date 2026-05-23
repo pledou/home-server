@@ -14,6 +14,18 @@ redis_version: "8-alpine"
 nextcloud_image: "nextcloud"
 nextcloud_version: "32"
 
+# PHP-FPM tuning to reduce request starvation under periodic background load.
+nextcloud_php_fpm_pm_max_children: 48
+nextcloud_php_fpm_pm_start_servers: 6
+nextcloud_php_fpm_pm_min_spare_servers: 4
+nextcloud_php_fpm_pm_max_spare_servers: 12
+nextcloud_php_fpm_pm_max_requests: 500
+nextcloud_php_fpm_request_terminate_timeout: "300s"
+
+# Preview generation is useful for photo-heavy setups.
+# This schedule keeps it enabled, but prevents overlap and long runaway runs.
+nextcloud_preview_pregenerate_cron: "*/30 * * * * cd /var/www/html && flock -n /tmp/preview-pregenerate.lock timeout 20m php -f occ preview:pre-generate"
+
 nextcloud_defaultapp_list:
   - viewer
   - recognize
@@ -21,6 +33,7 @@ nextcloud_defaultapp_list:
   - fulltextsearch
   - fulltextsearch_elasticsearch
   - files_fulltextsearch
+  - files_fulltextsearch_metadata
   - richdocuments
   - richdocumentscode
   - previewgenerator
@@ -65,7 +78,12 @@ nextcloud_context_agent_tool_status:
 
 nextcloud_exapp_list:
   - name: context_chat_backend
-    options: "--mount {{ docker_volumes_path }}/context-chat-backend-data:/nc_app_context_chat_backend_data"
+    # CC_EM_BASE_URL delegates embeddings to the dedicated Ollama Embeddings instance (port 8082 proxy)
+    # instead of the internal CPU-only llama.cpp model (~2 tok/s). The ExApp container is also
+    # connected to ia_network (see tasks/main.yml) so it can resolve the 'ollama-embeddings' hostname.
+    options: >-
+      --env CC_EM_BASE_URL=http://ollama-embeddings:11434
+      --env CC_EM_MODEL_NAME=nomic-embed-text-v2-moe
   - name: context_agent # Context Agent integration for enhanced automation capabilities
     options: ""
 

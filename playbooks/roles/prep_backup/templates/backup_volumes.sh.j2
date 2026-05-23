@@ -27,7 +27,7 @@ send_backup_report() {
 	duration="$(( $(date +%s) - BACKUP_START_TS ))"
 	message="[BACKUP][${backup_status}] host=$(hostname -f 2>/dev/null || hostname) duration=${duration}s ${details}"
 
-	container_name="$(docker ps --format '{{ "{{" }}.Names{{ "}}" }}' | grep -E '^nextcloud-talk-bot$' | head -n1 || true)"
+	container_name="$(docker ps --format '{{ "{{" }}.Names{{ "}}" }}' | grep -E '(^|_)nextcloud-talk-bot$' | head -n1 || true)"
 	[[ -n "${container_name}" ]] || return 0
 
 	docker exec -e BACKUP_REPORT_MESSAGE="${message}" -i "${container_name}" python - <<'PY' >/dev/null 2>&1 || true

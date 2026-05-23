@@ -51,13 +51,16 @@ RUN set -ex; \
     apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
     rm -rf /var/lib/apt/lists/*
 
-# php-fpm configuration
-RUN echo 'pm.max_children = 16' >> /usr/local/etc/php-fpm.d/zz-docker.conf && \
-    echo 'pm.start_servers = 8' >> /usr/local/etc/php-fpm.d/zz-docker.conf && \
-    echo 'pm.max_spare_servers = 8' >> /usr/local/etc/php-fpm.d/zz-docker.conf
+# php-fpm configuration tuned for sustained load
+RUN echo 'pm.max_children = {{ nextcloud_php_fpm_pm_max_children }}' >> /usr/local/etc/php-fpm.d/zz-docker.conf && \
+    echo 'pm.start_servers = {{ nextcloud_php_fpm_pm_start_servers }}' >> /usr/local/etc/php-fpm.d/zz-docker.conf && \
+    echo 'pm.min_spare_servers = {{ nextcloud_php_fpm_pm_min_spare_servers }}' >> /usr/local/etc/php-fpm.d/zz-docker.conf && \
+    echo 'pm.max_spare_servers = {{ nextcloud_php_fpm_pm_max_spare_servers }}' >> /usr/local/etc/php-fpm.d/zz-docker.conf && \
+    echo 'pm.max_requests = {{ nextcloud_php_fpm_pm_max_requests }}' >> /usr/local/etc/php-fpm.d/zz-docker.conf && \
+    echo 'request_terminate_timeout = {{ nextcloud_php_fpm_request_terminate_timeout }}' >> /usr/local/etc/php-fpm.d/zz-docker.conf
 
-# Add a preview generation cron job
-RUN echo '*/6 * * * * php -f /var/www/html/occ preview:pre-generate' >> /var/spool/cron/crontabs/www-data
+# Keep preview generation enabled, but avoid overlap and cap runtime.
+RUN echo '{{ nextcloud_preview_pregenerate_cron }}' >> /var/spool/cron/crontabs/www-data
 
 RUN mkdir -p \
     /var/log/supervisord \

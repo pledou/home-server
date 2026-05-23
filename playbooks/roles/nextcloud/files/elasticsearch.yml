@@ -1,0 +1,9 @@
+# Elasticsearch configuration for single-node Nextcloud setup
+# This file is managed by Ansible - do not edit manually
+
+cluster.name: "docker-cluster"
+network.host: 0.0.0.0
+
+# Single-node cluster defaults
+# Set default number of replicas to 0 to avoid yellow status
+index.number_of_replicas: 0
