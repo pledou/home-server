@@ -82,7 +82,7 @@ nextcloud_exapp_list:
     # instead of the internal CPU-only llama.cpp model (~2 tok/s). The ExApp container is also
     # connected to ia_network (see tasks/main.yml) so it can resolve the 'ollama-embeddings' hostname.
     options: >-
-      --env CC_EM_BASE_URL=http://ollama-embeddings:11434
+      --env CC_EM_BASE_URL=http://ollama-embeddings:11434/v1
       --env CC_EM_MODEL_NAME=nomic-embed-text-v2-moe
   - name: context_agent # Context Agent integration for enhanced automation capabilities
     options: ""
