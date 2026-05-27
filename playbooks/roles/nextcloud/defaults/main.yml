@@ -56,8 +56,9 @@ nextcloud_integration_openai_default_completion_model_id: "ministral-3:3b"
 nextcloud_integration_openai_request_timeout: 600
 nextcloud_integration_openai_max_tokens: 768
 nextcloud_context_chat_request_timeout: 900
-# bge-m3: 8192-token context window, multilingual (French-native), ideal for document indexing.
-nextcloud_context_chat_embedding_model: "bge-m3"
+# nomic-embed-text v1.5: 8192-token context, Q4 GGUF (stable, no NaN), works well for French.
+# bge-m3 F16 was tried but produces NaN values in Ollama for many document types.
+nextcloud_context_chat_embedding_model: "nomic-embed-text"
 
 nextcloud_context_agent_tool_status:
   mail: true
@@ -81,7 +82,7 @@ nextcloud_context_agent_tool_status:
 nextcloud_exapp_list:
   - name: context_chat_backend
     # CC_EM_BASE_URL delegates embeddings to the dedicated Ollama Embeddings instance.
-    # bge-m3: 8192-token context, multilingual — unlike nomic-embed-text-v2-moe (512 tokens, English-only).
+    # nomic-embed-text v1.5: 8192-token context, Q4 GGUF, stable (no NaN unlike bge-m3 F16).
     # The ExApp container is connected to ia_network (see tasks/main.yml) for hostname resolution.
     options: >-
       --env CC_EM_BASE_URL=http://ollama-embeddings:11434/v1
