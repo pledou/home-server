@@ -30,6 +30,8 @@ Do not run multiple STT/TTS backends for the same function in parallel from Open
 ## Dependencies
 
 - `authentik` role should run before `ia` for OAuth SSO integration.
+- OAuth credentials are automatically generated via Authentik API and stored in `/home/{{ ansible_user }}/home-server/stacks/ia/.secrets/`
+- No manual OAuth client configuration required
 
 ## Deploy
 

@@ -263,8 +263,6 @@
         oauth_apps:
           - provider:
               name: "webui-oauth-provider"
-              client_id: "{{ webui_oauth_client_id }}"
-              client_secret: "{{ webui_oauth_client_secret }}"
               redirect_uris:
                 - url: "https://ia.{{ app_domain_name }}/oauth/oidc/callback"
                   matching_mode: "strict"
@@ -283,4 +281,60 @@
               meta_launch_url: "https://ia.{{ app_domain_name }}"
               meta_description: "AI WebUI for speech and language processing"
               meta_publisher: "IA Services"
+
+    - name: Store WebUI OAuth credentials for docker-compose
+      when:
+        - authentik_api_token is defined
+        - oauth_provider_client_id is defined
+        - oauth_provider_client_secret is defined
+        - current_oauth_provider_name == "webui-oauth-provider"
+      block:
+        - name: Set OAuth credentials as facts
+          ansible.builtin.set_fact:
+            webui_oauth_client_id: "{{ oauth_provider_client_id }}"
+            webui_oauth_client_secret: "{{ oauth_provider_client_secret }}"
+
+        - name: Ensure secrets directory exists
+          ansible.builtin.file:
+            path: "/home/{{ ansible_user }}/home-server/stacks/ia/.secrets"
+            state: directory
+            mode: '0700'
+
+        - name: Store OAuth client ID
+          ansible.builtin.copy:
+            content: "{{ webui_oauth_client_id }}"
+            dest: "/home/{{ ansible_user }}/home-server/stacks/ia/.secrets/webui_oauth_client_id"
+            mode: '0600'
+
+        - name: Store OAuth client secret
+          ansible.builtin.copy:
+            content: "{{ webui_oauth_client_secret }}"
+            dest: "/home/{{ ansible_user }}/home-server/stacks/ia/.secrets/webui_oauth_client_secret"
+            mode: '0600'
+
+- name: Load WebUI OAuth credentials if they exist
+  when: authentik_api_token is not defined or oauth_provider_client_id is not defined
+  block:
+    - name: Check if OAuth credentials exist
+      ansible.builtin.stat:
+        path: "/home/{{ ansible_user }}/home-server/stacks/ia/.secrets/webui_oauth_client_id"
+      register: webui_oauth_creds_exist
+
+    - name: Load OAuth client ID
+      ansible.builtin.slurp:
+        src: "/home/{{ ansible_user }}/home-server/stacks/ia/.secrets/webui_oauth_client_id"
+      register: webui_oauth_client_id_file
+      when: webui_oauth_creds_exist.stat.exists
+
+    - name: Load OAuth client secret
+      ansible.builtin.slurp:
+        src: "/home/{{ ansible_user }}/home-server/stacks/ia/.secrets/webui_oauth_client_secret"
+      register: webui_oauth_client_secret_file
+      when: webui_oauth_creds_exist.stat.exists
+
+    - name: Set OAuth credentials from files
+      ansible.builtin.set_fact:
+        webui_oauth_client_id: "{{ webui_oauth_client_id_file.content | b64decode | trim }}"
+        webui_oauth_client_secret: "{{ webui_oauth_client_secret_file.content | b64decode | trim }}"
+      when: webui_oauth_creds_exist.stat.exists
 ...
