@@ -40,7 +40,6 @@ grafana_dashboard_updates:
   - gnet_id: 18077 # Unbound (Prometheus + Loki)
   - gnet_id: 14574 # NVIDIA GPU Metrics (nvidia_gpu_exporter)
   - gnet_id: 16125 # Fail2ban
-  - gnet_id: 12611 # Docker Logs via Loki
 
 # Alerting configuration
 # These should be overridden in group_vars or host_vars
