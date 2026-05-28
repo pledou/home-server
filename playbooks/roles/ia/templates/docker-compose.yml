@@ -16,6 +16,8 @@ services:
     # Dependencies for tools
     command: >
       bash -c "
+        export OAUTH_CLIENT_ID=$(cat /run/secrets/webui_oauth_client_id) &&
+        export OAUTH_CLIENT_SECRET=$(cat /run/secrets/webui_oauth_client_secret) &&
         pip install requests pydantic caldav icalendar &&
         exec bash start.sh
       "
@@ -24,8 +26,6 @@ services:
 
       # Generic OAuth
       OAUTH_PROVIDER_NAME: "authentik"
-      OAUTH_CLIENT_ID: "{{ webui_oauth_client_id }}"
-      OAUTH_CLIENT_SECRET: "{{ webui_oauth_client_secret }}"
       OAUTH_SCOPES: "openid profile email"
       OPENID_PROVIDER_URL: "https://auth.{{ app_domain_name }}/application/o/{{ webui_oauth_slug_name }}/.well-known/openid-configuration"
       WEBUI_URL: "https://ia.{{ app_domain_name }}"
@@ -70,6 +70,9 @@ services:
     networks:
       - network
       - traefik_backend
+    secrets:
+      - webui_oauth_client_id
+      - webui_oauth_client_secret
     depends_on:
      - ollama
      - ollama-embeddings
@@ -365,3 +368,9 @@ networks:
     external: true
   monitoring_backend:
     external: true
+
+secrets:
+  webui_oauth_client_id:
+    file: {{ docker_volumes_path }}/secrets/webui_oauth_client_id
+  webui_oauth_client_secret:
+    file: {{ docker_volumes_path }}/secrets/webui_oauth_client_secret

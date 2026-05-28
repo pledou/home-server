@@ -73,6 +73,36 @@
         webui_oauth_client_id: "{{ oauth_provider_client_id }}"
         webui_oauth_client_secret: "{{ oauth_provider_client_secret }}"
 
+    - name: Ensure secrets directory exists for Docker secret mounts
+      become: true
+      ansible.builtin.file:
+        path: "{{ docker_volumes_path }}/secrets"
+        state: directory
+        mode: '0700'
+      when:
+        - webui_oauth_client_id is defined
+        - webui_oauth_client_id | length > 0
+
+    - name: Write OAuth client ID secret file
+      become: true
+      ansible.builtin.copy:
+        content: "{{ webui_oauth_client_id }}"
+        dest: "{{ docker_volumes_path }}/secrets/webui_oauth_client_id"
+        mode: '0600'
+      when:
+        - webui_oauth_client_id is defined
+        - webui_oauth_client_id | length > 0
+
+    - name: Write OAuth client secret file
+      become: true
+      ansible.builtin.copy:
+        content: "{{ webui_oauth_client_secret }}"
+        dest: "{{ docker_volumes_path }}/secrets/webui_oauth_client_secret"
+        mode: '0600'
+      when:
+        - webui_oauth_client_secret is defined
+        - webui_oauth_client_secret | length > 0
+
 - name: Create docker-compose stack file
   ansible.builtin.template:
     src: docker-compose.yml
