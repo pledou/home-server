@@ -255,6 +255,24 @@
   changed_when: volume_create.rc == 0
   failed_when: false
 
+# Ensure the embedding model is present before ExApp registration.
+# bge-m3 is pulled here (not in the ia role) since it is only needed by Nextcloud.
+# stream: false makes Ollama wait until the pull is fully complete before returning.
+- name: Pull context_chat embedding model into Ollama Embeddings instance
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:8082/api/pull"
+    method: POST
+    body_format: json
+    body:
+      name: "{{ nextcloud_context_chat_embedding_model }}"
+      stream: false
+    status_code: [200]
+    timeout: 600
+  register: nc_embedding_pull
+  until: nc_embedding_pull.status == 200
+  retries: 3
+  delay: 10
+
 - name: List registered ExApps
   ansible.builtin.command:
     cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app_api:app:list'

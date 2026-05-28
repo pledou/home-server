@@ -168,6 +168,10 @@ services:
       NC_INSTANCE_URL: "https://{{ app_domain_name }}"
       HP_FRP_DISABLE_TLS: "false"
       # HP_TRUSTED_PROXY_IPS: "127.0.0.1/32"
+      # HAProxy binds IPv4-only by default but the container has an IPv6 address on
+      # traefik_backend. PHP AppAPI (Guzzle) resolves 'harp' to IPv6 and gets
+      # "Connection refused". :::8780 listens on both IPv4 and IPv6.
+      HP_EXAPPS_ADDRESS: ":::8780"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:rw
       - harp-certs:/certs:rw
