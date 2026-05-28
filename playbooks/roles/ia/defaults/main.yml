@@ -1,5 +1,10 @@
 # Default variables for IA role
 ---
+# OAuth credentials — overridden at runtime by the Authentik block
+webui_oauth_client_id: ""
+webui_oauth_client_secret: ""
+webui_oauth_slug_name: "webui"
+
 # Docker image versions
 webui_image: "ghcr.io/open-webui/open-webui"
 webui_version: "main"
