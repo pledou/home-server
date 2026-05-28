@@ -171,6 +171,22 @@
           register: grafana_admin_group
           changed_when: grafana_admin_group.status == 201
 
+        - name: Create grafana-editor group
+          ansible.builtin.uri:
+            url: "{{ authentik_api_base_url }}/api/v3/core/groups/"
+            method: POST
+            headers:
+              Authorization: "Bearer {{ authentik_api_token }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              name: "grafana-editor"
+              is_superuser: false
+            status_code: [201, 400]
+            validate_certs: true
+          register: grafana_editor_group
+          changed_when: grafana_editor_group.status == 201
+
         - name: Create grafana-user group
           ansible.builtin.uri:
             url: "{{ authentik_api_base_url }}/api/v3/core/groups/"
@@ -227,20 +243,71 @@
                 - url: "https://grafana.{{ app_domain_name }}/login/generic_oauth"
                   matching_mode: "strict"
               client_type: "confidential"
-              sub_mode: "user_email"
+              sub_mode: "hashed_user_id"
               include_claims_in_id_token: true
-              issuer_mode: "global"
-              access_code_validity: "minutes=1"
-              access_token_validity: "minutes=10"
-              refresh_token_validity: "days=30"
-              scopes: "openid profile email group"
+              issuer_mode: "per_provider"
+              scopes: "openid profile email groups"
             app:
               name: "Grafana"
-              slug: "grafana-slug"
+              slug: "grafana"
               open_in_new_tab: true
               meta_launch_url: "https://grafana.{{ app_domain_name }}"
-              meta_description: "Grafana monitoring and analytics platform"
-              meta_publisher: "Grafana"
+
+    - name: Store Grafana OAuth credentials for docker-compose
+      when:
+        - authentik_api_token is defined
+        - oauth_provider_client_id is defined
+        - oauth_provider_client_secret is defined
+        - current_oauth_provider_name == "grafana-oauth-provider"
+      block:
+        - name: Set OAuth credentials as facts
+          ansible.builtin.set_fact:
+            grafana_oauth_client_id: "{{ oauth_provider_client_id }}"
+            grafana_oauth_client_secret: "{{ oauth_provider_client_secret }}"
+
+        - name: Ensure secrets directory exists
+          ansible.builtin.file:
+            path: "/home/{{ ansible_user }}/home-server/stacks/monitoring/.secrets"
+            state: directory
+            mode: '0700'
+
+        - name: Store OAuth client ID
+          ansible.builtin.copy:
+            content: "{{ grafana_oauth_client_id }}"
+            dest: "/home/{{ ansible_user }}/home-server/stacks/monitoring/.secrets/grafana_oauth_client_id"
+            mode: '0600'
+
+        - name: Store OAuth client secret
+          ansible.builtin.copy:
+            content: "{{ grafana_oauth_client_secret }}"
+            dest: "/home/{{ ansible_user }}/home-server/stacks/monitoring/.secrets/grafana_oauth_client_secret"
+            mode: '0600'
+
+    - name: Load Grafana OAuth credentials if they exist
+      when: authentik_api_token is not defined or oauth_provider_client_id is not defined
+      block:
+        - name: Check if OAuth credentials exist
+          ansible.builtin.stat:
+            path: "/home/{{ ansible_user }}/home-server/stacks/monitoring/.secrets/grafana_oauth_client_id"
+          register: oauth_creds_exist
+
+        - name: Load OAuth client ID
+          ansible.builtin.slurp:
+            src: "/home/{{ ansible_user }}/home-server/stacks/monitoring/.secrets/grafana_oauth_client_id"
+          register: oauth_client_id_file
+          when: oauth_creds_exist.stat.exists
+
+        - name: Load OAuth client secret
+          ansible.builtin.slurp:
+            src: "/home/{{ ansible_user }}/home-server/stacks/monitoring/.secrets/grafana_oauth_client_secret"
+          register: oauth_client_secret_file
+          when: oauth_creds_exist.stat.exists
+
+        - name: Set OAuth credentials from files
+          ansible.builtin.set_fact:
+            grafana_oauth_client_id: "{{ oauth_client_id_file.content | b64decode | trim }}"
+            grafana_oauth_client_secret: "{{ oauth_client_secret_file.content | b64decode | trim }}"
+          when: oauth_creds_exist.stat.exists
 
 - name: Skip Authentik configuration when API is unavailable
   ansible.builtin.debug:
