@@ -219,35 +219,6 @@
           register: grafana_viewer_group
           changed_when: grafana_viewer_group.status == 201
 
-    - name: Create Authentik groups property mapping for Grafana
-      when: authentik_api_token is defined
-      block:
-        - name: Create or update Grafana groups property mapping
-          ansible.builtin.uri:
-            url: "{{ authentik_api_base_url }}/api/v3/propertymappings/scope/"
-            method: POST
-            headers:
-              Authorization: "Bearer {{ authentik_api_token }}"
-              Content-Type: "application/json"
-            body_format: json
-            body:
-              managed: null
-              name: "Grafana Groups Scope"
-              scope_name: "groups"
-              description: "Return user groups for Grafana role mapping"
-              expression: |
-                return {
-                    "groups": [group.name for group in request.user.ak_groups.all()]
-                }
-            status_code: [201, 400]
-            validate_certs: true
-          register: grafana_groups_mapping
-          failed_when:
-            - grafana_groups_mapping.status == 400
-            - "'already exists' not in (grafana_groups_mapping.json | string | lower)"
-            - "'unique' not in (grafana_groups_mapping.json | string | lower)"
-          changed_when: grafana_groups_mapping.status == 201
-
     - name: Configure Authentik providers and applications for Monitoring services
       when: authentik_api_token is defined
       ansible.builtin.include_tasks: "tasks/authentik_common.yml"

@@ -135,13 +135,12 @@ services:
       GF_AUTH_PROXY_ENABLE_LOGIN_TOKEN: "false"
       # Map user attributes from Authentik headers
       GF_AUTH_PROXY_HEADERS: "Email:X-authentik-email Name:X-authentik-name Groups:X-authentik-groups"
-      # Sync org roles from groups header
-      GF_AUTH_PROXY_SYNC_TTL: "60"
-      # Automatic role assignment based on Authentik groups
-      # Users in grafana-admin group -> Admin role
-      # Users in grafana-editor or grafana-user groups -> Editor role  
-      # Users in grafana-viewer group -> Viewer role
-      # Users NOT in any grafana-* group -> No access (denied)
+      # Re-sync on every request so role changes take effect immediately (TTL=0 disables caching)
+      GF_AUTH_PROXY_SYNC_TTL: "0"
+      # Map Authentik groups header (pipe-separated string) to Grafana roles via JMESPath
+      # grafana-admin -> Admin, grafana-editor/grafana-user -> Editor, grafana-viewer -> Viewer
+      GF_AUTH_PROXY_ROLE_ATTRIBUTE_PATH: "contains(Groups, 'grafana-admin') && 'Admin' || contains(Groups, 'grafana-editor') && 'Editor' || contains(Groups, 'grafana-user') && 'Editor' || contains(Groups, 'grafana-viewer') && 'Viewer'"
+      GF_AUTH_PROXY_ROLE_ATTRIBUTE_STRICT: "false"
       GF_USERS_AUTO_ASSIGN_ORG: "true"
       GF_USERS_AUTO_ASSIGN_ORG_ROLE: "Viewer"
     networks:
