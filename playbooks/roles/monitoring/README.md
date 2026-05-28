@@ -173,42 +173,50 @@ Edit `files/alerts.rules` to add custom alert rules:
 
 ## Grafana User Role Management
 
-Grafana automatically syncs user roles from Authentik based on group membership. Users are assigned roles through Authentik groups, which are mapped to Grafana organizational roles via property mappers.
+Grafana uses Authentik forward authentication (via Traefik) for SSO with automatic role assignment based on group membership. Users are automatically assigned roles when they log in based on their Authentik groups.
+
+### Automatic Role Assignment via Forward Auth
+
+When a user logs in to Grafana via Authentik forward auth:
+- **grafana-admin** group → **Admin** role (full administrative access)
+- **grafana-editor** group → **Editor** role (create/edit dashboards)
+- **grafana-user** group → **Editor** role (create/edit dashboards)
+- **grafana-viewer** group → **Viewer** role (read-only access)
+- **No grafana-\* group** → **Viewer** role (default, but no guaranteed access)
+
+**Important**: Users MUST be in at least one grafana-* group to ensure proper access. Users without any grafana-* group will default to Viewer role but won't have guaranteed access through Authentik forward auth.
 
 ### Setting Up Role-Based Access Control
 
 #### Step 1: Groups Automatically Created
 
-The playbook automatically creates three Authentik groups during deployment:
+The playbook automatically creates four Authentik groups during deployment:
 - `grafana-admin` - Full administrative access
-- `grafana-editor` - Can create and edit dashboards
-- `grafana-viewer` - Read-only access to existing dashboards (default)
+- `grafana-editor` - Can create and edit dashboards  
+- `grafana-user` - Can create and edit dashboards (Editor)
+- `grafana-viewer` - Read-only access to existing dashboards
 
 No manual group creation needed!
 
-#### Step 2: Configure Group-to-Role Property Mappers
-
-The OAuth provider includes three property mappers that automatically handle role assignment:
-
-- **grafana_mapper_role_admin**: Maps users in `grafana-admin` group to Grafana Admin role
-- **grafana_mapper_role_editor**: Maps users in `grafana-editor` group to Grafana Editor role
-- **grafana_mapper_role_viewer**: Maps users in `grafana-viewer` group to Grafana Viewer role
-
-These mappers are automatically configured during deployment.
-
-#### Step 3: Assign Users to Groups
+#### Step 2: Assign Users to Groups
 
 1. **In Authentik Admin Panel** → **Directory** → **Users**
 2. **Select a user** and go to **Groups** tab
 3. **Add the user** to one of:
    - `grafana-admin` - Full admin access
    - `grafana-editor` - Dashboard editor access
-   - `grafana-viewer` - Read-only access (default)
+   - `grafana-user` - Dashboard editor access
+   - `grafana-viewer` - Read-only access
 4. **Save**
 
-#### Step 4: User Logs In to Grafana
+#### Step 3: User Logs In to Grafana
 
-When user next logs in via Authentik OAuth, their role is automatically assigned based on group membership.
+When a user logs in via Authentik forward auth:
+1. User is authenticated through Authentik (via Traefik middleware)
+2. Authentik sends user info + groups in HTTP headers (`X-authentik-groups`)
+3. Grafana reads the groups from headers and assigns role automatically
+4. User is created in Grafana on first login (if doesn't exist)
+5. Role updates automatically on each login if group membership changes
 
 ### Role Hierarchy
 
@@ -218,13 +226,16 @@ When user next logs in via Authentik OAuth, their role is automatically assigned
 | **Editor** | Create, edit, and delete dashboards; manage alerts |
 | **Viewer** | View dashboards and panels (read-only) |
 
-### User Provisioning Flow
+### How Forward Auth Works
 
-When a user logs in via Authentik:
-1. User is automatically created in Grafana on first login (if doesn't exist)
-2. User is assigned to default **Viewer** role
-3. Role is updated based on Authentik group membership in real-time
-4. Changes to group membership in Authentik sync to Grafana on next login
+1. Traefik applies `authentik@docker` middleware to Grafana route
+2. Authentik validates user session and sends headers:
+   - `X-authentik-username` - Username
+   - `X-authentik-email` - Email
+   - `X-authentik-name` - Display name
+   - `X-authentik-groups` - Comma-separated list of groups
+3. Grafana's auth proxy reads these headers and maps groups to roles
+4. No OAuth flow needed - completely transparent to the user!
 
 ### Useful Grafana Admin Commands
 

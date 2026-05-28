@@ -48,7 +48,6 @@
   ansible.builtin.include_tasks: authentik_provider_application.yml
   when:
     - authentik_api_token is defined
-    - provider_apps is defined
 
 - name: Create or update OAuth provider app couples
   loop_control:
@@ -57,7 +56,6 @@
   ansible.builtin.include_tasks: authentik_oauth_provider_application.yml
   when:
     - authentik_api_token is defined
-    - oauth_apps is defined
 
 - name: Get embedded outpost
   ansible.builtin.uri:

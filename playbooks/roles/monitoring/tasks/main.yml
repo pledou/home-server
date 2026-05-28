@@ -171,6 +171,22 @@
           register: grafana_admin_group
           changed_when: grafana_admin_group.status == 201
 
+        - name: Create grafana-editor group
+          ansible.builtin.uri:
+            url: "{{ authentik_api_base_url }}/api/v3/core/groups/"
+            method: POST
+            headers:
+              Authorization: "Bearer {{ authentik_api_token }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              name: "grafana-editor"
+              is_superuser: false
+            status_code: [201, 400]
+            validate_certs: true
+          register: grafana_editor_group
+          changed_when: grafana_editor_group.status == 201
+
         - name: Create grafana-user group
           ansible.builtin.uri:
             url: "{{ authentik_api_base_url }}/api/v3/core/groups/"
@@ -220,27 +236,12 @@
             app:
               name: "Prometheus"
               slug: "prometheus"
-        oauth_apps:
           - provider:
-              name: "grafana-oauth-provider"
-              redirect_uris:
-                - url: "https://grafana.{{ app_domain_name }}/login/generic_oauth"
-                  matching_mode: "strict"
-              client_type: "confidential"
-              sub_mode: "user_email"
-              include_claims_in_id_token: true
-              issuer_mode: "global"
-              access_code_validity: "minutes=1"
-              access_token_validity: "minutes=10"
-              refresh_token_validity: "days=30"
-              scopes: "openid profile email group"
+              name: "grafana-provider"
+              external_host: "https://grafana.{{ app_domain_name }}"
             app:
               name: "Grafana"
-              slug: "grafana-slug"
-              open_in_new_tab: true
-              meta_launch_url: "https://grafana.{{ app_domain_name }}"
-              meta_description: "Grafana monitoring and analytics platform"
-              meta_publisher: "Grafana"
+              slug: "grafana"
 
 - name: Skip Authentik configuration when API is unavailable
   ansible.builtin.debug:

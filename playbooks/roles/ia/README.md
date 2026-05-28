@@ -30,6 +30,7 @@ Do not run multiple STT/TTS backends for the same function in parallel from Open
 ## Dependencies
 
 - `authentik` role should run before `ia` for OAuth SSO integration.
+- No manual OAuth client configuration required
 
 ## Deploy
 
