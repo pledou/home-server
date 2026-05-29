@@ -119,6 +119,10 @@
       dest: grafana-provisioning/dashboards/dashboard.yml
       owner: "{{ ansible_user }}"
       group: "{{ ansible_user }}"
+    - file: grafana/dashboards/docker-logs.json
+      dest: grafana-provisioning/dashboards/docker-logs.json
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
     - file: nextcloud-exporter-conf.yml
       dest: nextcloud-exporter-conf/config.yml
     - file: alertmanager-config.yml

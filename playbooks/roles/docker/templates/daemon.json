@@ -1,6 +1,6 @@
 {
   "log-driver": "json-file",
-  "log-opts": {"max-size": "10m", "max-file": "3"},
+  "log-opts": {"max-size": "5m", "max-file": "2"},
   "ipv6": true,
   "fixed-cidr-v6": "{{ my_ipv6_network.split('::')[0] }}:{{''.join(ansible_default_ipv6['macaddress'].split(':')[-2:])}}::/80"{% if docker_enable_nvidia_runtime_effective | default(false) %},
   "runtimes": {
