@@ -20,6 +20,15 @@ traefik_accesslog_host_path: "/var/log/traefik"
 # Buffering middleware – 0 means no limit, which avoids restricting Nextcloud large-file transfers
 traefik_max_response_body_bytes: 0
 
+# Global security middlewares applied on Traefik HTTPS entrypoint
+traefik_security_hsts_seconds: 63072000
+traefik_security_hsts_include_subdomains: true
+traefik_security_hsts_preload: true
+traefik_security_rate_average: 200
+traefik_security_rate_burst: 400
+traefik_security_rate_period: "1s"
+traefik_security_inflight_amount: 200
+
 # Fail2ban integration
 traefik_fail2ban_maxretry: 5
 traefik_fail2ban_findtime: 600

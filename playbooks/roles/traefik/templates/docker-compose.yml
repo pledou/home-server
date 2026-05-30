@@ -20,6 +20,17 @@ services:
       - traefik.http.middlewares.authentik.forwardauth.trustForwardHeader=true
       - traefik.http.middlewares.authentik.forwardauth.authResponseHeaders=X-authentik-username,X-authentik-groups,X-authentik-entitlements,X-authentik-email,X-authentik-name,X-authentik-uid,X-authentik-jwt,X-authentik-meta-jwks,X-authentik-meta-outpost,X-authentik-meta-provider,X-authentik-meta-app,X-authentik-meta-version,X-Frigate-Role,X-Proxy-Secret
 
+      # Global security middleware chain for all HTTPS routers
+      - traefik.http.middlewares.global-security.chain.middlewares=global-hsts@docker,global-ratelimit@docker,global-inflightreq@docker
+      - traefik.http.middlewares.global-hsts.headers.stsSeconds={{ traefik_security_hsts_seconds }}
+      - traefik.http.middlewares.global-hsts.headers.stsIncludeSubdomains={{ traefik_security_hsts_include_subdomains | lower }}
+      - traefik.http.middlewares.global-hsts.headers.stsPreload={{ traefik_security_hsts_preload | lower }}
+      - traefik.http.middlewares.global-hsts.headers.forceSTSHeader=true
+      - traefik.http.middlewares.global-ratelimit.ratelimit.average={{ traefik_security_rate_average }}
+      - traefik.http.middlewares.global-ratelimit.ratelimit.burst={{ traefik_security_rate_burst }}
+      - traefik.http.middlewares.global-ratelimit.ratelimit.period={{ traefik_security_rate_period }}
+      - traefik.http.middlewares.global-inflightreq.inflightreq.amount={{ traefik_security_inflight_amount }}
+
       - traefik.http.middlewares.real-ip.headers.customrequestheaders.X-Real-IP={{ app_domain_name }}
 
     environment:
@@ -42,6 +53,7 @@ services:
       - --certificatesresolvers.le.acme.dnschallenge.provider=duckdns
       - --entrypoints.https.http.tls.domains[0].main={{ app_domain_name }}
       - --entrypoints.https.http.tls.domains[0].sans=*.{{ app_domain_name }}
+      - --entrypoints.https.http.middlewares=global-security@docker
       - --entrypoints.https.forwardedheaders.insecure
       - --accesslog
       - --accesslog.filepath=/var/log/traefik/access.log
@@ -120,14 +132,7 @@ services:
       - traefik.http.routers.doh.rule=Host(`dns.{{ app_domain_name }}`) && Path(`/dns-query`)
       - traefik.http.routers.doh.entrypoints=https
       - traefik.http.routers.doh.tls=true
-      - traefik.http.middlewares.doh-compression.compress=true
-      - traefik.http.middlewares.doh-tls.headers.sslredirect=true
-      - traefik.http.middlewares.doh-tls.headers.sslforcehost=true
       - traefik.http.routers.doh.tls.certresolver=le
-      # Protection from requests flood
-      - traefik.http.middlewares.doh-ratelimit.ratelimit.average=100
-      - traefik.http.middlewares.doh-ratelimit.ratelimit.burst=50
-      - traefik.http.middlewares.doh-ratelimit.ratelimit.period=10s
       - traefik.http.routers.doh.service=doh-svc
       - traefik.http.services.doh-svc.loadbalancer.server.port=8053
     build:
