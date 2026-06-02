@@ -1,22 +1,39 @@
 # code: language=ansible
 ---
-- name: Gather traefik_backend network subnet for HaRP trusted proxy
+- name: Gather traefik_backend IPv4 network subnet for HaRP trusted proxy
   ansible.builtin.shell: |
     set -o pipefail
     docker network inspect traefik_backend 2>/dev/null | \
       jq -r '.[0].IPAM.Config[] | select(.Subnet | test("^[0-9]+\\.")) | .Subnet' | head -1
   args:
     executable: /bin/bash
-  register: traefik_network_subnet
+  register: traefik_network_subnet_ipv4
   changed_when: false
   failed_when: false
 
-- name: Set harp_trusted_proxy_ips from detected subnet or fallback
+- name: Gather traefik_backend IPv6 network subnet for HaRP trusted proxy
+  ansible.builtin.shell: |
+    set -o pipefail
+    docker network inspect traefik_backend 2>/dev/null | \
+      jq -r '.[0].IPAM.Config[] | select(.Subnet | test(":")) | .Subnet' | head -1
+  args:
+    executable: /bin/bash
+  register: traefik_network_subnet_ipv6
+  changed_when: false
+  failed_when: false
+
+- name: Set harp_trusted_proxy_ips from detected subnets or fallback
   ansible.builtin.set_fact:
     harp_trusted_proxy_ips: >-
-      {{ traefik_network_subnet.stdout | trim
-         if (traefik_network_subnet.stdout | default('') | trim | length > 0)
-         else '172.18.0.0/16' }}
+      {% set ipv4 = traefik_network_subnet_ipv4.stdout | default('') | trim %}
+      {% set ipv6 = traefik_network_subnet_ipv6.stdout | default('') | trim %}
+      {% set ipv4_net = ipv4 if ipv4 else '172.18.0.0/16' %}
+      {% set ipv4_base = ipv4_net | regex_replace('/.*', '') %}
+      {% set parts = [] %}
+      {% set _ = parts.append(ipv4_net) %}
+      {% set _ = parts.append('::ffff:' + ipv4_base + '/112') %}
+      {% if ipv6 %}{% set _ = parts.append(ipv6) %}{% endif %}
+      {{ parts | join(',') }}
 
 - name: Verify stacks directory exists
   ansible.builtin.file:
