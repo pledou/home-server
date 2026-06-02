@@ -4,6 +4,6 @@
 cluster.name: "docker-cluster"
 network.host: 0.0.0.0
 
-# Single-node cluster defaults
-# Set default number of replicas to 0 to avoid yellow status
-index.number_of_replicas: 0
+# Single-node setup: disable shard allocation awareness
+# Note: index.number_of_replicas CANNOT be set here (index-level setting)
+# Use index templates instead (applied via API after startup)
