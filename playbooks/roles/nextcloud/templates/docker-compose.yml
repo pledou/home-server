@@ -163,7 +163,9 @@ services:
       HP_SHARED_KEY: "{{AppAPISecret}}"
       NC_INSTANCE_URL: "https://{{ app_domain_name }}"
       HP_FRP_DISABLE_TLS: "false"
-      # HP_TRUSTED_PROXY_IPS: "127.0.0.1/32"
+      # Trust Traefik as reverse proxy - allows forwarded requests from traefik_backend.
+      # Without this, HaRP rejects requests with "Only requests from AppAPI allowed".
+      HP_TRUSTED_PROXY_IPS: "{{ harp_trusted_proxy_ips }}"
       # HAProxy binds IPv4-only by default but the container has an IPv6 address on
       # traefik_backend. PHP AppAPI (Guzzle) resolves 'harp' to IPv6 and gets
       # "Connection refused". :::8780 listens on both IPv4 and IPv6.
