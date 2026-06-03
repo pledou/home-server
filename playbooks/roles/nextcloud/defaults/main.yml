@@ -12,7 +12,7 @@ harp_version: "release"
 redis_image: "redis"
 redis_version: "8-alpine"
 nextcloud_image: "nextcloud"
-nextcloud_version: "32"
+nextcloud_version: "33"
 
 # PHP-FPM tuning to reduce request starvation under periodic background load.
 nextcloud_php_fpm_pm_max_children: 48
