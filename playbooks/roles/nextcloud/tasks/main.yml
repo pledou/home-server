@@ -163,27 +163,28 @@
     mode: u=rwx,g=rx,o=rx
 
 - name: Wait for Elasticsearch to be ready
-  ansible.builtin.uri:
-    url: "http://localhost:9200/_cluster/health"
-    user: "elastic"
-    password: "{{ nc_elastic_secret }}"
-    method: GET
-    status_code: 200
+  ansible.builtin.command:
+    cmd: >
+      docker exec nc-elasticsearch-1 curl -s -u elastic:{{ nc_elastic_secret }}
+      http://localhost:9200/_cluster/health
   register: es_health
-  until: es_health.status == 200
+  until: es_health.rc == 0 and (es_health.stdout | from_json).status is defined
   retries: 30
   delay: 2
+  changed_when: false
   failed_when: false
 
 - name: Configure Elasticsearch for single-node (0 replicas)
-  ansible.builtin.shell:
-    cmd: /home/{{ ansible_user }}/home-server/stacks/nc/elasticsearch_setup.sh
-  environment:
-    ELASTIC_HOST: "localhost:9200"
-    ELASTIC_USER: "elastic"
-    ELASTIC_PASS: "{{ nc_elastic_secret }}"
+  ansible.builtin.command:
+    cmd: >
+      docker exec nc-elasticsearch-1 bash -c '
+        curl -X PUT -s -u elastic:{{ nc_elastic_secret }}
+        http://localhost:9200/_index_template/nextcloud_defaults
+        -H "Content-Type: application/json"
+        -d "{\"index_patterns\": [\"*\"], \"priority\": 1, \"template\": {\"settings\": {\"number_of_replicas\": 0}}}"
+      '
   register: es_config
-  failed_when: false
+  failed_when: true
   changed_when: "'acknowledged' in es_config.stdout"
 
 - name: PostgreSQL restore after upgrade for Nextcloud
