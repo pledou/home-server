@@ -20,7 +20,7 @@ nextcloud_php_fpm_pm_start_servers: 6
 nextcloud_php_fpm_pm_min_spare_servers: 4
 nextcloud_php_fpm_pm_max_spare_servers: 12
 nextcloud_php_fpm_pm_max_requests: 500
-nextcloud_php_fpm_request_terminate_timeout: "300s"
+nextcloud_php_fpm_request_terminate_timeout: "3600s"
 
 # Preview generation is useful for photo-heavy setups.
 # This schedule keeps it enabled, but prevents overlap and long runaway runs.
@@ -53,9 +53,9 @@ nextcloud_defaultapp_list:
 
 nextcloud_integration_openai_url: "http://webui-api-proxy:8080/v1"
 nextcloud_integration_openai_default_completion_model_id: "ministral-3:3b"
-nextcloud_integration_openai_request_timeout: 600
+nextcloud_integration_openai_request_timeout: 3600
 nextcloud_integration_openai_max_tokens: 768
-nextcloud_context_chat_request_timeout: 900
+nextcloud_context_chat_request_timeout: 3600
 # nomic-embed-text v1.5: 8192-token context, Q4 GGUF (stable, no NaN), works well for French.
 # bge-m3 F16 was tried but produces NaN values in Ollama for many document types.
 nextcloud_context_chat_embedding_model: "nomic-embed-text"

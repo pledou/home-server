@@ -52,12 +52,17 @@ RUN set -ex; \
     rm -rf /var/lib/apt/lists/*
 
 # php-fpm configuration tuned for sustained load
-RUN echo 'pm.max_children = {{ nextcloud_php_fpm_pm_max_children }}' >> /usr/local/etc/php-fpm.d/zz-docker.conf && \
-    echo 'pm.start_servers = {{ nextcloud_php_fpm_pm_start_servers }}' >> /usr/local/etc/php-fpm.d/zz-docker.conf && \
-    echo 'pm.min_spare_servers = {{ nextcloud_php_fpm_pm_min_spare_servers }}' >> /usr/local/etc/php-fpm.d/zz-docker.conf && \
-    echo 'pm.max_spare_servers = {{ nextcloud_php_fpm_pm_max_spare_servers }}' >> /usr/local/etc/php-fpm.d/zz-docker.conf && \
-    echo 'pm.max_requests = {{ nextcloud_php_fpm_pm_max_requests }}' >> /usr/local/etc/php-fpm.d/zz-docker.conf && \
-    echo 'request_terminate_timeout = {{ nextcloud_php_fpm_request_terminate_timeout }}' >> /usr/local/etc/php-fpm.d/zz-docker.conf
+# IMPORTANT: zzz-docker.conf (with 3 z's) loads AFTER www.conf (alphabetical order)
+# This ensures our settings override defaults instead of being overridden.
+RUN echo 'pm.max_children = {{ nextcloud_php_fpm_pm_max_children }}' >> /usr/local/etc/php-fpm.d/zzz-docker.conf && \
+    echo 'pm.start_servers = {{ nextcloud_php_fpm_pm_start_servers }}' >> /usr/local/etc/php-fpm.d/zzz-docker.conf && \
+    echo 'pm.min_spare_servers = {{ nextcloud_php_fpm_pm_min_spare_servers }}' >> /usr/local/etc/php-fpm.d/zzz-docker.conf && \
+    echo 'pm.max_spare_servers = {{ nextcloud_php_fpm_pm_max_spare_servers }}' >> /usr/local/etc/php-fpm.d/zzz-docker.conf && \
+    echo 'pm.max_requests = {{ nextcloud_php_fpm_pm_max_requests }}' >> /usr/local/etc/php-fpm.d/zzz-docker.conf && \
+    echo 'request_terminate_timeout = {{ nextcloud_php_fpm_request_terminate_timeout }}' >> /usr/local/etc/php-fpm.d/zzz-docker.conf && \
+    echo 'slowlog = /var/log/php-fpm-slow.log' >> /usr/local/etc/php-fpm.d/zzz-docker.conf && \
+    echo 'request_slowlog_timeout = 60s' >> /usr/local/etc/php-fpm.d/zzz-docker.conf && \
+    echo 'request_slowlog_trace_depth = 20' >> /usr/local/etc/php-fpm.d/zzz-docker.conf
 
 # Keep preview generation enabled, but avoid overlap and cap runtime.
 RUN echo '{{ nextcloud_preview_pregenerate_cron }}' >> /var/spool/cron/crontabs/www-data
