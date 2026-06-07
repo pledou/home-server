@@ -8,6 +8,7 @@ This role deploys the AI stack used by Open WebUI and Home Assistant integration
 - `speaches` (OpenAI-compatible audio API for STT/TTS)
 - Ollama metrics exporter (for both instances)
 - ChromaDB (vector database for RAG and embeddings)
+- AUTOMATIC1111 (optional - Stable Diffusion WebUI for image generation)
 
 ## Rationalized scope
 
@@ -97,6 +98,7 @@ curl https://ia.{{ app_domain_name }}/ollama/api/generate \
 | Access Method | URL | Auth | Use Case |
 |--------------|-----|------|----------|
 | **Open WebUI (Web)** | `https://ia.{{ app_domain_name }}` | OAuth (Authentik) | Web chat interface |
+| **AUTOMATIC1111 (Web)** | `https://sd.{{ app_domain_name }}` | OAuth (Authentik) | Image generation UI |
 | **Ollama API (Local)** | `http://<host>:8080/api` | None | Local network access (LLM) |
 | **Ollama API (Remote)** | `https://ia.{{ app_domain_name }}/ollama/api` | API Key | Distant/internet access |
 | **Ollama Embeddings** | `http://<host>:8082/api` | None | Local embeddings generation |
@@ -108,6 +110,7 @@ curl https://ia.{{ app_domain_name }}/ollama/api/generate \
 - **Home Assistant integration**: Use local Ollama (`http://<ia-host>:8080/v1`) for Home Agent
 - **Remote/distant API access**: Use Open WebUI API (`https://ia.{{ app_domain_name }}/ollama/api`) with API token
 - **Web chat interface**: Use Open WebUI (`https://ia.{{ app_domain_name }}`)
+- **Image generation**: Use AUTOMATIC1111 (`https://sd.{{ app_domain_name }}`) - secured with Authentik
 - **Local development/testing**: Use direct Ollama (`http://<host>:8080/api`)
 - **Voice integration**: Speaches is exposed on port 8000 (OpenAI-compatible)
 - **Vector database/RAG**: ChromaDB is exposed on port 8001
@@ -202,6 +205,161 @@ This enables semantic entity search for large homes (> 25-50 entities).
 
 ChromaDB data is persisted in: `{{ docker_volumes_path }}/chromadb`
 
+## Image Generation
+
+The IA stack includes AUTOMATIC1111 (Stable Diffusion WebUI) for local image generation.
+
+### Configuration
+
+In `playbooks/roles/ia/defaults/main.yml`:
+
+```yaml
+# Enable/disable service
+image_generation_automatic1111_enabled: true
+
+# Docker image
+automatic1111_image: "universonic/stable-diffusion-webui"
+automatic1111_version: "latest"
+```
+
+### Access
+
+**AUTOMATIC1111** is accessible via Traefik with Authentik authentication:
+
+| Access Method | URL | Auth | Use Case |
+|--------------|-----|------|----------|
+| **Web UI** | `https://sd.{{ app_domain_name }}` | OAuth (Authentik) | Interactive web interface |
+| **Internal API** | `http://automatic1111:7860` | None | OpenWebUI integration |
+
+**Security:**
+- ✅ No ports exposed to host
+- ✅ All access goes through Traefik
+- ✅ Protected by Authentik OAuth
+- ✅ Automatic SSL certificates
+
+### Open WebUI Integration
+
+OpenWebUI automatically connects to AUTOMATIC1111 for image generation:
+
+- **API Endpoint**: `http://automatic1111:7860` (internal)
+- **Configuration**: Automatic via environment variable
+
+**To generate images in Open WebUI:**
+
+1. Open a chat
+2. Type `/image` or click the image icon
+3. Enter your prompt
+4. OpenWebUI will send the request to AUTOMATIC1111
+
+### AUTOMATIC1111 Web Interface
+
+AUTOMATIC1111 provides a comprehensive web UI at `https://sd.{{ app_domain_name }}` where you can:
+
+#### Model Management
+- **txt2img** tab: Generate images from text prompts
+- **img2img** tab: Transform existing images
+- **Extras** tab: Upscale and enhance images
+- **Settings** tab: Configure generation parameters
+
+#### Model Selection
+In the top-left corner of the interface:
+1. Click the **"Stable Diffusion checkpoint"** dropdown
+2. Select from installed models
+3. Wait for the model to load (shows in terminal/logs)
+
+#### Installing Additional Models
+You can download models directly through the UI:
+1. Go to the **"Settings"** tab
+2. Click **"Stable Diffusion"** section
+3. Use the model downloader, or:
+4. Manually place `.safetensors` files in `/opt/ia/automatic1111-models/Stable-diffusion/`
+
+### Initial Setup
+
+#### 1. Install a Stable Diffusion Model
+
+After deployment, download at least one model:
+
+```bash
+# Create directory
+sudo mkdir -p /opt/ia/automatic1111-models/Stable-diffusion
+
+# Download SDXL (recommended, ~7 GB, best quality)
+cd /opt/ia/automatic1111-models/Stable-diffusion
+sudo wget https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors
+
+# Or download SD 1.5 (smaller, ~4 GB, faster)
+sudo wget https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors
+```
+
+**Popular models:**
+- **SDXL Base 1.0**: Best quality, higher requirements
+- **SD 1.5**: Faster, lower VRAM usage
+- **Realistic Vision**: Photorealistic images
+- **DreamShaper**: Artistic style
+
+Find more models at [Civitai](https://civitai.com) or [Hugging Face](https://huggingface.co/models?pipeline_tag=text-to-image).
+
+#### 2. GPU Support
+
+- **Intel Arc**: Supported via `/dev/dri` device mount (experimental)
+- **NVIDIA**: Full GPU support via nvidia-docker runtime
+- **CPU**: Works but very slow (~5-10 min per image)
+
+#### 3. Test the Service
+
+**Via Web UI:**
+```bash
+# Open in browser
+https://sd.your-domain.com
+```
+
+**Via API:**
+```bash
+curl http://localhost:7860/sdapi/v1/sd-models
+# Note: Only works from within the Docker network or if you expose the port
+```
+
+### Using the Web Interface
+
+After logging in via Authentik:
+
+1. **Select a Model**: Use the dropdown at the top
+2. **txt2img Tab**:
+   - Enter your prompt
+   - Adjust parameters (steps, CFG scale, sampler)
+   - Click "Generate"
+3. **Save Images**: Generated images are saved to `/opt/ia/automatic1111-outputs/`
+
+**Tips:**
+- **Sampling steps**: 20-30 for quick tests, 50+ for quality
+- **CFG Scale**: 7-11 for balanced results
+- **Sampler**: DPM++ 2M Karras is a good default
+
+### Configuration Options
+
+Key launch parameters (already configured):
+- `--api`: Enables API for OpenWebUI integration
+- `--listen`: Allows external connections
+- `--xformers`: Memory optimization (if available)
+- `--skip-torch-cuda-test`: For Intel GPU compatibility
+
+### Disabling the Service
+
+To disable image generation:
+
+```yaml
+image_generation_automatic1111_enabled: false
+```
+
+Then redeploy with `--tags ia`.
+
+### Data Persistence
+
+- **Models**: `/opt/ia/automatic1111-models/`
+- **Outputs**: `/opt/ia/automatic1111-outputs/`
+- **Config**: Stored in the models directory
+
 ## Main variables
 
 Defined in `playbooks/roles/ia/defaults/main.yml`:
@@ -213,6 +371,8 @@ Defined in `playbooks/roles/ia/defaults/main.yml`:
 - `speaches_stt_model`, `speaches_tts_model`, `speaches_preload_models`
 - `speaches_postdeploy_models`
 - `chromadb_image`, `chromadb_version`
+- `image_generation_automatic1111_enabled`
+- `automatic1111_image`, `automatic1111_version`
 - `ia_homeassistant_agent_model`, `ia_ollama_embedding_model`
 - `ia_openai_base_url`, `ia_embeddings_base_url` (cross-role integration endpoints)
 

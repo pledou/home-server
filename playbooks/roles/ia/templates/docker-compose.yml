@@ -62,6 +62,12 @@ services:
       RAG_EMBEDDING_ENGINE: "ollama"
       RAG_OLLAMA_BASE_URL: "http://ollama-embeddings-metrics:8082"
       RAG_EMBEDDING_MODEL: "{{ ia_ollama_embedding_model }}"
+      
+      # Image Generation
+      {% if image_generation_automatic1111_enabled %}
+      IMAGE_GENERATION_ENGINE: "automatic1111"
+      AUTOMATIC1111_BASE_URL: "http://automatic1111:7860"
+      {% endif %}
     restart: always
     volumes:
       - open-webui:/app/backend/data
@@ -330,6 +336,47 @@ services:
         aliases:
           - chromadb
 
+
+
+  {% if image_generation_automatic1111_enabled %}
+  automatic1111:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.constraint-label=traefik_backend
+      - traefik.http.routers.ia-sd-https.rule=Host(`sd.{{ app_domain_name }}`)
+      - traefik.http.routers.ia-sd-https.entrypoints=https
+      - traefik.http.routers.ia-sd-https.tls=true
+      - traefik.http.routers.ia-sd-https.tls.certresolver=le
+      - traefik.http.routers.ia-sd-https.middlewares=authentik@docker
+      - traefik.http.services.ia-sd.loadbalancer.server.port=7860
+    image: "{{ automatic1111_image }}:{{ automatic1111_version }}"
+    command: bash -c "python launch.py --listen --port 7860 --api --xformers --enable-insecure-extension-access --skip-version-check"
+    volumes:
+      - automatic1111-models:/app/stable-diffusion-webui/models
+      - automatic1111-outputs:/app/stable-diffusion-webui/outputs
+    restart: unless-stopped
+    networks:
+      network:
+        aliases:
+          - automatic1111
+      traefik_backend:
+    {% if gpu == 'intel' %}
+    devices:
+      - /dev/dri:/dev/dri
+    environment:
+      - COMMANDLINE_ARGS=--skip-torch-cuda-test
+    {% elif gpu == 'nvidia' %}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+    {% endif %}
+  {% endif %}
+
 volumes:
   ollama:
     driver: local
@@ -361,6 +408,20 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/chromadb"
+  {% if image_generation_automatic1111_enabled %}
+  automatic1111-models:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/automatic1111-models"
+  automatic1111-outputs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/automatic1111-outputs"
+  {% endif %}
 
 networks:
   network:
