@@ -1,5 +1,40 @@
 # code: language=ansible
 ---
+- name: Gather traefik_backend IPv4 network subnet for HaRP trusted proxy
+  ansible.builtin.shell: |
+    set -o pipefail
+    docker network inspect traefik_backend 2>/dev/null | \
+      jq -r '.[0].IPAM.Config[] | select(.Subnet | test("^[0-9]+\\.")) | .Subnet' | head -1
+  args:
+    executable: /bin/bash
+  register: traefik_network_subnet_ipv4
+  changed_when: false
+  failed_when: false
+
+- name: Gather traefik_backend IPv6 network subnet for HaRP trusted proxy
+  ansible.builtin.shell: |
+    set -o pipefail
+    docker network inspect traefik_backend 2>/dev/null | \
+      jq -r '.[0].IPAM.Config[] | select(.Subnet | test(":")) | .Subnet' | head -1
+  args:
+    executable: /bin/bash
+  register: traefik_network_subnet_ipv6
+  changed_when: false
+  failed_when: false
+
+- name: Set harp_trusted_proxy_ips from detected subnets or fallback
+  ansible.builtin.set_fact:
+    harp_trusted_proxy_ips: >-
+      {% set ipv4 = traefik_network_subnet_ipv4.stdout | default('') | trim %}
+      {% set ipv6 = traefik_network_subnet_ipv6.stdout | default('') | trim %}
+      {% set ipv4_net = ipv4 if ipv4 else '172.18.0.0/16' %}
+      {% set ipv4_base = ipv4_net | regex_replace('/.*', '') %}
+      {% set parts = [] %}
+      {% set _ = parts.append(ipv4_net) %}
+      {% set _ = parts.append('::ffff:' + ipv4_base + '/112') %}
+      {% if ipv6 %}{% set _ = parts.append(ipv6) %}{% endif %}
+      {{ parts | join(',') }}
+
 - name: Verify stacks directory exists
   ansible.builtin.file:
     path: "/home/{{ ansible_user }}/home-server/stacks/nc"
@@ -128,25 +163,25 @@
     mode: u=rwx,g=rx,o=rx
 
 - name: Wait for Elasticsearch to be ready
-  ansible.builtin.uri:
-    url: "http://localhost:9200/_cluster/health"
-    user: "elastic"
-    password: "{{ nc_elastic_secret }}"
-    method: GET
-    status_code: 200
+  ansible.builtin.command:
+    cmd: >
+      docker exec nc-elasticsearch-1 curl -s -u elastic:{{ nc_elastic_secret }}
+      http://localhost:9200/_cluster/health
   register: es_health
-  until: es_health.status == 200
+  until: es_health.rc == 0 and (es_health.stdout | from_json).status is defined
   retries: 30
   delay: 2
+  changed_when: false
   failed_when: false
 
 - name: Configure Elasticsearch for single-node (0 replicas)
-  ansible.builtin.shell:
-    cmd: /home/{{ ansible_user }}/home-server/stacks/nc/elasticsearch_setup.sh
-  environment:
-    ELASTIC_HOST: "localhost:9200"
-    ELASTIC_USER: "elastic"
-    ELASTIC_PASS: "{{ nc_elastic_secret }}"
+  ansible.builtin.command:
+    cmd: >-
+      docker exec nc-elasticsearch-1 curl -X PUT -s
+      -u elastic:{{ nc_elastic_secret }}
+      http://localhost:9200/_index_template/nextcloud_defaults
+      -H "Content-Type: application/json"
+      -d '{"index_patterns": ["*"], "priority": 1, "template": {"settings": {"number_of_replicas": 0}}}'
   register: es_config
   failed_when: false
   changed_when: "'acknowledged' in es_config.stdout"
@@ -211,6 +246,14 @@
   register: add_db_objects
   failed_when: false
   changed_when: add_db_objects.rc == 0
+
+- name: Disable maintenance mode after upgrade
+  when: config_php.stat.exists
+  ansible.builtin.command:
+    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ maintenance:mode --off'
+  register: maintenance_off
+  failed_when: false
+  changed_when: "'disabled' in maintenance_off.stdout"
 
 - name: Install apps
   become: true # necessary to read docker_volumes_path content
