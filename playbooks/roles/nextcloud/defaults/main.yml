@@ -69,7 +69,7 @@ nextcloud_context_agent_tool_status:
   talk: true
   mcp: false
   here: false
-  image_gen: false
+  image_gen: true
   context_chat: false
   youtube: false
   openstreetmap: false
@@ -88,7 +88,8 @@ nextcloud_exapp_list:
       --env CC_EM_BASE_URL=http://ollama-embeddings:11434/v1
       --env CC_EM_MODEL_NAME={{ nextcloud_context_chat_embedding_model }}
   - name: context_agent # Context Agent integration for enhanced automation capabilities
-    options: ""
+    options: >-
+      {% if ia_automatic1111_url is defined %}--env AUTOMATIC1111_URL={{ ia_automatic1111_url }}{% endif %}
 
 nextcloud_system_config:
   - "overwrite.cli.url --value=https://{{ app_domain_name }}"
