@@ -51,7 +51,7 @@
   become: false
   when: authentik_api_token is defined
   block:
-    - name: Configure Authentik OAuth provider and application for IA WebUI
+    - name: Configure Authentik OAuth and Proxy providers for IA services
       when: authentik_api_token is defined
       ansible.builtin.include_tasks: "tasks/authentik_common.yml"
       vars:
@@ -75,6 +75,20 @@
               open_in_new_tab: true
               meta_launch_url: "https://ia.{{ app_domain_name }}"
               meta_description: "AI WebUI for speech and language processing"
+              meta_publisher: "IA Services"
+        proxy_apps:
+          - provider:
+              name: "automatic1111-proxy-provider"
+              external_host: "https://sd.{{ app_domain_name }}"
+              internal_host: "http://ia-automatic1111-1:7860"
+              mode: "forward_single"
+              skip_path_regex: ""
+            app:
+              name: "Stable Diffusion"
+              slug: "stable-diffusion"
+              open_in_new_tab: true
+              meta_launch_url: "https://sd.{{ app_domain_name }}"
+              meta_description: "AI Image Generation with Stable Diffusion (Automatic1111)"
               meta_publisher: "IA Services"
 
     - name: Set WebUI OAuth credentials as facts
