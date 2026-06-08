@@ -29,6 +29,19 @@
     group: "{{ ansible_user }}"
     mode: u=rwx,g=o=rx
 
+- name: Create automatic1111 directories (root-owned)
+  become: true
+  ansible.builtin.file:
+    path: "{{ docker_volumes_path }}/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: u=rwx,g=o=rx
+  loop:
+    - automatic1111-models
+    - automatic1111-outputs
+  when: image_generation_automatic1111_enabled
+
 - name: Report detected IA GPU mode
   ansible.builtin.debug:
     msg: "IA GPU mode selected: effective={{ gpu_mode_effective | default('none') }}"
