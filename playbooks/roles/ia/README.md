@@ -116,6 +116,53 @@ curl https://ia.{{ app_domain_name }}/ollama/api/generate \
 - **Vector database/RAG**: ChromaDB is exposed on port 8001
 - **Embeddings generation**: Use dedicated Ollama Embeddings (`http://<host>:8082`)
 
+## WebUI API Proxy Configuration
+
+The `webui-api-proxy` service provides a unified OpenAI-compatible API endpoint that routes requests to the appropriate backend services. This proxy is used by external services like Nextcloud to access AI capabilities without requiring authentication.
+
+### Routing Logic
+
+The proxy routes requests as follows:
+
+| Route | Backend | Purpose | Auth Required |
+|-------|---------|---------|---------------|
+| `/v1/audio/*` | `speaches:8000` | Audio transcription/TTS | No |
+| `/api/v1/audio/*` | `speaches:8000` | Audio API (legacy) | No |
+| `/v1/models` | `ollama-metrics:8080` | List available models | No |
+| `/v1/chat/completions` | `ollama-metrics:8080` | Chat completions | No |
+| `/api/models` | `ollama-metrics:8080` | Models API (legacy) | No |
+| `/api/chat/completions` | `ollama-metrics:8080` | Chat API (legacy) | No |
+| `/v1/*` (other) | `webui:8080` | Other OpenAI APIs | Maybe* |
+| `/` | `webui:8080` | Open WebUI interface | OAuth |
+
+**Why ollama-metrics instead of Open WebUI for core APIs?**
+
+- **No authentication required**: External services (Nextcloud, Home Assistant) can access models and completions without OAuth
+- **Simpler integration**: Direct access to Ollama's API without session management
+- **Metrics included**: ollama-metrics provides Prometheus metrics for monitoring
+
+**Why speaches for audio?**
+
+- Open WebUI can use speaches as audio backend, but direct routing is more efficient for external services
+- Speaches provides OpenAI-compatible STT/TTS without authentication
+
+**When is Open WebUI used?**
+
+- Advanced OpenAI API features (embeddings, fine-tuning endpoints if implemented)
+- Web interface access (requires OAuth through Authentik)
+- Features requiring user context or sessions
+
+### Nextcloud Integration Example
+
+```yaml
+# integration_openai configuration in Nextcloud
+url: "http://webui-api-proxy:8080/v1"
+default_completion_model_id: "ministral-3:3b"
+request_timeout: 3600
+```
+
+Nextcloud will send requests to `/v1/models` and `/v1/chat/completions` which are routed to ollama-metrics without requiring authentication.
+
 ## Ollama Instances Architecture
 
 This stack deploys **two separate Ollama instances** to prevent resource contention:
