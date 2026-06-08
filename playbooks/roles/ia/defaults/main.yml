@@ -48,7 +48,7 @@ chromadb_version: "latest"
 # Image Generation configuration
 image_generation_automatic1111_enabled: true
 
-automatic1111_image: "universonic/stable-diffusion-webui"
+automatic1111_image: "ashleykza/stable-diffusion-webui"
 automatic1111_version: "latest"
 
 # Ollama embeddings configuration (separate instance for embeddings)
