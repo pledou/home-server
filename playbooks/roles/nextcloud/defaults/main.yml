@@ -55,6 +55,11 @@ nextcloud_integration_openai_url: "http://webui-api-proxy:8080/v1"
 nextcloud_integration_openai_default_completion_model_id: "ministral-3:3b"
 nextcloud_integration_openai_request_timeout: 3600
 nextcloud_integration_openai_max_tokens: 768
+
+# Image generation configuration
+nextcloud_image_generation_url: "{{ ia_automatic1111_url | default('') }}"
+nextcloud_image_generation_provider: "automatic1111"
+
 nextcloud_context_chat_request_timeout: 3600
 # nomic-embed-text v1.5: 8192-token context, Q4 GGUF (stable, no NaN), works well for French.
 # bge-m3 F16 was tried but produces NaN values in Ollama for many document types.
@@ -176,6 +181,8 @@ nextcloud_apps_config:
   - integration_openai default_completion_model_id --value="{{ nextcloud_integration_openai_default_completion_model_id }}"
   - integration_openai request_timeout --value="{{ nextcloud_integration_openai_request_timeout }}"
   - integration_openai max_tokens --value="{{ nextcloud_integration_openai_max_tokens }}"
+  - integration_openai t2i_url --value="{{ nextcloud_image_generation_url }}"
+  - integration_openai t2i_provider --value="{{ nextcloud_image_generation_provider }}"
   - context_agent tool_status --value='{{ nextcloud_context_agent_tool_status | to_json }}'
   - richdocuments enabled --value="yes"
   - richdocuments wopi_url --value="https://{{ app_domain_name }}/apps/richdocumentscode/proxy.php?req="
