@@ -353,9 +353,12 @@ services:
       - traefik.http.services.ia-sd.loadbalancer.server.port=7860
     image: "{{ automatic1111_image }}:{{ automatic1111_version }}"
     environment:
-      {% if gpu == 'intel' %}- CLI_ARGS=--listen --port 7860 --api --enable-insecure-extension-access --skip-version-check --skip-torch-cuda-test --allow-code
-      {% elif gpu == 'nvidia' %}- CLI_ARGS=--listen --port 7860 --api --xformers --enable-insecure-extension-access --skip-version-check --allow-code --medvram --opt-split-attention
-      {% else %}- CLI_ARGS=--listen --port 7860 --api --enable-insecure-extension-access --skip-version-check --allow-code --no-half --precision full
+      {% if gpu == 'intel' %}
+      - CLI_ARGS=--listen --port 7860 --api --enable-insecure-extension-access --skip-version-check --skip-torch-cuda-test --allow-code
+      {% elif gpu == 'nvidia' %}
+      - CLI_ARGS=--listen --port 7860 --api --xformers --enable-insecure-extension-access --skip-version-check --allow-code --medvram --opt-split-attention
+      {% else %}
+      - CLI_ARGS=--listen --port 7860 --api --enable-insecure-extension-access --skip-version-check --allow-code --no-half --precision full
       {% endif %}
     volumes:
       - automatic1111-models:/data/models
