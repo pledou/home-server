@@ -352,17 +352,22 @@ services:
       - traefik.http.routers.ia-sd-https.middlewares=authentik@docker
       - traefik.http.services.ia-sd.loadbalancer.server.port=7860
     image: "{{ automatic1111_image }}:{{ automatic1111_version }}"
+    {% if gpu == 'intel' %}
     environment:
-      {% if gpu == 'intel' %}
-      - CLI_ARGS=--listen --port 7860 --api --enable-insecure-extension-access --skip-version-check --skip-torch-cuda-test --allow-code
-      {% elif gpu == 'nvidia' %}
-      - CLI_ARGS=--listen --port 7860 --api --xformers --enable-insecure-extension-access --skip-version-check --allow-code --medvram --opt-split-attention
-      {% else %}
-      - CLI_ARGS=--listen --port 7860 --api --enable-insecure-extension-access --skip-version-check --allow-code --no-half --precision full
-      {% endif %}
+      - WEBUI_PORT=7860
+      - COMMANDLINE_ARGS=--listen --api --enable-insecure-extension-access --skip-version-check --skip-torch-cuda-test --allow-code
+    {% elif gpu == 'nvidia' %}
+    environment:
+      - WEBUI_PORT=7860
+      - COMMANDLINE_ARGS=--listen --api --xformers --enable-insecure-extension-access --skip-version-check --allow-code
+    {% else %}
+    environment:
+      - WEBUI_PORT=7860
+      - COMMANDLINE_ARGS=--listen --api --enable-insecure-extension-access --skip-version-check --allow-code --no-half --precision full
+    {% endif %}
     volumes:
-      - automatic1111-models:/data/models
-      - automatic1111-outputs:/output
+      - automatic1111-models:/app/stable-diffusion-webui/models
+      - automatic1111-outputs:/app/stable-diffusion-webui/outputs
     restart: unless-stopped
     networks:
       network:

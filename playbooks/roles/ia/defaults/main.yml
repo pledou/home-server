@@ -48,9 +48,9 @@ chromadb_version: "latest"
 # Image Generation configuration
 image_generation_automatic1111_enabled: true
 
-# Using AbdBarho's well-maintained image with only Automatic1111
-automatic1111_image: "ghcr.io/abdbarho/stable-diffusion-webui"
-automatic1111_version: "auto"  # 'auto' tag is for Automatic1111 only (not ComfyUI)
+# Using a well-maintained Automatic1111 Docker image
+automatic1111_image: "universonic/stable-diffusion-webui"
+automatic1111_version: "latest"
 
 # Ollama embeddings configuration (separate instance for embeddings)
 ollama_embeddings_image: "{{ ollama_image }}"
