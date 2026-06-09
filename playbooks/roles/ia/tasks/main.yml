@@ -51,7 +51,7 @@
   become: false
   when: authentik_api_token is defined
   block:
-    - name: Configure Authentik OAuth and Proxy providers for IA services
+    - name: Configure Authentik OAuth providers for IA services
       when: authentik_api_token is defined
       ansible.builtin.include_tasks: "tasks/authentik_common.yml"
       vars:
@@ -76,7 +76,14 @@
               meta_launch_url: "https://ia.{{ app_domain_name }}"
               meta_description: "AI WebUI for speech and language processing"
               meta_publisher: "IA Services"
-        proxy_apps:
+
+    - name: Configure Authentik Proxy provider for ComfyUI
+      when:
+        - authentik_api_token is defined
+        - image_generation_comfyui_enabled
+      ansible.builtin.include_tasks: "tasks/authentik_common.yml"
+      vars:
+        provider_apps:
           - provider:
               name: "comfyui-proxy-provider"
               external_host: "https://sd.{{ app_domain_name }}"
