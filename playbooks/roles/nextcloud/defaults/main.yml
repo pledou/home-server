@@ -57,8 +57,8 @@ nextcloud_integration_openai_request_timeout: 3600
 nextcloud_integration_openai_max_tokens: 768
 
 # Image generation configuration
-nextcloud_image_generation_url: "{{ ia_automatic1111_url | default('') }}"
-nextcloud_image_generation_provider: "automatic1111"
+nextcloud_image_generation_url: "{{ ia_comfyui_url | default('') }}"
+nextcloud_image_generation_provider: "comfyui"
 
 nextcloud_context_chat_request_timeout: 3600
 # nomic-embed-text v1.5: 8192-token context, Q4 GGUF (stable, no NaN), works well for French.
@@ -94,7 +94,7 @@ nextcloud_exapp_list:
       --env CC_EM_MODEL_NAME={{ nextcloud_context_chat_embedding_model }}
   - name: context_agent # Context Agent integration for enhanced automation capabilities
     options: >-
-      {% if ia_automatic1111_url is defined %}--env AUTOMATIC1111_URL={{ ia_automatic1111_url }}{% endif %}
+      {% if ia_comfyui_url is defined %}--env COMFYUI_URL={{ ia_comfyui_url }}{% endif %}
 
 nextcloud_system_config:
   - "overwrite.cli.url --value=https://{{ app_domain_name }}"

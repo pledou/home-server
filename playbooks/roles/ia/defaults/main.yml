@@ -46,11 +46,11 @@ chromadb_image: "chromadb/chroma"
 chromadb_version: "latest"
 
 # Image Generation configuration
-image_generation_automatic1111_enabled: true
+image_generation_comfyui_enabled: true
 
-# Using a well-maintained Automatic1111 Docker image
-automatic1111_image: "universonic/stable-diffusion-webui"
-automatic1111_version: "latest"
+# Using official ComfyUI Docker image
+comfyui_image: "comfyui/base"
+comfyui_version: "latest"
 
 # Ollama embeddings configuration (separate instance for embeddings)
 ollama_embeddings_image: "{{ ollama_image }}"
@@ -88,7 +88,7 @@ ia_ollama_embedding_model: "nomic-embed-text-v2-moe"
 ia_chromadb_host: "127.0.0.1"
 ia_chromadb_port: 8001
 ia_speaches_openai_base_url: "http://127.0.0.1:8000/v1"
-ia_automatic1111_url: "http://automatic1111:7860"
+ia_comfyui_url: "http://comfyui:8188"
 
 webui_secret_key: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
 

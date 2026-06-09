@@ -64,9 +64,12 @@ services:
       RAG_EMBEDDING_MODEL: "{{ ia_ollama_embedding_model }}"
       
       # Image Generation
-      {% if image_generation_automatic1111_enabled %}
-      IMAGE_GENERATION_ENGINE: "automatic1111"
-      AUTOMATIC1111_BASE_URL: "http://automatic1111:7860"
+      {% if image_generation_comfyui_enabled %}
+      IMAGE_GENERATION_ENGINE: "comfyui"
+      COMFYUI_BASE_URL: "http://comfyui:8188"
+      ENABLE_IMAGE_GENERATION: "True"
+      IMAGE_GENERATION_MODEL: "flux1-schnell-fp8"
+      AUTOMATIC_IMAGE_TITLE_GENERATION: "True"
       {% endif %}
     restart: always
     volumes:
@@ -338,8 +341,8 @@ services:
 
 
 
-  {% if image_generation_automatic1111_enabled %}
-  automatic1111:
+  {% if image_generation_comfyui_enabled %}
+  comfyui:
     labels:
       - com.centurylinklabs.watchtower.enable=true
       - traefik.enable=true
@@ -350,29 +353,18 @@ services:
       - traefik.http.routers.ia-sd-https.tls=true
       - traefik.http.routers.ia-sd-https.tls.certresolver=le
       - traefik.http.routers.ia-sd-https.middlewares=authentik@docker
-      - traefik.http.services.ia-sd.loadbalancer.server.port=7860
-    image: "{{ automatic1111_image }}:{{ automatic1111_version }}"
-    {% if gpu == 'intel' %}
+      - traefik.http.services.ia-sd.loadbalancer.server.port=8188
+    image: "{{ comfyui_image }}:{{ comfyui_version }}"
     environment:
-      - WEBUI_PORT=7860
-      - COMMANDLINE_ARGS=--listen --api --enable-insecure-extension-access --skip-version-check --skip-torch-cuda-test --allow-code
-    {% elif gpu == 'nvidia' %}
-    environment:
-      - WEBUI_PORT=7860
-      - COMMANDLINE_ARGS=--listen --api --xformers --enable-insecure-extension-access --skip-version-check --allow-code
-    {% else %}
-    environment:
-      - WEBUI_PORT=7860
-      - COMMANDLINE_ARGS=--listen --api --enable-insecure-extension-access --skip-version-check --allow-code --no-half --precision full
-    {% endif %}
+      - CLI_ARGS=--listen 0.0.0.0 --port 8188
     volumes:
-      - automatic1111-models:/app/stable-diffusion-webui/models
-      - automatic1111-outputs:/app/stable-diffusion-webui/outputs
+      - comfyui-models:/root/models
+      - comfyui-output:/root/output
     restart: unless-stopped
     networks:
       network:
         aliases:
-          - automatic1111
+          - comfyui
       traefik_backend:
     {% if gpu == 'intel' %}
     devices:
@@ -418,19 +410,19 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/chromadb"
-  {% if image_generation_automatic1111_enabled %}
-  automatic1111-models:
+  {% if image_generation_comfyui_enabled %}
+  comfyui-models:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: "{{ docker_volumes_path }}/automatic1111-models"
-  automatic1111-outputs:
+      device: "{{ docker_volumes_path }}/comfyui-models"
+  comfyui-output:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: "{{ docker_volumes_path }}/automatic1111-outputs"
+      device: "{{ docker_volumes_path }}/comfyui-output"
   {% endif %}
 
 networks:

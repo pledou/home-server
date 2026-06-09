@@ -404,15 +404,15 @@
   changed_when: nc_ia_connect.rc == 0
   failed_when: false
 
-# context_agent may use automatic1111 service for image generation.
+# context_agent may use comfyui service for image generation.
 # Connect it to ia_network to allow hostname resolution.
-- name: Connect context_agent ExApp to ia_network for automatic1111 access
+- name: Connect context_agent ExApp to ia_network for comfyui access
   ansible.builtin.command:
     cmd: docker network connect ia_network nc_app_context_agent
   register: nc_ia_connect_agent
   changed_when: nc_ia_connect_agent.rc == 0
   failed_when: false
-  when: image_generation_automatic1111_enabled | default(false)
+  when: image_generation_comfyui_enabled | default(false)
 
 - name: Enable exapps
   ansible.builtin.command:

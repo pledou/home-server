@@ -29,7 +29,7 @@
     group: "{{ ansible_user }}"
     mode: u=rwx,g=o=rx
 
-- name: Create automatic1111 directories (root-owned)
+- name: Create comfyui directories (root-owned)
   become: true
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item }}"
@@ -38,9 +38,9 @@
     group: root
     mode: u=rwx,g=o=rx
   loop:
-    - automatic1111-models
-    - automatic1111-outputs
-  when: image_generation_automatic1111_enabled
+    - comfyui-models
+    - comfyui-output
+  when: image_generation_comfyui_enabled
 
 - name: Report detected IA GPU mode
   ansible.builtin.debug:
@@ -78,9 +78,9 @@
               meta_publisher: "IA Services"
         proxy_apps:
           - provider:
-              name: "automatic1111-proxy-provider"
+              name: "comfyui-proxy-provider"
               external_host: "https://sd.{{ app_domain_name }}"
-              internal_host: "http://ia-automatic1111-1:7860"
+              internal_host: "http://ia-comfyui-1:8188"
               mode: "forward_single"
               skip_path_regex: ""
             app:
@@ -88,7 +88,7 @@
               slug: "stable-diffusion"
               open_in_new_tab: true
               meta_launch_url: "https://sd.{{ app_domain_name }}"
-              meta_description: "AI Image Generation with Stable Diffusion (Automatic1111)"
+              meta_description: "AI Image Generation with Stable Diffusion (ComfyUI)"
               meta_publisher: "IA Services"
 
     - name: Set WebUI OAuth credentials as facts
