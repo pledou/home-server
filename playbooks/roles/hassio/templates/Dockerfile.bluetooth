@@ -1,0 +1,21 @@
+FROM "{{ homeassistant_image }}:{{ homeassistant_version }}"
+
+USER root
+
+# Install Bluetooth dependencies and build tools
+RUN apk add --no-cache \
+    make \
+    gcc \
+    g++ \
+    musl-dev \
+    linux-headers \
+    glib-dev \
+    bluez-dev \
+    bluez \
+    python3-dev
+
+# Install bluepy for Bluetooth LE support
+RUN pip3 install --no-cache-dir bluepy==1.3.0
+
+# Set capabilities for bluepy-helper to access Bluetooth
+RUN setcap 'cap_net_raw,cap_net_admin+eip' /usr/local/lib/python*/site-packages/bluepy/bluepy-helper || true

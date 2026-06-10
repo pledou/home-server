@@ -17,11 +17,16 @@ services:
     entrypoint:
       - /init
     hostname: homeassistant
-     {% if enocean_device_id is defined %}
+    build:
+      context: .
+      dockerfile: Dockerfile.bluetooth
+    image: "homeassistant-bluetooth:latest"
     devices:
+      - /dev/bus/usb:/dev/bus/usb  # Support Bluetooth USB dongles
+    {% if enocean_device_id is defined %}
       - /dev/serial/by-id/{{enocean_device_id}}:/dev/enocean
     {% endif %}
-    image: "{{ homeassistant_image }}:{{ homeassistant_version }}"
+    # image: "{{ homeassistant_image }}:{{ homeassistant_version }}"
     network_mode: host
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8123"]
@@ -31,6 +36,8 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_BIND_SERVICE
+      - NET_RAW        # Required for Bluetooth LE
+      - SYS_ADMIN      # Required for Bluetooth operations
     privileged: true
     restart: unless-stopped
     security_opt:
@@ -167,16 +174,20 @@ services:
       - frigate_config:/config:rw
       - frigate_media:/media:rw
       - {{ docker_volumes_path }}/frigate_config/proxy_trusted_headers.conf:/usr/local/nginx/conf/proxy_trusted_headers.conf:ro
-    ## Uncomment this block for nvidia gpu support
-    # deploy:
-    #       resources:
-    #           reservations:
-    #               devices:
-    #                   - driver: nvidia
-    #                     count: 1
-    #                     capabilities: [gpu]
+    {% if frigate_gpu_type | default('intel') == 'nvidia' %}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    {% endif %}
     devices:
-      - /dev/dri/renderD128:/dev/dri/renderD128 # for hardware acceleration
+      - /dev/dri/renderD128:/dev/dri/renderD128 # Intel iGPU for VAAPI
+      {% if frigate_gpu_type | default('intel') in ['nvidia', 'both'] %}
+      - /dev/dri/renderD129:/dev/dri/renderD129 # NVIDIA dGPU
+      {% endif %}
     environment:
       FRIGATE_RTSP_PASSWORD: "your_rtsp_password"
     ports:

@@ -75,6 +75,11 @@
     mode: u=g=rwx,o=rx
     force: false
   when: zigbee2mqtt_device_id is defined
+- name: Create Bluetooth Dockerfile from template
+  ansible.builtin.template:
+    src: Dockerfile.bluetooth
+    dest: /home/{{ ansible_user }}/home-server/stacks/hassio/Dockerfile.bluetooth
+    mode: u=g=rwx,o=rx
 - name: Create docker-compose file
   ansible.builtin.template:
     src: docker-compose.yml
