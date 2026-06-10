@@ -48,9 +48,10 @@ chromadb_version: "latest"
 # Image Generation configuration
 image_generation_comfyui_enabled: true
 
-# Using official ComfyUI Docker image
-comfyui_image: "comfyui/base"
-comfyui_version: "latest"
+# Using YanWenKun's maintained ComfyUI Docker image
+# See: https://github.com/YanWenKun/ComfyUI-Docker
+comfyui_image: "yanwk/comfyui-boot"
+comfyui_version: "cu130-slim-v2"
 
 # Ollama embeddings configuration (separate instance for embeddings)
 ollama_embeddings_image: "{{ ollama_image }}"

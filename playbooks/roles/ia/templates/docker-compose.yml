@@ -358,8 +358,8 @@ services:
     environment:
       - CLI_ARGS=--listen 0.0.0.0 --port 8188
     volumes:
-      - comfyui-models:/root/models
-      - comfyui-output:/root/output
+      - comfyui-models:/root/ComfyUI/models
+      - comfyui-output:/root/ComfyUI/output
     restart: unless-stopped
     networks:
       network:
