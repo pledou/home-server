@@ -23,8 +23,10 @@ nextcloud_php_fpm_pm_max_requests: 500
 nextcloud_php_fpm_request_terminate_timeout: "3600s"
 
 # Preview generation is useful for photo-heavy setups.
-# This schedule keeps it enabled, but prevents overlap and long runaway runs.
-nextcloud_preview_pregenerate_cron: "*/30 * * * * cd /var/www/html && flock -n /tmp/preview-pregenerate.lock timeout 20m php -f occ preview:pre-generate"
+# With 50k+ media files, pre-generation can saturate PHP-FPM workers.
+# Disabled by default - previews are generated on-demand when accessed.
+# For large libraries, consider running manually during maintenance windows.
+nextcloud_preview_pregenerate_cron: ""  # Disabled - use on-demand generation
 
 nextcloud_defaultapp_list:
   - viewer
@@ -126,9 +128,10 @@ nextcloud_system_config:
   - "enabledPreviewProviders 18 --value='OC\\Preview\\SVG'"
   - "enabledPreviewProviders 19 --value='OC\\Preview\\TIFF'"
   - "enabledPreviewProviders 20 --value='OC\\Preview\\Font'"
-#  - "preview_max_x --value='1024' --type=integer"
-#  - "preview_max_y --value='768' --type=integer"
-#  - "preview_max_scale_facto --value='1' --type=integer"
+  - "preview_max_x --value='2048' --type=integer"
+  - "preview_max_y --value='2048' --type=integer"
+  - "preview_max_scale_factor --value='1' --type=integer"
+  - "preview_max_filesize_image --value='50' --type=integer"
   - "auth.bruteforce.protection.enabled --value=true --type=boolean"
   - "trashbin_retention_obligation --value='auto,7'"
   - "activity_expire_days --value='14'  --type=integer"
