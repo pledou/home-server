@@ -174,7 +174,7 @@ services:
       - frigate_config:/config:rw
       - frigate_media:/media:rw
       - {{ docker_volumes_path }}/frigate_config/proxy_trusted_headers.conf:/usr/local/nginx/conf/proxy_trusted_headers.conf:ro
-    {% if frigate_gpu_type | default('intel') == 'nvidia' %}
+    {% if gpu == 'nvidia' %}
     deploy:
       resources:
         reservations:
@@ -184,8 +184,9 @@ services:
               capabilities: [gpu]
     {% endif %}
     devices:
+      {% if gpu == 'intel' %}
       - /dev/dri/renderD128:/dev/dri/renderD128 # Intel iGPU for VAAPI
-      {% if frigate_gpu_type | default('intel') in ['nvidia', 'both'] %}
+      {% elif gpu == 'nvidia' %}
       - /dev/dri/renderD129:/dev/dri/renderD129 # NVIDIA dGPU
       {% endif %}
     environment:
