@@ -14,7 +14,7 @@ RUN sed -E -i "s/Buckets:[[:space:]]*\[\]float64\{[^}]*\},/Buckets: []float64{ $
 
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /ollama-metrics .
 
-FROM alpine:3.23
+FROM alpine:3.24
 
 RUN addgroup -S ollama && adduser -S -G ollama -h /home/ollama ollama
 
