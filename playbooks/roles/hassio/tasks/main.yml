@@ -85,6 +85,8 @@
     src: docker-compose.yml
     dest: /home/{{ ansible_user }}/home-server/stacks/hassio/docker-compose.yml
     mode: u=g=rwx,o=rx
+  vars:
+    gpu: "{{ gpu_mode_effective | default('none') }}"
 - name: Copy frigate config file
   become: true
   ansible.builtin.template:
@@ -202,8 +204,6 @@
     project_src: /home/{{ ansible_user }}/home-server/stacks/hassio
   ignore_errors: true
   register: pull_result
-  vars:
-    gpu: "{{ gpu_mode_effective | default('none') }}"
 
 - name: Warning - using local images
   ansible.builtin.debug:
@@ -217,8 +217,6 @@
     build: "always"
     state: present
     project_src: /home/{{ ansible_user }}/home-server/stacks/hassio
-  vars:
-    gpu: "{{ gpu_mode_effective | default('none') }}"
 
 - name: Setup HACS and custom integrations
   when: homeassistant_hacs_enabled | bool

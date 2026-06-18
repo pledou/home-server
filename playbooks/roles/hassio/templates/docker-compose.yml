@@ -184,10 +184,10 @@ services:
               capabilities: [gpu]
     {% endif %}
     devices:
-      {% if gpu == 'intel' %}
-      - /dev/dri/renderD128:/dev/dri/renderD128 # Intel iGPU for VAAPI
-      {% elif gpu == 'nvidia' %}
+      {% if gpu == 'nvidia' %}
       - /dev/dri/renderD129:/dev/dri/renderD129 # NVIDIA dGPU
+      {% elif gpu == 'intel' %}
+      - /dev/dri/renderD128:/dev/dri/renderD128 # Intel iGPU for VAAPI
       {% endif %}
     environment:
       FRIGATE_RTSP_PASSWORD: "your_rtsp_password"
