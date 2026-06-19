@@ -160,7 +160,7 @@ services:
       traefik.http.services.frigate.loadbalancer.server.scheme: http
       traefik.http.services.frigate.loadbalancer.passHostHeader: 'true'
       traefik.http.routers.frigate-https.middlewares: authentik@docker
-    image: "{{ frigate_image }}:{{ frigate_version }}"
+    image: "{{ frigate_image }}:{{ frigate_version }}{{ '-tensorrt' if gpu == 'nvidia' else '' }}"
     restart: unless-stopped
     privileged: true
     shm_size: '512mb'
