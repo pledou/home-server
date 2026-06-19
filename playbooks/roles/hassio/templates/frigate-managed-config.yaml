@@ -17,3 +17,10 @@ mqtt:
   password: "{{ mqtt_password }}"
   host: mqtt
   port: 1883
+
+{{ if gpu == "nvidia" }}
+detectors:
+  tensorrt:
+    type: tensorrt
+    device: 0 #This is the default, select the first GPU
+{{ endif }}

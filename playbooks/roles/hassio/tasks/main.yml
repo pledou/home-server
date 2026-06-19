@@ -103,6 +103,8 @@
     marker_end: "END"
     block: "{{ lookup('template', 'frigate-managed-config.yaml') }}"
     mode: u=g=rwx,o=rx
+  vars:
+    gpu: "{{ gpu_mode_effective | default('none') }}"
 - name: Copy frigate proxy trusted headers config
   become: true
   ansible.builtin.template:
