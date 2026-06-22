@@ -173,6 +173,9 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - frigate_config:/config:rw
       - frigate_media:/media:rw
+      {% if gpu  == 'nvidia' %}
+      - frigate_models:/config/model_cache:rw
+      {% endif %}
       - {{ docker_volumes_path }}/frigate_config/proxy_trusted_headers.conf:/usr/local/nginx/conf/proxy_trusted_headers.conf:ro
     {% if gpu == 'nvidia' %}
     deploy:
@@ -191,6 +194,8 @@ services:
       {% endif %}
     environment:
       FRIGATE_RTSP_PASSWORD: "your_rtsp_password"
+      NVIDIA_VISIBLE_DEVICES: "all"
+      NVIDIA_DRIVER_CAPABILITIES: "compute,utility,video"
     ports:
       - 8554:8554/tcp  # RTSP
       - 5000:5000/tcp  # Web UI without security only for access from home assistant
@@ -239,6 +244,12 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/frigate_config"
+  frigate_models:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/frigate_models"
   frigate_media:
     driver: local
     driver_opts:

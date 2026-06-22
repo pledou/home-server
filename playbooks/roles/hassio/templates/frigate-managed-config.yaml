@@ -18,9 +18,20 @@ mqtt:
   host: mqtt
   port: 1883
 
-{{ if gpu == "nvidia" }}
+{% if gpu == "nvidia" %}
+# Globally set nvidia hwaccel
+ffmpeg:
+  hwaccel_args: preset-nvidia  # Hardware acceleration for both H.264 and H.265 streams
+
 detectors:
-  tensorrt:
-    type: tensorrt
-    device: 0 #This is the default, select the first GPU
-{{ endif }}
+  onnx_0:
+    type: onnx
+model:
+  path: /config/model_cache/{{ frigate_model_filename }}
+  model_type: yolo-generic
+  width: {{ frigate_image_size }}
+  height: {{ frigate_image_size }}
+  input_tensor: nchw
+  input_pixel_format: rgb
+  input_dtype: float
+{% endif %}
