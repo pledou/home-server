@@ -60,3 +60,8 @@ homeassistant_ai_whisper_model: "whisper-1"
 homeassistant_ai_whisper_temperature: 0.0
 homeassistant_ai_whisper_prompt: ""
 homeassistant_ai_whisper_api_key: ""
+
+# frigate nvidia detection model
+frigate_model_size: "m" # available model sizes are t, s, m, c, and e
+frigate_image_size: 320
+frigate_model_filename: "yolov9-{{ frigate_model_size }}-{{ frigate_image_size }}.onnx"

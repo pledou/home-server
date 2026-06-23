@@ -39,6 +39,8 @@
       mode: u=rwx,g=rx,o=
     - name: frigate_media
       mode: u=rwx,g=rx,o=
+    - name: frigate_models
+      mode: u=rwx,g=rx,o=
 
 - name: Copy mosquitto config file
   become: true
@@ -75,11 +77,18 @@
     mode: u=g=rwx,o=rx
     force: false
   when: zigbee2mqtt_device_id is defined
+- name: Create Bluetooth Dockerfile from template
+  ansible.builtin.template:
+    src: Dockerfile.bluetooth
+    dest: /home/{{ ansible_user }}/home-server/stacks/hassio/Dockerfile.bluetooth
+    mode: u=g=rwx,o=rx
 - name: Create docker-compose file
   ansible.builtin.template:
     src: docker-compose.yml
     dest: /home/{{ ansible_user }}/home-server/stacks/hassio/docker-compose.yml
     mode: u=g=rwx,o=rx
+  vars:
+    gpu: "{{ gpu_mode_effective | default('none') }}"
 - name: Copy frigate config file
   become: true
   ansible.builtin.template:
@@ -96,6 +105,8 @@
     marker_end: "END"
     block: "{{ lookup('template', 'frigate-managed-config.yaml') }}"
     mode: u=g=rwx,o=rx
+  vars:
+    gpu: "{{ gpu_mode_effective | default('none') }}"
 - name: Copy frigate proxy trusted headers config
   become: true
   ansible.builtin.template:
@@ -103,6 +114,30 @@
     dest: "{{ docker_volumes_path }}/frigate_config/proxy_trusted_headers.conf"
     mode: u=g=r,o=r
     force: true
+
+- name: Create YOLOv9 Dockerfile template
+  become: true
+  ansible.builtin.template:
+    src: yolov9.Dockerfile.j2
+    dest: /tmp/yolov9.Dockerfile
+    mode: u=rw,g=r,o=r
+  when: gpu_mode_effective == "nvidia"
+
+- name: Download YOLOv9 ONNX
+  become: true
+  ansible.builtin.command:
+    cmd: >-
+      docker build . --build-arg MODEL_SIZE={{frigate_model_size}} 
+      --build-arg IMG_SIZE={{frigate_image_size}} 
+      --output {{ docker_volumes_path }}/frigate_models -f /tmp/yolov9.Dockerfile
+    creates: "{{ docker_volumes_path }}/frigate_models/{{ frigate_model_filename }}"
+  when: gpu_mode_effective == "nvidia"
+  register: load_model
+
+- name: Debug load model
+  ansible.builtin.debug:
+    var:
+      load_model
 - name: Configure homeassistant for proxy
   become: true
   ansible.builtin.blockinfile:

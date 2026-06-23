@@ -17,11 +17,16 @@ services:
     entrypoint:
       - /init
     hostname: homeassistant
-     {% if enocean_device_id is defined %}
+    build:
+      context: .
+      dockerfile: Dockerfile.bluetooth
+    image: "homeassistant-bluetooth:latest"
     devices:
+      - /dev/bus/usb:/dev/bus/usb  # Support Bluetooth USB dongles
+    {% if enocean_device_id is defined %}
       - /dev/serial/by-id/{{enocean_device_id}}:/dev/enocean
     {% endif %}
-    image: "{{ homeassistant_image }}:{{ homeassistant_version }}"
+    # image: "{{ homeassistant_image }}:{{ homeassistant_version }}"
     network_mode: host
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8123"]
@@ -31,6 +36,8 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_BIND_SERVICE
+      - NET_RAW        # Required for Bluetooth LE
+      - SYS_ADMIN      # Required for Bluetooth operations
     privileged: true
     restart: unless-stopped
     security_opt:
@@ -153,7 +160,7 @@ services:
       traefik.http.services.frigate.loadbalancer.server.scheme: http
       traefik.http.services.frigate.loadbalancer.passHostHeader: 'true'
       traefik.http.routers.frigate-https.middlewares: authentik@docker
-    image: "{{ frigate_image }}:{{ frigate_version }}"
+    image: "{{ frigate_image }}:{{ frigate_version }}{{ '-tensorrt' if gpu == 'nvidia' else '' }}"
     restart: unless-stopped
     privileged: true
     shm_size: '512mb'
@@ -166,19 +173,29 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - frigate_config:/config:rw
       - frigate_media:/media:rw
+      {% if gpu  == 'nvidia' %}
+      - frigate_models:/config/model_cache:rw
+      {% endif %}
       - {{ docker_volumes_path }}/frigate_config/proxy_trusted_headers.conf:/usr/local/nginx/conf/proxy_trusted_headers.conf:ro
-    ## Uncomment this block for nvidia gpu support
-    # deploy:
-    #       resources:
-    #           reservations:
-    #               devices:
-    #                   - driver: nvidia
-    #                     count: 1
-    #                     capabilities: [gpu]
+    {% if gpu == 'nvidia' %}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    {% endif %}
     devices:
-      - /dev/dri/renderD128:/dev/dri/renderD128 # for hardware acceleration
+      {% if gpu == 'nvidia' %}
+      - /dev/dri/renderD129:/dev/dri/renderD129 # NVIDIA dGPU
+      {% elif gpu == 'intel' %}
+      - /dev/dri/renderD128:/dev/dri/renderD128 # Intel iGPU for VAAPI
+      {% endif %}
     environment:
       FRIGATE_RTSP_PASSWORD: "your_rtsp_password"
+      NVIDIA_VISIBLE_DEVICES: "all"
+      NVIDIA_DRIVER_CAPABILITIES: "compute,utility,video"
     ports:
       - 8554:8554/tcp  # RTSP
       - 5000:5000/tcp  # Web UI without security only for access from home assistant
@@ -227,6 +244,12 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/frigate_config"
+  frigate_models:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/frigate_models"
   frigate_media:
     driver: local
     driver_opts:
