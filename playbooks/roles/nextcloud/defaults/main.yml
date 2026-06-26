@@ -38,7 +38,7 @@ nextcloud_defaultapp_list:
   - files_fulltextsearch_metadata
   - richdocuments
   - richdocumentscode
-  - previewgenerator
+  # - previewgenerator not required if CPU is sufficient for on-demand generation
   - assistant
   - music
   - notify_push
@@ -183,4 +183,3 @@ nextcloud_apps_config:
   - richdocuments wopi_url --value="https://{{ app_domain_name }}/apps/richdocumentscode/proxy.php?req="
   - richdocuments public_wopi_url --value="https://{{ app_domain_name }}"
   - serverinfo token --value "{{ nextcloud_exporter_auth_token }}"
-
