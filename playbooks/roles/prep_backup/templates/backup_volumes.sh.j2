@@ -102,11 +102,11 @@ log_step "Backing up Nextcloud data (local)"
 /usr/local/bin/restic backup --tag min --verbose {{ docker_volumes_path }}/nextcloud-turnserver-data
 /usr/local/bin/restic backup --tag min --verbose {{ docker_volumes_path }}/nextcloud-www
 /usr/local/bin/restic backup --tag min --verbose {{ docker_volumes_path }}/nextcloud-config
-/usr/local/bin/restic backup --tag max --verbose {{ docker_volumes_path }}/nextcloud-data
+/usr/local/bin/restic backup --tag max --verbose {{ docker_volumes_path }}/nextcloud-data --exclude='appdata*/preview' 
 {% if aws_access_key_id and aws_secret_access_key %}
 log_step "Backing up Nextcloud data (AWS)"
 /usr/local/bin/restic backup -r s3:{{ aws_bucket }} --verbose {{ docker_volumes_path }}/nextcloud-config
-/usr/local/bin/restic backup -r s3:{{ aws_bucket }} --verbose {{ docker_volumes_path }}/nextcloud-data
+/usr/local/bin/restic backup -r s3:{{ aws_bucket }} --verbose {{ docker_volumes_path }}/nextcloud-data --exclude='appdata*/preview' 
 {% endif %}
 
 # end maintenance mode
