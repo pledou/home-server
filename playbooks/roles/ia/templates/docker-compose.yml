@@ -176,7 +176,7 @@ services:
         aliases:
           - ollama-metrics
 
-  {% if gpu != 'intel' %}
+  {% if not ollama_embeddings_use_gpu and gpu != 'intel' %}
   ollama-embeddings:
     labels:
       - com.centurylinklabs.watchtower.enable=true
