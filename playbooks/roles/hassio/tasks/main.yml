@@ -10,6 +10,10 @@
   vars:
     secrets:
       - mqtt_password
+- name: Compute facts for GPU detection
+  ansible.builtin.set_fact:
+    gpu: "{{ 'intel' if gpu_intel_available and gpu_frigate_prefer_intel else gpu_mode_effective | default('none') }}"
+    frigate_model_filename: "yolov9-{{ frigate_model_size }}-{{ frigate_image_size }}.onnx" 
 - name: Create homeassistant provisionning directories
   become: true
   ansible.builtin.file:
@@ -87,8 +91,6 @@
     src: docker-compose.yml
     dest: /home/{{ ansible_user }}/home-server/stacks/hassio/docker-compose.yml
     mode: u=g=rwx,o=rx
-  vars:
-    gpu: "{{ gpu_mode_effective | default('none') }}"
 - name: Copy frigate config file
   become: true
   ansible.builtin.template:
@@ -105,8 +107,6 @@
     marker_end: "END"
     block: "{{ lookup('template', 'frigate-managed-config.yaml') }}"
     mode: u=g=rwx,o=rx
-  vars:
-    gpu: "{{ gpu_mode_effective | default('none') }}"
 - name: Copy frigate proxy trusted headers config
   become: true
   ansible.builtin.template:
@@ -121,17 +121,17 @@
     src: yolov9.Dockerfile.j2
     dest: /tmp/yolov9.Dockerfile
     mode: u=rw,g=r,o=r
-  when: gpu_mode_effective == "nvidia"
+  when: gpu != "none"
 
 - name: Download YOLOv9 ONNX
   become: true
   ansible.builtin.command:
     cmd: >-
-      docker build . --build-arg MODEL_SIZE={{frigate_model_size}} 
-      --build-arg IMG_SIZE={{frigate_image_size}} 
+      docker build . --build-arg MODEL_SIZE={{ frigate_model_size }} 
+      --build-arg IMG_SIZE={{ frigate_image_size }} 
       --output {{ docker_volumes_path }}/frigate_models -f /tmp/yolov9.Dockerfile
     creates: "{{ docker_volumes_path }}/frigate_models/{{ frigate_model_filename }}"
-  when: gpu_mode_effective == "nvidia"
+  when: gpu != "none"
   register: load_model
 
 - name: Debug load model

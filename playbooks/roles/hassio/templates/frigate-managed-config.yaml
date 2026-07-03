@@ -18,14 +18,21 @@ mqtt:
   host: mqtt
   port: 1883
 
-{% if gpu == "nvidia" %}
-# Globally set nvidia hwaccel
+{% if gpu != "none" % }
 ffmpeg:
-  hwaccel_args: preset-nvidia  # Hardware acceleration for both H.264 and H.265 streams
+  hwaccel_args: {% if gpu == "intel" %}preset-intel-qsv-h265{% elif gpu == "nvidia" %}preset-nvidia{% endif %}
+{% endif %}
 
 detectors:
+  {% if gpu == "intel" %}
+  ov_0:
+    type: openvino
+    device: GPU
+  {% else %}
   onnx_0:
     type: onnx
+  {% endif %}
+
 model:
   path: /config/model_cache/{{ frigate_model_filename }}
   model_type: yolo-generic
@@ -34,4 +41,6 @@ model:
   input_tensor: nchw
   input_pixel_format: rgb
   input_dtype: float
-{% endif %}
+  {% if gpu == "intel" %}
+  labelmap_path: /labelmap/coco-80.txt
+  {% endif %}
