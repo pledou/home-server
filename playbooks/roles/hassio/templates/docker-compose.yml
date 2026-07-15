@@ -173,7 +173,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - frigate_config:/config:rw
       - frigate_media:/media:rw
-      {% if gpu  == 'nvidia' %}
+      {% if gpu  == 'nvidia' or gpu == 'intel' %}
       - frigate_models:/config/model_cache:rw
       {% endif %}
       - {{ docker_volumes_path }}/frigate_config/proxy_trusted_headers.conf:/usr/local/nginx/conf/proxy_trusted_headers.conf:ro

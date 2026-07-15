@@ -52,6 +52,7 @@ ollama_embeddings_intel_image: "{{ ollama_intel_image }}"
 ollama_embeddings_intel_version: "{{ ollama_intel_version }}"
 
 # Embeddings resource limits (smaller than main ollama)
+ollama_embeddings_use_gpu: false
 ollama_embeddings_memory_limit_ratio: 0.15
 ollama_embeddings_min_memory_mb: 2048
 ollama_embeddings_shm_size_mb: 4096

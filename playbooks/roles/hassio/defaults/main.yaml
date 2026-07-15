@@ -62,6 +62,7 @@ homeassistant_ai_whisper_prompt: ""
 homeassistant_ai_whisper_api_key: ""
 
 # frigate nvidia detection model
-frigate_model_size: "m" # available model sizes are t, s, m, c, and e
+frigate_model_size: "s" # available model sizes are t, s, m, c, and e
 frigate_image_size: 320
-frigate_model_filename: "yolov9-{{ frigate_model_size }}-{{ frigate_image_size }}.onnx"
+# keep nvidia card free for LLMs, if both nvidia and intel are available, use intel for frigate
+gpu_frigate_prefer_intel: true
