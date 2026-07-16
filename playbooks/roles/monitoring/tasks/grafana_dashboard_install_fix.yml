@@ -1,0 +1,72 @@
+---
+- name: Download Grafana.com & other dashboards
+  become: true
+  ansible.builtin.get_url:
+    url: "{% if 'gnet_id' in item %}
+            https://grafana.com/api/dashboards/{{ item.gnet_id }}/revisions/latest/download
+          {% else %}
+            {{ item.url }}
+          {% endif %}"
+    dest: "{{ dashboard_file_path }}"
+    mode: u=rwx,g=o=rx
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    force: true # update to last version on each run
+
+- name: Normalize Grafana dashboard datasource references
+  become: true
+  ansible.builtin.shell: |
+    set -o pipefail
+    jq '
+      (.. | objects | select(has("datasource")) | .datasource) |=
+        (if . == "prometheus" or . == "Prometheus" or . == "${DS_PROMETHEUS}" then
+           "prometheus_uid"
+         elif . == "loki" or . == "Loki" or . == "${DS_LOKI}" then
+           "loki_uid"
+         elif (type == "object") then
+           (if ((.uid // "") == "prometheus" or (.uid // "") == "Prometheus" or (.uid // "") == "${DS_PROMETHEUS}") then
+              .uid = "prometheus_uid"
+            elif ((.uid // "") == "loki" or (.uid // "") == "Loki" or (.uid // "") == "${DS_LOKI}") then
+              .uid = "loki_uid"
+            elif ((.uid // "") == "" and (.type // "") == "prometheus") then
+              . + {"uid": "prometheus_uid"}
+            elif ((.uid // "") == "" and (.type // "") == "loki") then
+              . + {"uid": "loki_uid"}
+            else
+              .
+            end)
+         else
+           .
+         end)
+      | (.. | objects
+          | select(has("datasourceUid") and (.datasourceUid == "prometheus" or .datasourceUid == "Prometheus"))
+          | .datasourceUid) = "prometheus_uid"
+      | (.. | objects
+          | select(has("datasourceUid") and (.datasourceUid == "loki" or .datasourceUid == "Loki"))
+          | .datasourceUid) = "loki_uid"
+    ' "{{ dashboard_file_path }}" \
+    > /tmp/{{ dashboard_file_path | basename }}.tmp && \
+    mv /tmp/{{ dashboard_file_path | basename }}.tmp \
+      "{{ dashboard_file_path }}"
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: Fix Nextcloud dashboard datasource template variable
+  ansible.builtin.shell: |
+    jq '.templating.list = [{
+      "current": {},
+      "includeAll": false,
+      "label": "Datasource",
+      "name": "DS_LOCAL",
+      "options": [],
+      "query": "prometheus",
+      "refresh": 1,
+      "regex": "",
+      "type": "datasource"
+    }] + .templating.list' {{ dashboard_file_path }} > /tmp/{{ dashboard_file_path | basename }}.tmp && \
+    mv /tmp/{{ dashboard_file_path | basename }}.tmp {{ dashboard_file_path }}  
+  args:
+    executable: /bin/bash
+  changed_when: false
+  when: "'20716' in dashboard_file_path"

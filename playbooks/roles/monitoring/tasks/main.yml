@@ -87,7 +87,7 @@
 
 - name: Deploy Prometheus alert rules
   become: true
-  ansible.builtin.copy:
+  ansible.builtin.template:
     src: alerts.rules
     dest: "{{ docker_volumes_path }}/prometheus-conf/alerts.rules"
     mode: u=rwx,g=o=rx
@@ -273,104 +273,13 @@
     dest: /home/{{ ansible_user }}/home-server/stacks/monitoring/docker-compose.yml
     mode: u=g=rwx,o=rx
 
-- name: Download NorskHelsenett Ollama Metrics dashboard
-  become: true
-  ansible.builtin.get_url:
-    url: "{{ ollama_metrics_dashboard_url }}"
-    dest: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/ollama-metrics-dashboard.json"
-    mode: u=rwx,g=o=rx
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-    force: true
-
-- name: Download Grafana.com dashboards
-  become: true
-  ansible.builtin.get_url:
-    url: "https://grafana.com/api/dashboards/{{ item.gnet_id }}/revisions/latest/download"
-    dest: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/{{ item.gnet_id }}.json"
-    mode: u=rwx,g=o=rx
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-    force: true # update to last version on each run
-  loop: "{{ grafana_dashboard_updates | default([]) }}"
-  loop_control:
-    label: "{{ item.gnet_id }} -> {{ item.gnet_id }}.json"
-
-- name: Ensure dashboards referencing datasource variables define them
-  ansible.builtin.include_tasks: grafana_fix_missing_ds_prometheus.yml
-  loop: "{{ grafana_dashboard_updates | default([]) + [{'gnet_id': 'ollama-metrics-dashboard'}] }}"
-  loop_control:
-    label: "{{ item.gnet_id }}.json"
+- name: Install Grafana dashboards from Grafana.com and other sources
+  ansible.builtin.include_tasks: "tasks/grafana_dashboard_install_fix.yml"
   vars:
-    dashboard_gnet_id: "{{ item.gnet_id }}"
-
-- name: Fix Nextcloud dashboard datasource template variable
-  ansible.builtin.shell: |
-    jq '.templating.list = [{
-      "current": {},
-      "includeAll": false,
-      "label": "Datasource",
-      "name": "DS_LOCAL",
-      "options": [],
-      "query": "prometheus",
-      "refresh": 1,
-      "regex": "",
-      "type": "datasource"
-    }] + .templating.list' /opt/grafana-provisioning/dashboards/20716.json > /tmp/20716.json.tmp && \
-    mv /tmp/20716.json.tmp /opt/grafana-provisioning/dashboards/20716.json
-  args:
-    executable: /bin/bash
-  changed_when: false
-
-- name: Replace Prometheus dashboard datasource variables with fixed UID
-  become: true
-  ansible.builtin.replace:
-    path: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/{{ item.gnet_id }}.json"
-    regexp: '\$\{DS_(?:PROM[A-Z_]*|PRM[A-Z_]*)\}'
-    replace: 'prometheus_uid'
-  loop: "{{ grafana_dashboard_updates | default([]) + [{'gnet_id': 'ollama-metrics-dashboard'}] }}"
-  loop_control:
-    label: "{{ item.gnet_id }}.json"
-
-- name: Normalize Ollama dashboard Prometheus datasource references
-  become: true
-  ansible.builtin.shell: |
-    set -o pipefail
-    jq '
-      (.. | objects | select(has("datasource")) | .datasource) |=
-        (if . == "prometheus" or . == "Prometheus" then
-           "prometheus_uid"
-         elif (type == "object") then
-           (if ((.uid // "") == "prometheus" or (.uid // "") == "Prometheus") then
-              .uid = "prometheus_uid"
-            elif ((.uid // "") == "" and (.type // "") == "prometheus") then
-              . + {"uid": "prometheus_uid"}
-            else
-              .
-            end)
-         else
-           .
-         end)
-      | (.. | objects
-          | select(has("datasourceUid") and (.datasourceUid == "prometheus" or .datasourceUid == "Prometheus"))
-          | .datasourceUid) = "prometheus_uid"
-    ' "{{ docker_volumes_path }}/grafana-provisioning/dashboards/ollama-metrics-dashboard.json" \
-    > /tmp/ollama-metrics-dashboard.json.tmp && \
-    mv /tmp/ollama-metrics-dashboard.json.tmp \
-      "{{ docker_volumes_path }}/grafana-provisioning/dashboards/ollama-metrics-dashboard.json"
-  args:
-    executable: /bin/bash
-  changed_when: false
-
-- name: Replace Loki dashboard datasource variables with fixed UID
-  become: true
-  ansible.builtin.replace:
-    path: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/{{ item.gnet_id }}.json"
-    regexp: '\$\{DS_LOKI[A-Z_]*\}'
-    replace: 'loki_uid'
+    dashboard_file_path: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/{{ item.name }}.json"
   loop: "{{ grafana_dashboard_updates | default([]) }}"
   loop_control:
-    label: "{{ item.gnet_id }}.json"
+    label: "{{ item.name }}"
 
 - name: Try to pull latest images (continue on failure)
   community.docker.docker_compose_v2:

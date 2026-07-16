@@ -4,13 +4,13 @@ groups:
 
   # Alert for any instance that is unreachable for >2 minutes.
   - alert: service_down
-    expr: up{job!="watchtower"} == 0
+    expr: up{job!="watchtower",job!="docker"} == 0
     for: 2m
     labels:
       severity: page
     annotations:
-      summary: "Instance {{ $labels.instance }} down"
-      description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 2 minutes."
+      summary: "Instance {{'{{ $labels.instance }}'}} down"
+      description: "{{'{{ $labels.instance }}'}} of job {{'{{ $labels.job }}'}} has been down for more than 2 minutes."
 
   - alert: high_load_warning
     expr: (node_load5 / on(instance) group_left count(node_cpu_seconds_total{mode="idle"}) by (instance) > 0.7) unless on() (((sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="ollama"}[2m])) > 0.20) or (sum(rate(container_cpu_usage_seconds_total{name=~".*ia-ollama-.*"}[2m])) > 0.20)))
@@ -18,8 +18,8 @@ groups:
     labels:
       severity: warning
     annotations:
-      summary: "Instance {{ $labels.instance }} under high load"
-      description: "{{ $labels.instance }} load average is at {{ $value | humanizePercentage }} of CPU capacity for more than 10 minutes."
+      summary: "Instance {{'{{ $labels.instance }}'}} under high load"
+      description: "{{'{{ $labels.instance }}'}} load average is at {{'{{ $value | humanizePercentage }}'}} of CPU capacity for more than 10 minutes."
 
   - alert: high_load_critical
     expr: (node_load5{job!~".*node-exporter.*"} / on(instance) group_left count(node_cpu_seconds_total{job!~".*node-exporter.*",mode="idle"}) by (instance) > 1.0) unless on() (((sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="ollama"}[2m])) > 0.20) or (sum(rate(container_cpu_usage_seconds_total{name=~".*ia-ollama-.*"}[2m])) > 0.20)))
@@ -27,8 +27,8 @@ groups:
     labels:
       severity: critical
     annotations:
-      summary: "Instance {{ $labels.instance }} critically overloaded"
-      description: "{{ $labels.instance }} load average is at {{ $value | humanizePercentage }} of CPU capacity (exceeding 100%) for more than 10 minutes. System may be unresponsive."
+      summary: "Instance {{'{{ $labels.instance }}'}} critically overloaded"
+      description: "{{'{{ $labels.instance }}'}} load average is at {{'{{ $value | humanizePercentage }}'}} of CPU capacity (exceeding 100%) for more than 10 minutes. System may be unresponsive."
 
   # Monitoring infrastructure has higher load tolerance (node-exporter, prometheus, etc.)
   - alert: high_load_warning_monitoring
@@ -37,8 +37,8 @@ groups:
     labels:
       severity: warning
     annotations:
-      summary: "Monitoring infrastructure {{ $labels.instance }} under elevated load"
-      description: "Node-exporter on {{ $labels.instance }} has elevated load at {{ $value | humanizePercentage }} of CPU capacity for more than 15 minutes. This is acceptable for monitoring infrastructure."
+      summary: "Monitoring infrastructure {{'{{ $labels.instance }}'}} under elevated load"
+      description: "Node-exporter on {{'{{ $labels.instance }}'}} has elevated load at {{'{{ $value | humanizePercentage }}'}} of CPU capacity for more than 15 minutes. This is acceptable for monitoring infrastructure."
 
   - alert: high_load_critical_monitoring
     expr: ((node_load5{job=~".*node-exporter.*"} / on(instance) group_left count(node_cpu_seconds_total{job=~".*node-exporter.*",mode="idle"}) by (instance)) > 2.0) unless on() (((sum(rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_service="ollama"}[2m])) > 0.20) or (sum(rate(container_cpu_usage_seconds_total{name=~".*ia-ollama-.*"}[2m])) > 0.20)))
@@ -46,8 +46,8 @@ groups:
     labels:
       severity: critical
     annotations:
-      summary: "Monitoring infrastructure {{ $labels.instance }} critically overloaded"
-      description: "Node-exporter on {{ $labels.instance }} has critical load at {{ $value | humanizePercentage }} of CPU capacity (exceeding 200%) for more than 15 minutes. Investigation recommended."
+      summary: "Monitoring infrastructure {{'{{ $labels.instance }}'}} critically overloaded"
+      description: "Node-exporter on {{'{{ $labels.instance }}'}} has critical load at {{'{{ $value | humanizePercentage }}'}} of CPU capacity (exceeding 200%) for more than 15 minutes. Investigation recommended."
 
   - alert: high_temperature_warning
     expr: node_thermal_zone_temp > 85
@@ -55,8 +55,8 @@ groups:
     labels:
       severity: warning
     annotations:
-      summary: "High temperature on {{ $labels.instance }}"
-      description: "Thermal zone {{ $labels.zone }} on {{ $labels.instance }} has been above 70°C for more than 1 hour (current: {{ $value }}°C). Consider cleaning fans/heatsinks."
+      summary: "High temperature on {{'{{ $labels.instance }}'}}"
+      description: "Thermal zone {{'{{ $labels.zone }}'}} on {{'{{ $labels.instance }}'}} has been above 70°C for more than 1 hour (current: {{'{{ $value }}'}}°C). Consider cleaning fans/heatsinks."
 
   - alert: high_temperature_critical
     expr: node_thermal_zone_temp > 95
@@ -64,8 +64,8 @@ groups:
     labels:
       severity: critical
     annotations:
-      summary: "CRITICAL temperature on {{ $labels.instance }}"
-      description: "Thermal zone {{ $labels.zone }} on {{ $labels.instance }} has been above 90°C for more than 20 minutes (current: {{ $value }}°C). Immediate attention required!"
+      summary: "CRITICAL temperature on {{'{{ $labels.instance }}'}}"
+      description: "Thermal zone {{'{{ $labels.zone }}'}} on {{'{{ $labels.instance }}'}} has been above 90°C for more than 20 minutes (current: {{'{{ $value }}'}}°C). Immediate attention required!"
 
   - alert: cpu_sustained_high
     expr: (1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 0.9
@@ -73,8 +73,8 @@ groups:
     labels:
       severity: warning
     annotations:
-      summary: "Sustained high CPU on {{ $labels.instance }}"
-      description: "CPU usage on {{ $labels.instance }} has been above 90% for more than 20 minutes. Consider throttling AI workloads to prevent overheating."
+      summary: "Sustained high CPU on {{'{{ $labels.instance }}'}}"
+      description: "CPU usage on {{'{{ $labels.instance }}'}} has been above 90% for more than 20 minutes. Consider throttling AI workloads to prevent overheating."
 
   - alert: filesystem_full_warning
     expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs|vfat",mountpoint!~"/media/.*"} / node_filesystem_size_bytes) < 0.2
@@ -82,8 +82,8 @@ groups:
     labels:
       severity: warning
     annotations:
-      summary: "Filesystem {{ $labels.mountpoint }} nearly full on {{ $labels.instance }}"
-      description: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} is 80% full ({{ $value | humanizePercentage }} available). Consider cleaning up disk space."
+      summary: "Filesystem {{'{{ $labels.mountpoint }}'}} nearly full on {{'{{ $labels.instance }}'}}"
+      description: "Filesystem {{'{{ $labels.mountpoint }}'}} on {{'{{ $labels.instance }}'}} is 80% full ({{'{{ $value | humanizePercentage }}'}} available). Consider cleaning up disk space."
 
   - alert: filesystem_full_critical
     expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs|vfat",mountpoint!~"/media/.*"} / node_filesystem_size_bytes) < 0.1
@@ -91,8 +91,8 @@ groups:
     labels:
       severity: critical
     annotations:
-      summary: "Filesystem {{ $labels.mountpoint }} critically full on {{ $labels.instance }}"
-      description: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} is 90% full ({{ $value | humanizePercentage }} available). Immediate action required!"
+      summary: "Filesystem {{'{{ $labels.mountpoint }}'}} critically full on {{'{{ $labels.instance }}'}}"
+      description: "Filesystem {{'{{ $labels.mountpoint }}'}} on {{'{{ $labels.instance }}'}} is 90% full ({{'{{ $value | humanizePercentage }}'}} available). Immediate action required!"
 
   - alert: filesystem_health_check_failed
     expr: node_filesystem_health_check_failed > 0
@@ -100,5 +100,6 @@ groups:
     labels:
       severity: critical
     annotations:
-      summary: "Filesystem health check failed on {{ $labels.instance }}"
-      description: "Filesystem error patterns were detected by periodic host checks on {{ $labels.instance }}. Review kernel logs and run fsck during maintenance if needed."
+      summary: "Filesystem health check failed on {{'{{ $labels.instance }}'}}"
+      description: "Filesystem error patterns were detected by periodic host checks on {{'{{ $labels.instance }}'}}. Review kernel logs and run fsck during maintenance if needed."
+      
