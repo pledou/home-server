@@ -52,6 +52,10 @@
       - AppAPISecret
       - turn_secret
 
+- name: Compute facts for GPU detection
+  ansible.builtin.set_fact:
+    gpu: "{{ 'intel' if gpu_intel_available and gpu_nextcloud_prefer_intel else gpu_mode_effective | default('none') }}"
+
 - name: Create nextcloud provisionning directories
   become: true
   ansible.builtin.file:
@@ -426,4 +430,36 @@
   register: context_chat_timeout
   failed_when: false
   changed_when: "'set to' in context_chat_timeout.stdout or 'Config value' in context_chat_timeout.stdout"
+
+- name: Patch Recognize to enable Intel GPU backend
+  when: gpu == 'intel'
+  block:
+    - name: Ensure Recognize app directory exists
+      ansible.builtin.stat:
+        path: "{{ nextcloud_apps_dir }}/recognize"
+      register: recognize_dir
+
+    - name: Patch TensorFlow GPU detection (PHP)
+      when: recognize_dir.stat.exists
+      ansible.builtin.replace:
+        path: "{{ nextcloud_apps_dir }}/recognize/lib/Service/TensorflowService.php"
+        regexp: 'tf.config.list_physical_devices\("GPU"\)'
+        replace: '["XPU"]'
+
+    - name: Patch Python backend to use OpenVINO GPU
+      when: recognize_dir.stat.exists
+      ansible.builtin.copy:
+        dest: "{{ nextcloud_apps_dir }}/recognize/python/openvino_backend.py"
+        mode: '0644'
+        content: |
+          from openvino.runtime import Core
+          ie = Core()
+          device = "GPU"
+
+    - name: Force Recognize to load OpenVINO backend
+      when: recognize_dir.stat.exists
+      ansible.builtin.lineinfile:
+        path: "{{ nextcloud_apps_dir }}/recognize/python/tf_backend.py"
+        insertafter: '^import tensorflow'
+        line: 'from openvino_backend import ie, device'
 ...

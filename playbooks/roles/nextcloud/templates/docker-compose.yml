@@ -75,6 +75,10 @@ services:
       - elasticsearch
     secrets:
       - postgres_password
+    {% if gpu == 'intel' %}
+    devices:
+      - /dev/dri:/dev/dri
+    {% endif %}
 
   redis:
     labels:

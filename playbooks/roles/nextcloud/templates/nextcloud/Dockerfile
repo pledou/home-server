@@ -17,9 +17,59 @@ RUN set -ex; \
     ; \
     rm -rf /var/lib/apt/lists/*
 
+{% if gpu == 'intel' %}
+RUN apt-get update && \
+    apt-get install -y lsb-release && \
+    echo "deb http://ftp.debian.org/debian $(lsb_release -cs) non-free" >> \
+       /etc/apt/sources.list.d/intel-graphics.list && \
+    apt-get update && \
+    apt-get install -y intel-media-va-driver-non-free ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN GID=`stat -c "%g" /dev/dri/renderD128` && \
+    groupadd -g $GID render2 || true && \
+    GROUP=`getent group $GID | cut -d: -f1` && \
+    usermod -aG $GROUP www-data
+# CF https://memories.gallery/hw-transcoding/#docker
 
 RUN set -ex; \
-    \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        python3 \
+        python3-pip \
+        python3-venv \
+        intel-opencl-icd \
+        intel-level-zero-gpu \
+        level-zero \
+    ; \
+    rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install --no-cache-dir \
+        pillow \
+        numpy \
+        opencv-python-headless \
+        onnxruntime \
+        onnx \
+        tensorflow==2.15.0 \
+        intel-extension-for-tensorflow==2.15.0 \
+        openvino==2024.4.0 \
+        openvino-dev==2024.4.0
+
+RUN apt-get update && \
+    apt-get install -y \
+        intel-opencl-icd \
+        intel-level-zero-gpu \
+        level-zero \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV TF_ENABLE_ONEDNN_OPTS=1
+ENV TF_XPU_ONEDNN_ENABLE=1
+ENV OPENVINO_DEVICE=GPU
+
+{% endif %}
+
+RUN set -ex; \
+    \ 
     savedAptMark="$(apt-mark showmanual)"; \
     \
     apt-get update; \
