@@ -185,40 +185,37 @@ services:
     restart: unless-stopped
 
 {% if gpu_nvidia_available | default(false) %}
-  nvidia-gpu-exporter:
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
-    image: "{{ nvidia_gpu_exporter_image }}:{{ nvidia_gpu_exporter_version }}"
-    # Explicit field list: driver 580+ added fields with "[us]"/"[ms]" unit suffixes
-    # in their names, which are invalid Prometheus metric names and crash the exporter.
-    # Only query the stable, well-known fields that work across all driver versions.
-    command:
-      - "--query-field-names=timestamp,index,name,driver_version,temperature.gpu,fan.speed,\
-        utilization.gpu,utilization.memory,\
-        memory.total,memory.free,memory.used,\
-        power.draw,power.limit,\
-        clocks.current.graphics,clocks.current.sm,clocks.current.memory,\
-        pcie.link.gen.current,pcie.link.gen.max,\
-        pstate"
-    restart: unless-stopped
+  nvidia-dcgm-exporter:
+    image: {{ nvidia_gpu_exporter_image }}:{{ nvidia_gpu_exporter_version }}-distroless
+    runtime: nvidia
     networks:
       backend:
         aliases:
           - nvidia-gpu-exporter
-    environment:
-      NVIDIA_VISIBLE_DEVICES: all
     deploy:
+      mode: global
       resources:
         reservations:
           devices:
-            - driver: nvidia
-              capabilities: [gpu]
+            - capabilities: [gpu]
+    command:
+      - "--address=0.0.0.0:9400"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/nvidia-container-runtime/host-files-for-container.d:/etc/nvidia-container-runtime/host-files-for-container.d:ro
 {% endif %}
 
   cadvisor:
     labels:
       - com.centurylinklabs.watchtower.enable=true
     image: "{{ cadvisor_image }}:{{ cadvisor_version }}"
+    command:
+      - "--docker_only=true"
+      - "--housekeeping_interval=15s"
+      - "--allow_dynamic_housekeeping=false"
+      - "--machine_id_file=/etc/machine-id"
+      - "--store_container_labels=false"
+      - "--disable_metrics=advtcp,cpu_topology,cpuset,hugetlb,memory_numa,resctrl,sched,tcp,udp,diskIO,cpuLoad,perf_event,process,referenced_memory"
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
