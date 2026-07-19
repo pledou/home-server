@@ -34,9 +34,17 @@ services:
       - traefik.http.routers.nginx-https.rule=Host(`{{ app_domain_name }}`)
       - traefik.http.routers.nginx-https.priority=10
       - traefik.http.routers.nginx-https.entrypoints=https
-      - traefik.http.routers.nginx-https.middlewares=nginx@docker,real-ip@docker
+      - traefik.http.routers.nginx-https.middlewares=nginx@docker,real-ip@docker,noh3@docker
       - traefik.http.routers.nginx-https.tls=true
       - traefik.http.routers.nginx-https.tls.certresolver=le
+      - traefik.http.routers.nginx-https.service=nginx
+  
+      # Disable HTTP/3 for OCS because not supported by context_agent:2.6.0
+      - "traefik.http.middlewares.noh3.headers.customresponseheaders.Alt-Svc="
+      - "traefik.http.routers.nextcloud-exapp.rule=Host(`{{ app_domain_name }}`) && Path(`/ocs/v1.php/apps/app_api/api/v1/ex-app`)"
+      - "traefik.http.routers.nextcloud-exapp.entrypoints=https"
+      - "traefik.http.routers.nextcloud-exapp.service=nginx"
+      - "traefik.http.routers.nextcloud-exapp.middlewares=noh3@docker"
 
       - traefik.http.services.nginx.loadbalancer.server.port=80
 
