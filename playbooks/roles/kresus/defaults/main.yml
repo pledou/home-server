@@ -4,6 +4,6 @@
 kresus_postgres_image: "postgres"
 kresus_postgres_version: "15"
 apprise_image: "caronc/apprise"
-apprise_version: "1.4"
+apprise_version: "1.5"
 kresus_image: "bnjbvr/kresus"
-kresus_version: "0.23.6"
+kresus_version: "0.25.1"
