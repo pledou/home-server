@@ -48,9 +48,9 @@ services:
       AUDIO_STT_OPENAI_API_KEY: "openai-api-key"
       AUDIO_STT_MODEL: "{{ speaches_stt_model }}"
       ENABLE_ADMIN_EXPORT: False
-      {% if IA_openai_api_key is defined and IA_openai_api_key != "" %}
-      OPENAI_API_BASE_URLS: "{{ IA_openai_api_url }}"
-      OPENAI_API_KEYS: "{{ IA_openai_api_key }}"
+      {% if ia_openai_api_key is defined and ia_openai_api_key != "" %}
+      OPENAI_API_BASE_URLS: "{{ ia_openai_api_url }}"
+      OPENAI_API_KEYS: "{{ ia_openai_api_key }}"
       {% endif %}
 
       # Vector Database for RAG
@@ -93,7 +93,6 @@ services:
           - webui-api-proxy
     volumes:
       - ./webui-api-proxy.conf:/etc/nginx/conf.d/default.conf:ro
-
 
   ollama:
     labels:
@@ -176,80 +175,54 @@ services:
         aliases:
           - ollama-metrics
 
-  {% if not ollama_embeddings_use_gpu and gpu != 'intel' %}
   ollama-embeddings:
     labels:
       - com.centurylinklabs.watchtower.enable=true
+    {% if not ollama_embeddings_use_gpu and gpu != 'intel' %}
     image: "{{ ollama_embeddings_image }}:{{ ollama_embeddings_version }}"
-    healthcheck:
-      test: ollama --version || exit 1
     command: serve
-    pull_policy: always
-    tty: true
-    restart: always
-    environment:
-      - OLLAMA_KEEP_ALIVE=24h
-      - OLLAMA_NUM_THREADS={{ ollama_embeddings_num_threads }}
-      - OLLAMA_HOST=0.0.0.0
-    networks:
-      network:
-        aliases:
-          - ollama-embeddings
-    volumes:
-      - ollama-embeddings:/root/.ollama
-    
-    cpus: "{{ ollama_embeddings_cpu_limit }}"
-    mem_limit: "{{ ollama_embeddings_memory_limit_mb }}m"
-    shm_size: "{{ ollama_embeddings_shm_size_mb }}m"
-
-    {% if gpu == 'nvidia' %}
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              capabilities: [gpu]
-    {% endif %}
-  {% else %}
-  ollama-embeddings:
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
+    {% else %}
     user: root
     image: "{{ ollama_embeddings_intel_image }}:{{ ollama_embeddings_intel_version }}"
-    cpus: "{{ ollama_embeddings_cpu_limit }}"
-    mem_limit: "{{ ollama_embeddings_memory_limit_mb }}m"
-    shm_size: "{{ ollama_embeddings_shm_size_mb }}m" 
+    working_dir: /llm/scripts/
+    command: ["bash", "-c", "source ipex-llm-init --gpu --device iGPU && bash start-ollama.sh"]
+    devices:
+      - /dev/dri:/dev/dri
+    {% endif %}
     pull_policy: always
     tty: true
     restart: always
     environment:
-      - DEVICE=iGPU
       - OLLAMA_KEEP_ALIVE=24h
       - OLLAMA_NUM_THREADS={{ ollama_embeddings_num_threads }}
       - OLLAMA_HOST=0.0.0.0
+      {% if ollama_embeddings_use_gpu or gpu == 'intel' %}
+      - DEVICE=iGPU
       - no_proxy=localhost,127.0.0.1
       - OLLAMA_NUM_GPU=999
       - ZES_ENABLE_SYSMAN=1
       - SYCL_CACHE_PERSISTENT=1
       - SYCL_PI_LEVEL_ZERO_USE_IMMEDIATE_COMMANDLISTS=1
-    working_dir: /llm/scripts/
-    command: ["bash", "-c", "source ipex-llm-init --gpu --device iGPU && bash start-ollama.sh"]
-    
-    volumes:
-      - ollama-embeddings:/root/.ollama
-    devices:
-      - /dev/dri:/dev/dri
+      {% endif %}
     networks:
       network:
         aliases:
           - ollama-embeddings
+    volumes:
+      - ollama-embeddings:/root/.ollama
+    cpus: "{{ ollama_embeddings_cpu_limit }}"
+    mem_limit: "{{ ollama_embeddings_memory_limit_mb }}m"
+    shm_size: "{{ ollama_embeddings_shm_size_mb }}m"
+    {% if gpu == 'nvidia' or ollama_embeddings_use_gpu or gpu == 'intel' %}
     deploy:
       resources:
         reservations:
           devices:
-            - driver: intel
+            - driver: {{ 'nvidia' if gpu == 'nvidia' else 'intel' }}
               capabilities: [gpu]
-  {% endif %}
+    {% endif %}
+    healthcheck:
+      test: ollama --version || exit 1
 
   ollama-embeddings-metrics:
     labels:
@@ -330,6 +303,179 @@ services:
         aliases:
           - chromadb
 
+  mindroom:
+    container_name: mindroom
+    volumes:
+      - "{{ docker_volumes_path }}/mindroom-config/config.yaml:/app/config.yaml"
+      - mindroom-data:/app/mindroom_data
+      - mindroom-logs:/app/logs
+    environment:
+      - MATRIX_HOMESERVER=http://synapse:8008
+      - MATRIX_SERVER_NAME=m.{{ app_domain_name }}
+    depends_on:
+      synapse:
+        condition: service_healthy
+    networks:
+      - network
+      - traefik_backend
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+      - traefik.enable=true
+      # Dashboard routes go directly to the MindRoom runtime, which now serves the bundled UI
+      - traefik.docker.network=traefik_backend
+      - traefik.http.routers.mindroom-https.rule=Host(`mindroom.{{ app_domain_name }}`)
+      - traefik.http.routers.mindroom-https.entrypoints=https
+      - traefik.http.routers.mindroom-https.tls=true
+      - traefik.http.routers.mindroom-https.tls.certresolver=le
+      - traefik.http.routers.mindroom-https.priority=50
+      - traefik.http.routers.mindroom-https.middlewares=authentik@docker
+      - traefik.http.routers.mindroom-https.service=mindroom
+      - traefik.http.services.mindroom.loadbalancer.server.port=8765
+
+      # OpenAI-compatible /v1 routes go directly to the MindRoom runtime (has its own auth)
+      - traefik.http.routers.mindroom-v1.rule=Host(`mindroom.{{ app_domain_name }}`) && PathPrefix(`/v1`)
+      - traefik.http.routers.mindroom-v1.entrypoints=https
+      - traefik.http.routers.mindroom-v1.tls=true
+      - traefik.http.routers.mindroom-v1.tls.certresolver=le
+      - traefik.http.routers.mindroom-v1.service=mindroom-v1
+      - traefik.http.routers.mindroom-v1.priority=100
+      - traefik.http.services.mindroom-v1.loadbalancer.server.port=8765
+
+    image: "{{ mindroom_image }}:{{ mindroom_version }}"
+
+  mindroom-chat:
+    image: ghcr.io/mindroom-ai/mindroom-chat:latest
+    environment:
+      - CLIENT_HOMESERVER_URL=https://m.{{ app_domain_name }}
+      - MINDROOM_DASHBOARD_URL=https://mindroom.{{ app_domain_name }}
+      - APP_BASE_PATH=/
+      - APP_ENABLE_SERVICE_WORKER=true
+    volumes:
+      - "{{ docker_volumes_path }}/mindroom-config/client-config.json:/app/config.template.json:ro"
+    command: >
+      sh -c "envsubst < /app/config.template.json > /app/config.json && exec nginx -g 'daemon off;'"
+    depends_on:
+      synapse:
+        condition: service_healthy
+      mindroom:
+        condition: service_started
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+      - traefik.enable=true
+      - traefik.http.routers.mindroom-chat.rule=Host(`chat.{{ app_domain_name }}`)
+      - traefik.http.routers.mindroom-chat.entrypoints=https
+      - traefik.http.routers.mindroom-chat.tls=true
+      - traefik.http.routers.mindroom-chat.tls.certresolver=le
+      - traefik.http.routers.mindroom-chat.services=mindroom-chat
+      - traefik.http.services.mindroom-chat.loadbalancer.server.port=8080
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/config.json"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  sandbox-runner:
+    image:  "{{ mindroom_image }}:{{ mindroom_version }}"
+    container_name: mindroom-sandbox-runner
+    restart: always
+    user: 1000:1000
+    command: ["/app/run-sandbox-runner.sh"]
+    volumes:
+      - mindroom-sandbox-workspace:/app/workspace
+    environment:
+      - MINDROOM_SANDBOX_RUNNER_MODE=true
+      - MINDROOM_SANDBOX_PROXY_TOKEN=${MINDROOM_SANDBOX_PROXY_TOKEN:-sandbox-secret}
+      - MINDROOM_CONFIG_PATH=/app/config.yaml
+      - MINDROOM_STORAGE_PATH=/app/workspace/.mindroom
+    networks:
+      - network
+  synapse:
+    image: "{{ synapse_image }}:{{ synapse_version }}"
+    container_name: synapse
+    environment:
+      SYNAPSE_SERVER_NAME: m.{{ app_domain_name }}
+      SYNAPSE_REPORT_STATS: "no"
+      SYNAPSE_DATABASE_URL: postgresql://synapse:{{ synapse_postgres_password }}@synapse-postgres:5432/synapse
+      SYNAPSE_REDIS_URL: redis://synapse-redis:6379
+    depends_on:
+      synapse-postgres:
+        condition: service_healthy
+      synapse-redis:
+        condition: service_healthy
+    extra_hosts:
+      - "{{ app_domain_name }}:host-gateway"
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - synapse-data:/data
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-fSs", "http://localhost:8008/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - network
+      - traefik_backend
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.http.routers.synapse-matrix.rule=Host(`m.{{ app_domain_name }}`)
+      - traefik.http.routers.synapse-matrix.entrypoints=https
+      - traefik.http.routers.synapse-matrix.tls=true
+      - traefik.http.routers.synapse-matrix.tls.certresolver=le
+      - traefik.http.routers.synapse-matrix.service=synapse-matrix
+      - traefik.http.services.synapse-matrix.loadbalancer.server.port=8008
+      - traefik.http.routers.synapse-fed.rule=Host(`matrix-federation.{{ app_domain_name }}`)
+      - traefik.http.routers.synapse-fed.entrypoints=https
+      - traefik.http.routers.synapse-fed.tls=true
+      - traefik.http.routers.synapse-fed.tls.certresolver=le
+      - traefik.http.routers.synapse-fed.service=synapse-fed
+      - traefik.http.services.synapse-fed.loadbalancer.server.port=8080
+
+  synapse-postgres:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    image: "{{ synapse_postgres_image }}:{{ synapse_postgres_version | default('15') }}"
+    container_name: synapse-postgres
+    environment:
+      POSTGRES_DB: synapse
+      POSTGRES_USER: synapse
+      POSTGRES_PASSWORD_FILE: /run/secrets/synapse_postgres_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - synapse-postgres-data:/var/lib/postgresql/data
+    secrets:
+      - synapse_postgres_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U synapse"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      network:
+        aliases:
+          - synapse-postgres
+    restart: always
+
+  synapse-redis:
+    image: redis:7-alpine
+    container_name: synapse-redis
+    volumes:
+      - synapse-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      network:
+        aliases:
+          - synapse-redis
+    restart: always
+
 volumes:
   ollama:
     driver: local
@@ -362,6 +508,43 @@ volumes:
       o: bind
       device: "{{ docker_volumes_path }}/chromadb"
 
+  synapse-postgres-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/synapse-postgres-data"
+  synapse-redis-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/synapse-redis-data"
+  synapse-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/synapse-data"
+  mindroom-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/mindroom-data"
+  mindroom-logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/mindroom-logs"
+  mindroom-sandbox-workspace:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/mindroom-sandbox-workspace"
+
 networks:
   network:
   traefik_backend:
@@ -371,6 +554,8 @@ networks:
 
 secrets:
   webui_oauth_client_id:
-    file: {{ docker_volumes_path }}/secrets/webui_oauth_client_id
+    file: "{{ docker_volumes_path }}/secrets/webui_oauth_client_id"
   webui_oauth_client_secret:
-    file: {{ docker_volumes_path }}/secrets/webui_oauth_client_secret
+    file: "{{ docker_volumes_path }}/secrets/webui_oauth_client_secret"
+  synapse_postgres_password:
+    file: "{{ docker_volumes_path }}/secrets/synapse_postgres_password"
