@@ -1,15 +1,15 @@
 {
   "defaultHomeserver": 0,
   "homeserverList": ["https://m.{{ app_domain_name }}"],
-  "allowCustomHomeservers": true,
+  "allowCustomHomeservers": false,
   "sidebar": {
     "showExploreCommunity": false,
     "showAddSpace": false,
-    "showMindRoom": false,
+    "showMindRoom": true,
     "mindRoomUrl": "https://mindroom.{{ app_domain_name }}"
   },
   "auth": {
-    "hideServerPickerWhenSingle": false,
+    "hideServerPickerWhenSingle": true,
     "allowRegistration": true,
     "requireAppleProvider": false
   },

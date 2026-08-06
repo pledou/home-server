@@ -373,11 +373,24 @@ agents:
     skills: []
     tools: []
 authorization:
-  default_room_access: false
-  config_command_enabled: false
-  global_users:
+  global_users:                    # Users with access to all rooms
   - '@test:m-test-4.mindroom.chat'
-  room_permissions: {}
+  room_permissions: {}             # Keys: room ID (!id), full alias (#alias:domain), or managed room key (alias)
+  default_room_access: true       # Default: false
+  config_command_enabled: true    # Enable !config for global admin users; default: false
+  aliases: {}                      # Map canonical Matrix user IDs to bridge aliases (see authorization docs)
+  agent_reply_permissions: {}      # Per-agent/team/router (or '*') reply allowlists; supports globs like '*:example.com'
+
+# Matrix room onboarding/discoverability (optional)
+matrix_room_access:
+  mode: multi_user        # Default keeps invite-only/private behavior
+  multi_user_join_rule: knock     # In multi_user mode: public or knock
+  publish_to_room_directory: true # Publish managed rooms in server room directory
+  invite_only_rooms: []            # Room keys/aliases/IDs that stay invite-only/private
+  reconcile_existing_rooms: true  # Explicit migration of existing managed rooms
+  encrypt_managed_rooms: false     # Enable Matrix E2EE on managed rooms (irreversible per room)
+  room_admins: []                  # Matrix user IDs granted admin power (100) in every managed room
+
 bot_accounts: []
 mindroom_user:
   display_name: MindRoomUser

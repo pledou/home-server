@@ -86,6 +86,25 @@
       - name: synapse_macaroon_secret_key
         length: 32
         chars: hexdigits
+      - name: matrix_registration_shared_secret
+        length: 32
+
+- name: Copy matrix_registration_shared_secret to secrets with containers uid
+  become: true
+  ansible.builtin.copy:
+    remote_src: true
+    src: "{{ docker_volumes_path }}/secrets/matrix_registration_shared_secret"
+    dest: "{{ docker_volumes_path }}/secrets/{{ item.dest }}"
+    mode: '0440'
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+  loop:
+    - dest: mindroom_matrix_registration_shared_secret
+      owner: 1000
+      group: 1000
+    - dest: synapse_matrix_registration_shared_secret
+      owner: 991
+      group: 991
 
 - name: Create Speaches cache directory (ubuntu-owned)
   become: true
@@ -183,7 +202,7 @@
           - provider:
               name: "matrix-synapse-provider"
               redirect_uris:
-                - url: "https://m.{{ app_domain_name }}/oauth/oidc/callback"
+                - url: "https://m.{{ app_domain_name }}/_synapse/client/oidc/callback"
                   matching_mode: "strict"
               client_type: "confidential"
               sub_mode: "user_email"
@@ -196,12 +215,39 @@
             app:
               name: "Matrix Synapse"
               slug: "{{ matrix_oauth_slug_name }}"
-              meta_launch_url: "https://m.{{ app_domain_name }}"
+              meta_launch_url: "https://chat.{{ app_domain_name }}"
               meta_description: "Synapse Matrix server for secure messaging and collaboration."
         provider_apps:
           - provider:
+              name: "matrix-admin-provider"
+              external_host: "https://m-admin.{{ app_domain_name }}"
+            app:
+              name: "Matrix Admin"
+              slug: matrix-admin
+          - provider:
               name: "mindroom-provider"
               external_host: "https://mindroom.{{ app_domain_name }}"
+              property_mappings:
+                - name: "mindroom-mappings"
+                  expression: |
+                    email = user.email
+                    if email and '@' in email:
+                        localpart = email.split('@')[0]
+                        matrix_id = f"@{localpart}:m.leducd.duckdns.org"
+                    else:
+                        matrix_id = ""
+                    return {
+                        "ak_proxy": {
+                            "user_attributes": {
+                                "additionalHeaders": {
+                                    "X-MindRoom-User-Id": str(user.id),
+                                    "X-MindRoom-User-Email": str(user.email),
+                                    "X-MindRoom-Matrix-User-Id": matrix_id
+                                }
+                            }
+                        }
+                    }
+                  scope_name: "mindroom-scope"
             app:
               name: "MindRoom"
               slug: "mindroom"
@@ -497,5 +543,3 @@
     label: "{{ item.item | default('unknown') }}"
   when:
     - (item.status | default(0) | int) == 500
-
-...

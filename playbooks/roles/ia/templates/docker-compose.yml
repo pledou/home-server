@@ -309,9 +309,28 @@ services:
       - "{{ docker_volumes_path }}/mindroom-config/config.yaml:/app/config.yaml"
       - mindroom-data:/app/mindroom_data
       - mindroom-logs:/app/logs
+      - ./mindroom-entrypoint.sh:/app/mindroom-entrypoint.sh:ro
+    secrets:
+      - mindroom_matrix_registration_shared_secret
+      # working only on swarm
+      # - source: matrix_registration_shared_secret
+      #   target: matrix_registration_shared_secret
+      #   uid: "1000"
+      #   gid: "1000"
+      #   mode: "0440"
     environment:
+      - MINDROOM_USER={{ ansible_user }}
+      - MINDROOM_GROUP={{ ansible_group }}
       - MATRIX_HOMESERVER=http://synapse:8008
       - MATRIX_SERVER_NAME=m.{{ app_domain_name }}
+      - MINDROOM_DESKTOP_MATRIX_HOMESERVER=https://m.{{ app_domain_name }}
+      - MINDROOM_TRUSTED_UPSTREAM_AUTH_ENABLED=true
+      - MINDROOM_TRUSTED_UPSTREAM_USER_ID_HEADER=X-MindRoom-User-Id
+      - MINDROOM_TRUSTED_UPSTREAM_EMAIL_HEADER=X-MindRoom-User-Email
+      - MINDROOM_TRUSTED_UPSTREAM_MATRIX_USER_ID_HEADER=X-MindRoom-Matrix-User-Id
+      - MINDROOM_TRUSTED_UPSTREAM_EMAIL_TO_MATRIX_USER_ID_TEMPLATE='@{localpart}:m.{{ app_domain_name }}'
+
+      - MATRIX_REGISTRATION_SHARED_SECRET_FILE=/run/secrets/mindroom_matrix_registration_shared_secret
     depends_on:
       synapse:
         condition: service_healthy
@@ -362,18 +381,22 @@ services:
     labels:
       - com.centurylinklabs.watchtower.enable=true
       - traefik.enable=true
+      - traefik.docker.network=traefik_backend
       - traefik.http.routers.mindroom-chat.rule=Host(`chat.{{ app_domain_name }}`)
       - traefik.http.routers.mindroom-chat.entrypoints=https
       - traefik.http.routers.mindroom-chat.tls=true
       - traefik.http.routers.mindroom-chat.tls.certresolver=le
-      - traefik.http.routers.mindroom-chat.services=mindroom-chat
-      - traefik.http.services.mindroom-chat.loadbalancer.server.port=8080
+      - traefik.http.routers.mindroom-chat.service=mindroom-chat
+      - traefik.http.services.mindroom-chat.loadbalancer.server.port=80
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/config.json"]
       interval: 30s
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - network
+      - traefik_backend
 
   sandbox-runner:
     image:  "{{ mindroom_image }}:{{ mindroom_version }}"
@@ -396,8 +419,16 @@ services:
     environment:
       SYNAPSE_SERVER_NAME: m.{{ app_domain_name }}
       SYNAPSE_REPORT_STATS: "no"
+      SYNAPSE_NO_TLS: true
       SYNAPSE_DATABASE_URL: postgresql://synapse:{{ synapse_postgres_password }}@synapse-postgres:5432/synapse
       SYNAPSE_REDIS_URL: redis://synapse-redis:6379
+    secrets:
+      - synapse_matrix_registration_shared_secret
+      # - source: matrix_registration_shared_secret
+      #   target: matrix_registration_shared_secret
+      #   uid: "991"
+      #   gid: "991"
+      #   mode: "0440"
     depends_on:
       synapse-postgres:
         condition: service_healthy
@@ -427,6 +458,8 @@ services:
       - traefik.http.routers.synapse-matrix.tls=true
       - traefik.http.routers.synapse-matrix.tls.certresolver=le
       - traefik.http.routers.synapse-matrix.service=synapse-matrix
+      - traefik.http.middlewares.synapse-headers.headers.customrequestheaders.X-Forwarded-Proto=https
+      - traefik.http.routers.synapse-matrix.middlewares=synapse-headers
       - traefik.http.services.synapse-matrix.loadbalancer.server.port=8008
       - traefik.http.routers.synapse-fed.rule=Host(`matrix-federation.{{ app_domain_name }}`)
       - traefik.http.routers.synapse-fed.entrypoints=https
@@ -434,6 +467,27 @@ services:
       - traefik.http.routers.synapse-fed.tls.certresolver=le
       - traefik.http.routers.synapse-fed.service=synapse-fed
       - traefik.http.services.synapse-fed.loadbalancer.server.port=8080
+
+  synapse-admin:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.http.routers.synapse-admin.rule=Host(`m-admin.{{ app_domain_name }}`)
+      - traefik.http.routers.synapse-admin.entrypoints=https
+      - traefik.http.routers.synapse-admin.tls=true
+      - traefik.http.routers.synapse-admin.tls.certresolver=le
+      - traefik.http.routers.synapse-admin.service=synapse-admin
+      - traefik.http.services.synapse-admin.loadbalancer.server.port=80
+      - traefik.http.routers.synapse-admin.middlewares=authentik@docker
+    container_name: synapse-admin
+    hostname: synapse-admin
+    image: awesometechnologies/synapse-admin:master
+    environment:
+      REACT_APP_SERVER: "https://m.{{ app_domain_name }}"
+    restart: unless-stopped
+    networks:
+      - traefik_backend
 
   synapse-postgres:
     labels:
@@ -454,6 +508,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 15s
     networks:
       network:
         aliases:
@@ -470,6 +525,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 15s
     networks:
       network:
         aliases:
@@ -559,3 +615,7 @@ secrets:
     file: "{{ docker_volumes_path }}/secrets/webui_oauth_client_secret"
   synapse_postgres_password:
     file: "{{ docker_volumes_path }}/secrets/synapse_postgres_password"
+  synapse_matrix_registration_shared_secret:
+    file: "{{ docker_volumes_path}}/secrets/synapse_matrix_registration_shared_secret"
+  mindroom_matrix_registration_shared_secret:
+    file: "{{ docker_volumes_path}}/secrets/mindroom_matrix_registration_shared_secret"
