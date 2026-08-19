@@ -29,6 +29,7 @@
     path: "{{ docker_volumes_path }}/unbound"
     state: directory
     mode: u=rw,g=o=r
+    owner: "{{ ansible_user }}"
   when: unbound is defined and unbound
 
 - name: Detect DHCP upstream DNS server
@@ -66,6 +67,7 @@
     src: "{{ item }}"
     dest: "{{ docker_volumes_path }}/unbound/{{ item }}"
     mode: u=rw,g=o=r
+    owner: "{{ ansible_user }}"
   loop:
     - unbound.conf
     - a-records.conf
