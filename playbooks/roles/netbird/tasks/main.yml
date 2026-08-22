@@ -1,0 +1,131 @@
+---
+- name: Create NetBird directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ netbird_volume_path }}"
+    - "{{ netbird_data_path }}"
+    - "{{ netbird_config_path }}"
+  tags: netbird
+
+- name: Create NetBird environment file
+  ansible.builtin.template:
+    src: netbird.env.j2
+    dest: "{{ netbird_config_path }}/.env"
+    mode: '0600'
+  tags: netbird
+
+- name: Create NetBird docker-compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ netbird_volume_path }}/docker-compose.yml"
+    mode: '0600'
+  tags: netbird
+
+- name: Create Authentik OIDC provider for NetBird
+  ansible.builtin.uri:
+    url: "https://{{ authentik_domain | default(app_domain_name) }}/api/v3/providers/oauth2/"
+    method: POST
+    user: "{{ authentik_api_user | default('akadmin') }}"
+    password: "{{ authentik_api_password }}"
+    headers:
+      Content-Type: "application/json"
+      Authorization: "Bearer {{ authentik_api_token }}"
+    body_format: json
+    body:
+      name: "NetBird OAuth2 Provider"
+      client_id: "{{ netbird_oidc_client_id }}"
+      client_type: "confidential"
+      authorization_flow: "{{ authentik_oauth2_flow_id | default('default-authorization-flow') }}"
+      redirect_uris: "{{ netbird_oidc_redirect_uri }}"
+      skip_authorization: false
+      access_code_validity: "minutes=10"
+      access_token_validity: "hours=24"
+      refresh_token_validity: "days=30"
+    status_code: [201, 400]
+    validate_certs: true
+  register: authentik_oauth_result
+  when: authentik_api_token is defined
+  ignore_errors: true
+  tags: netbird
+
+- name: Store NetBird OIDC client secret
+  ansible.builtin.set_fact:
+    netbird_oidc_client_secret: "{{ authentik_oauth_result.json.client_secret }}"
+  when: 
+    - authentik_oauth_result.json is defined
+    - authentik_oauth_result.json.client_secret is defined
+  tags: netbird
+
+- name: Create Authentik application for NetBird
+  ansible.builtin.uri:
+    url: "https://{{ authentik_domain | default(app_domain_name) }}/api/v3/core/applications/"
+    method: POST
+    user: "{{ authentik_api_user | default('akadmin') }}"
+    password: "{{ authentik_api_password }}"
+    headers:
+      Content-Type: "application/json"
+      Authorization: "Bearer {{ authentik_api_token }}"
+    body_format: json
+    body:
+      name: "NetBird VPN"
+      slug: "netbird-vpn"
+      provider: "{{ authentik_oauth_result.json.id | default(1) }}"
+      comment: "NetBird VPN access with OIDC authentication"
+    status_code: [201, 400]
+    validate_certs: true
+  when: authentik_api_token is defined
+  ignore_errors: true
+  tags: netbird
+
+- name: Pull NetBird images
+  ansible.builtin.command:
+    cmd: "docker compose -f {{ netbird_volume_path }}/docker-compose.yml pull"
+  environment:
+    DOCKER_HOST: "unix:///var/run/docker.sock"
+  tags: netbird
+
+- name: Start NetBird services
+  ansible.builtin.command:
+    cmd: "docker compose -f {{ netbird_volume_path }}/docker-compose.yml up -d"
+  environment:
+    DOCKER_HOST: "unix:///var/run/docker.sock"
+  tags: netbird
+
+- name: Wait for NetBird Management API to be ready
+  ansible.builtin.uri:
+    url: "https://localhost:{{ netbird_management_port }}/health"
+    method: GET
+    validate_certs: false
+    status_code: [200, 404]
+  register: netbird_health
+  until: netbird_health.status in [200, 404]
+  retries: 30
+  delay: 10
+  tags: netbird
+
+- name: Configure Traefik for NetBird Management UI
+  ansible.builtin.template:
+    src: traefik-netbird.yml.j2
+    dest: "{{ docker_volumes_path }}/traefik/config/netbird.yml"
+    mode: '0644'
+  notify: restart traefik
+  tags: [netbird, traefik]
+
+- name: Output NetBird connection information
+  ansible.builtin.debug:
+    msg:
+      - "NetBird VPN Setup Complete!"
+      - "Management UI: https://{{ netbird_domain }}"
+      - "Signal Server: {{ inventory_hostname }}:{{ netbird_signal_port }}"
+      - "Virtual Network CIDR: {{ netbird_network_cidr }}"
+      - ""
+      - "Next steps:"
+      - "1. Access https://{{ netbird_domain }}"
+      - "2. Login with your Authentik credentials"
+      - "3. Download/Install NetBird client"
+      - "4. Run 'netbird up' to connect"
+      - "5. Configure firewall rules in dashboard"
+  tags: netbird

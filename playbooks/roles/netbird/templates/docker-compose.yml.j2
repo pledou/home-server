@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  # NetBird Management Server
+  management:
+    image: {{ netbird_image }}:{{ netbird_version }}
+    container_name: netbird-management
+    restart: unless-stopped
+    networks:
+      - netbird
+      - traefik
+    ports:
+      - "{{ netbird_management_port }}:{{ netbird_management_port }}"
+    volumes:
+      - netbird_data:/var/lib/netbird
+      - netbird_config:/etc/netbird
+      - /etc/letsencrypt/live/{{ netbird_domain }}/cert.pem:/etc/netbird/tls.crt:ro
+      - /etc/letsencrypt/live/{{ netbird_domain }}/privkey.pem:/etc/netbird/tls.key:ro
+    environment:
+      NETBIRD_LOGLEVEL: {{ netbird_log_level }}
+      NETBIRD_BIND_ADDR: 0.0.0.0:{{ netbird_management_port }}
+      NETBIRD_NETWORK_CIDR: {{ netbird_network_cidr }}
+      NETBIRD_DNS_ENABLED: "{{ netbird_dns_enabled | lower }}"
+      NETBIRD_DNS_PORT: "{{ netbird_dns_port }}"
+      NETBIRD_JWT_ISSUER: {{ netbird_oidc_issuer }}
+      NETBIRD_JWT_AUDIENCE: {{ netbird_oidc_audience }}
+      NETBIRD_OAUTH2_CLIENT_ID: {{ netbird_oidc_client_id }}
+      NETBIRD_OAUTH2_CLIENT_SECRET: "{{ netbird_oidc_client_secret | default('') }}"
+      NETBIRD_OAUTH2_REDIRECT_URI: {{ netbird_oidc_redirect_uri }}
+      NETBIRD_DB_ENGINE: {{ netbird_db_engine }}
+      NETBIRD_DB_PATH: {{ netbird_db_path }}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "https://localhost:{{ netbird_management_port }}/health", "--insecure"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.netbird-management.rule: "Host(`{{ netbird_domain }}`)"
+      traefik.http.routers.netbird-management.entrypoints: "websecure"
+      traefik.http.routers.netbird-management.tls: "true"
+      traefik.http.routers.netbird-management.service: "netbird-management"
+      traefik.http.services.netbird-management.loadbalancer.server.port: "{{ netbird_management_port }}"
+      traefik.http.services.netbird-management.loadbalancer.server.scheme: "https"
+
+  # NetBird Signal Server
+  signal:
+    image: {{ netbird_signal_image }}:{{ netbird_version }}
+    container_name: netbird-signal
+    restart: unless-stopped
+    networks:
+      - netbird
+    ports:
+      - "{{ netbird_signal_port }}:{{ netbird_signal_port }}/udp"
+      - "{{ netbird_signal_port }}:{{ netbird_signal_port }}/tcp"
+    volumes:
+      - netbird_data:/var/lib/netbird
+      - netbird_config:/etc/netbird
+    environment:
+      NETBIRD_LOGLEVEL: {{ netbird_log_level }}
+      NETBIRD_BIND_ADDR: 0.0.0.0:{{ netbird_signal_port }}
+      NETBIRD_BIND_ADDR_WEBSOCKET: 0.0.0.0:51821
+    depends_on:
+      - management
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:51821/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+{% if netbird_relay_enabled %}
+  # NetBird Relay Server (optional)
+  relay:
+    image: {{ netbird_relay_image }}:{{ netbird_version }}
+    container_name: netbird-relay
+    restart: unless-stopped
+    networks:
+      - netbird
+    ports:
+      - "{{ netbird_relay_port }}:{{ netbird_relay_port }}/udp"
+      - "{{ netbird_relay_port }}:{{ netbird_relay_port }}/tcp"
+    volumes:
+      - netbird_data:/var/lib/netbird
+      - netbird_config:/etc/netbird
+    environment:
+      NETBIRD_LOGLEVEL: {{ netbird_log_level }}
+      NETBIRD_BIND_ADDR: 0.0.0.0:{{ netbird_relay_port }}
+    depends_on:
+      - management
+      - signal
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:51821/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+{% endif %}
+
+networks:
+  netbird:
+    name: netbird
+    driver: bridge
+  traefik:
+    external: true
+    name: traefik
+
+volumes:
+  netbird_data:
+    name: netbird_data
+    driver: local
+  netbird_config:
+    name: netbird_config
+    driver: local
