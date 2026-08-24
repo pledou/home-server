@@ -142,7 +142,7 @@ frigate_cameras: |-
     provider: ollama
     base_url: "http://ollama:11434"
     #  Error initializing Ollama: model 'gpt-4o' not found
-    model: "ministral-3:3b"
+    model: "gemma4:e4b"
 
 frigate_proxy_auth_secret: !vault |
                            $ANSIBLE_VAULT;1.1;AES256
