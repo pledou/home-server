@@ -183,3 +183,5 @@ nextcloud_apps_config:
   - richdocuments wopi_url --value="https://{{ app_domain_name }}/apps/richdocumentscode/proxy.php?req="
   - richdocuments public_wopi_url --value="https://{{ app_domain_name }}"
   - serverinfo token --value "{{ nextcloud_exporter_auth_token }}"
+
+gpu_nextcloud_prefer_intel: true
