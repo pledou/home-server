@@ -1,328 +1,83 @@
-# code: language=ansible
 ---
-- name: Verify stacks directory exists
-  ansible.builtin.file:
-    path: "/home/{{ ansible_user }}/home-server/stacks/traefik"
-    state: directory
-    mode: u=rwx,g=o=rx
 
-- name: Create Traefik access log directory
-  become: true
-  ansible.builtin.file:
-    path: "{{ traefik_accesslog_host_path }}"
+- name: Create traefik config directory
+  file:
+    path: "{{ docker_volumes_path }}/traefik"
     state: directory
-    mode: u=rwx,g=rx,o=rx
+    mode: u=rwx,g=o=
 
-- name: Create traefik provisionning directories
-  become: true
-  ansible.builtin.file:
-    path: "{{ docker_volumes_path }}/{{ item }}"
+- name: Create traefik dynamic config directory
+  file:
+    path: "{{ docker_volumes_path }}/traefik/dynamics"
+    state: directory
+    mode: u=rwx,g=o=
+
+- name: Create traefik logs directory
+  file:
+    path: "{{ docker_volumes_path }}/traefik/logs"
     state: directory
     mode: u=rw,g=o=r
-  loop:
-    - traefik-public-certificates
-    - traefik-rules
 
-- name: Create unbound directory
-  become: true
-  ansible.builtin.file:
+- name: Create unbound data directory
+  file:
     path: "{{ docker_volumes_path }}/unbound"
     state: directory
     mode: u=rw,g=o=r
+    owner: "{{ ansible_user }}"
   when: unbound is defined and unbound
 
 - name: Detect DHCP upstream DNS server
-  become: true
-  ansible.builtin.shell: |
-    set -o pipefail
-    awk '/^nameserver/{print $2}' /run/systemd/resolve/resolv.conf /etc/resolv.conf 2>/dev/null \
-      | grep -E '^[0-9]+(\.[0-9]+){3}$' \
-      | grep -Ev '^(127\.|0\.)' \
-      | head -n1
-  args:
-    executable: /bin/bash
-  register: dhcp_upstream_dns
-  changed_when: false
-  failed_when: false
-  when:
-    - unbound is defined and unbound
-    - unbound_forward_dns is not defined
+  block:
+    - name: Read DHCP leases
+      command: cat /var/lib/dhcp/dhclient.leases
+      register: dhcp_leases
+      changed_when: false
+      failed_when: false
 
-- name: Set unbound upstream DNS from DHCP or fallback
-  ansible.builtin.set_fact:
-    unbound_forward_dns: >-
-      {{
-        (dhcp_upstream_dns.stdout | trim)
-        if (dhcp_upstream_dns.stdout | trim | length > 0)
-      }}
-  when:
-    - unbound is defined and unbound
-    - unbound_forward_dns is not defined
-    - dhcp_upstream_dns is succeeded
+    - name: Extract domain-name-servers
+      set_fact:
+        dhcp_dns: "{{ (dhcp_leases.stdout | regex_search('domain-name-servers (.+);') | regex_replace('domain-name-servers ', '') | regex_replace(';', '')).split(', ') }}"
+      when: "'domain-name-servers' in dhcp_leases.stdout"
 
-- name: Copy unbound configuration templates
-  become: true
-  ansible.builtin.template:
+    - name: Set default DNS if DHCP query failed
+      set_fact:
+        dhcp_dns: ["8.8.8.8", "8.8.4.4"]
+      when: dhcp_dns is not defined
+
+  when: unbound is defined and unbound
+
+- name: Generate traefik static config
+  template:
+    src: traefik-static.yml.j2
+    dest: "{{ docker_volumes_path }}/traefik/traefik.yml"
+    mode: u=rw,g=,o=
+
+- name: Generate traefik dynamic config
+  template:
+    src: traefik-dynamic.yml.j2
+    dest: "{{ docker_volumes_path }}/traefik/dynamics/file-provider.yml"
+    mode: u=rw,g=,o=
+
+- name: Copy unbound config files
+  copy:
     src: "{{ item }}"
     dest: "{{ docker_volumes_path }}/unbound/{{ item }}"
     mode: u=rw,g=o=r
+    owner: "{{ ansible_user }}"
   loop:
     - unbound.conf
     - a-records.conf
-    - srv-records.conf
-    - forward-records.conf
-    - horizon-online.conf
-    - horizon-offline.conf
   when: unbound is defined and unbound
 
-- name: Initialize active horizon config to online mode
-  become: true
-  ansible.builtin.copy:
-    src: "{{ docker_volumes_path }}/unbound/horizon-online.conf"
-    dest: "{{ docker_volumes_path }}/unbound/horizon-active.conf"
-    remote_src: true
-    force: false
-    mode: u=rw,g=o=r
-  when:
-    - unbound is defined and unbound
-    - unbound_offline_fallback_enabled | bool
-
-- name: Install unbound horizon switcher script
-  become: true
-  ansible.builtin.template:
+- name: Generate unbound horizon-switch script
+  template:
     src: unbound-horizon-switch.sh.j2
-    dest: /usr/local/bin/unbound-horizon-switch.sh
-    mode: u=rwx,g=rx,o=rx
-  when:
-    - unbound is defined and unbound
-    - unbound_offline_fallback_enabled | bool
-
-- name: Schedule unbound horizon switcher
-  become: true
-  ansible.builtin.cron:
-    name: unbound horizon online/offline switch
-    minute: "*"
-    job: "/usr/local/bin/unbound-horizon-switch.sh"
-    user: root
-    state: present
-  when:
-    - unbound is defined and unbound
-    - unbound_offline_fallback_enabled | bool
-
-- name: Create docker-compose stack file
-  vars:
-    mac: "{{ ansible_default_ipv6.macaddress.split(':') }}"
-    first_byte: "{{ '%02x' % ((mac[0]|int(base=16)) + 2 if (mac[0]|int(base=16)) < 0x80 else (mac[0]|int(base=16)) - 2) }}"
-    eui64: "{{ first_byte + mac[1] + ':' + mac[2] + 'ff:fe' + mac[3] + ':' + mac[4] + mac[5] }}"
-  ansible.builtin.template:
-    src: docker-compose.yml
-    dest: /home/{{ ansible_user }}/home-server/stacks/traefik/docker-compose.yml
-    mode: u=rwx,g=o=rx
-
-- name: Set DNS as 127.0.0.1 in systemd-resolved configuration
-  become: true
-  ansible.builtin.replace:
-    path: /etc/systemd/resolved.conf
-    regexp: '#DNS=.*'
-    replace: 'DNS=127.0.0.1'
-  notify: Restart systemd-resolved
+    dest: "{{ docker_volumes_path }}/unbound/horizon-switch.sh"
+    mode: u=rwx,g=o=
   when: unbound is defined and unbound
 
-- name: Prevent systemd-resolved from listening on port 53
-  become: true
-  ansible.builtin.replace:
-    path: /etc/systemd/resolved.conf
-    regexp: '#DNSStubListener=.*'
-    replace: 'DNSStubListener=no'
-  notify: Restart systemd-resolved
-  when: unbound is defined and unbound
-
-- name: Flush handlers
-  ansible.builtin.meta: flush_handlers
-  when: unbound is defined and unbound
-
-# - name: Get IPv6 gateway
-#   ansible.builtin.shell: |
-#     set -o pipefail
-#     ip -6 route | grep default
-#   register: ipv6_gateway_output
-#   changed_when: false
-
-# - name: Extract IPv6 gateway
-#   ansible.builtin.set_fact:
-#     ipv6_gateway: "{{ ipv6_gateway_output.stdout.split(' ')[2] }}"
-
-# - name: Configure static IPv6 address
-#   become: true
-#   community.general.nmcli:
-#     conn_name: "{{ ansible_default_ipv4.alias }}"
-#     state: present
-#     type: ethernet
-#     ip6:
-#       - "{{ public_ipv6_address }}/64"
-#     gw6: "{{ ipv6_gateway }}"
-#     dns6:
-#       - "{% if unbound is defined and unbound %}::1{% else %}{{ ipv6_gateway }}{% endif %}"
-#       - "{{ ipv6_gateway }}"
-
-- name: Restore doh git repo
-  become: true
-  ansible.builtin.git:
-    repo: 'https://github.com/m13253/dns-over-https.git'
-    dest: "/home/{{ ansible_user }}/home-server/stacks/traefik/doh"
-    version: 'master'
-    single_branch: true
-  environment:
-    GIT_TERMINAL_PROMPT: "0" # reports "terminal prompts disabled" on missing password
-  when: unbound is defined and unbound
-
-- name: Restore unbound_exporter git repo
-  become: true
-  ansible.builtin.git:
-    repo: "{{ unbound_exporter_git_repo }}"
-    dest: "/home/{{ ansible_user }}/home-server/stacks/traefik/unbound_exporter"
-    version: "{{ unbound_exporter_git_version }}"
-    single_branch: true
-  environment:
-    GIT_TERMINAL_PROMPT: "0" # reports "terminal prompts disabled" on missing password
-  when: unbound is defined and unbound
-
-- name: Docker_sysctl_fix_proxy
-  become: true
-  ansible.posix.sysctl:
-    sysctl_file: /etc/sysctl.d/99-docker-router.conf
-    name: net.ipv6.conf.{{ ansible_default_ipv4.alias }}.proxy_ndp
-    value: "1"
-    sysctl_set: true
-
-- name: Docker_sysctl_fix_ra
-  become: true
-  ansible.posix.sysctl:
-    sysctl_file: /etc/sysctl.d/99-docker-router.conf
-    name: net.ipv6.conf.{{ ansible_default_ipv4.alias }}.accept_ra
-    value: "2"
-    sysctl_set: true
-
-- name: Configure UFW rules for Traefik services
-  become: true
-  vars:
-    local_networks:
-      - "{{ (ansible_default_ipv4.address ~ '/' ~ ansible_default_ipv4.prefix) | ansible.utils.ipaddr('network/prefix') }}"
-      - "{{ (ansible_default_ipv6.address ~ '/' ~ ansible_default_ipv6.prefix) | ansible.utils.ipaddr('network/prefix') }}"
-    ufw_rules:
-      - name: "OpenSSH"
-        port: "22"
-        cidrs: "{{ local_networks }}"
-      - name: "RDP"
-        port: "3389"
-        cidrs: "{{ local_networks }}"
-      - name: "HTTPS"
-        port: "443"
-        cidrs: ["any"]
-      - name: "DNS"
-        port: "53"
-        cidrs: "{{ local_networks }}"
-        when: "{{ unbound is defined and unbound }}"
-      - name: "DotS"
-        port: "853"
-        cidrs: ["any"]
-        when: "{{ unbound is defined and unbound }}"
-  community.general.ufw:
-    rule: allow
-    port: "{{ item.0.port }}"
-    proto: "{{ item.0.proto | default('tcp') }}"
-    from_ip: "{{ item.1 if item.1 != 'any' else omit }}"
-    direction: "{{ item.0.direction | default(omit) }}"
-    comment: "{{ item.0.name }}"
-  loop: "{{ ufw_rules | subelements('cidrs') }}"
-  when: item.0.when is not defined or item.0.when
-
-- name: Try to pull latest images (continue on failure)
-  community.docker.docker_compose_v2:
-    pull: "always"
-    state: present
-    project_src: /home/{{ ansible_user }}/home-server/stacks/traefik
-  ignore_errors: true
-  register: pull_result
-
-- name: Warning - using local images
-  ansible.builtin.debug:
-    msg: "WARNING: Could not pull latest images. Deploying with existing local images."
-  when: pull_result is failed
-
-- name: Deploy stack from a compose file
-  community.docker.docker_compose_v2:
-    pull: "never"
-    build: "always"
-    state: present
-    project_src: /home/{{ ansible_user }}/home-server/stacks/traefik
-
-- name: Install fail2ban
-  become: true
-  ansible.builtin.package:
-    name: fail2ban
-    state: present
-
-- name: Deploy fail2ban filter for Traefik
-  become: true
-  ansible.builtin.template:
-    src: fail2ban-filter-traefik.conf.j2
-    dest: /etc/fail2ban/filter.d/traefik.conf
-    mode: u=rw,g=r,o=r
-  notify: Restart fail2ban
-
-- name: Deploy fail2ban jail for Traefik
-  become: true
-  ansible.builtin.template:
-    src: fail2ban-jail-traefik.conf.j2
-    dest: /etc/fail2ban/jail.d/traefik.conf
-    mode: u=rw,g=r,o=r
-  notify: Restart fail2ban
-
-- name: Enable and start fail2ban
-  become: true
-  ansible.builtin.systemd:
-    name: fail2ban
-    state: started
-    enabled: true
-
-- name: Check Authentik API availability
-  ansible.builtin.uri:
-    url: "{{ authentik_api_base_url }}/api/v3/admin/version/"
-    method: GET
-    headers:
-      Authorization: "Bearer {{ authentik_api_token }}"
-    status_code: 200
-    validate_certs: true
-  register: authentik_api_health
-  changed_when: false
-  failed_when: false
-  when: authentik_api_token is defined
-
-- name: Configure Authentik providers and applications for Traefik services
-  become: false
-  when:
-    - authentik_api_token is defined
-    - authentik_api_health is defined
-    - authentik_api_health.status | default(0) == 200
-  block:
-    - name: Configure Authentik providers and applications for Traefik services
-      ansible.builtin.include_tasks: "tasks/authentik_common.yml"
-      vars:
-        provider_apps:
-          - provider:
-              name: "traefik-provider"
-              external_host: "https://traefik.{{ app_domain_name }}"
-            app:
-              name: "Traefik Dashboard"
-              slug: "traefik"
-
-- name: Skip Traefik Authentik configuration when API is unavailable
-  ansible.builtin.debug:
-    msg: >-
-      Authentik API unreachable at {{ authentik_api_base_url }}; skipping Traefik SSO setup for now.
-      Re-run with --tags traefik after Authentik is healthy.
-  when:
-    - authentik_api_token is defined
-    - authentik_api_health is defined
-    - authentik_api_health.status | default(0) != 200
+- name: Generate traefik compose
+  template:
+    src: traefik-compose.yml.j2
+    dest: "{{ docker_volumes_path }}/traefik/docker-compose.yml"
+    mode: u=rw,g=,o=
