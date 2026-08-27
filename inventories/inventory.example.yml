@@ -6,7 +6,6 @@ all:
             ansible_connection: ssh
             ansible_host: 192.168.1.100
             ansible_user: your_username
-            ansible_group: your_group
             ansible_ssh_pass: !vault |
                               $ANSIBLE_VAULT;1.1;AES256
                               YOUR_ENCRYPTED_SSH_PASSWORD_HERE
