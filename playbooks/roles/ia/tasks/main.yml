@@ -9,102 +9,16 @@
 - name: Create ia provisionning directories (root-owned)
   become: true
   ansible.builtin.file:
-    path: "{{ docker_volumes_path }}/{{ item.name }}"
+    path: "{{ docker_volumes_path }}/{{ item }}"
     state: directory
-    owner: "{{ item.owner | default('root') }}"
-    group: "{{ item.group | default('root') }}"
-    mode: "{{ item.mode | default('u=rwx,g=rx,o=') }}"
+    owner: root
+    group: root
+    mode: u=rwx,g=o=rx
   loop:
-    - name: ollama
-    - name: ollama-embeddings
-    - name: open-webui
-    - name: chromadb
-    - name: synapse-data
-      owner: 991
-      group: 991
-    - name: synapse-data/media_store
-      owner: 991
-      group: 991
-    - name: synapse-postgres-data
-      owner: 999
-      group: 999
-    - name: synapse-redis-data
-      owner: 999
-      group: 999
-    - name: mindroom-data
-      owner: "{{ ansible_user }}"
-      group: "{{ ansible_group }}"
-    - name: mindroom-data/sessions
-      owner: "{{ ansible_user }}"
-      group: "{{ ansible_group }}"
-    - name: mindroom-data/learning
-      owner: "{{ ansible_user }}"
-      group: "{{ ansible_group }}"
-    - name: mindroom-data/tracking
-      owner: "{{ ansible_user }}"
-      group: "{{ ansible_group }}"
-    - name: mindroom-data/memory  # For mem0/chroma vector DB
-      owner: "{{ ansible_user }}"
-      group: "{{ ansible_group }}"
-    - name: mindroom-data/credentials
-      owner: "{{ ansible_user }}"
-      group: "{{ ansible_group }}"
-    - name: mindroom-logs
-      owner: "{{ ansible_user }}"
-      group: "{{ ansible_group }}"
-    - name: mindroom-config
-      owner: "{{ ansible_user }}"
-      group: "{{ ansible_group }}"    
-    - name: mindroom-sandbox-workspace
-      owner: "{{ ansible_user }}"
-      group: "{{ ansible_group }}"
-
-- name: Generate Synapse signing key if it doesn't exist
-  become: true
-  ansible.builtin.shell:
-    cmd: |
-      echo "No signing key found. Generating one..."
-      python3 -m synapse.crypto.signing_key -o "{{ docker_volumes_path }}/synapse-data/signing.key"
-      echo "Signing key generated."
-    creates: "{{ docker_volumes_path }}/synapse-data/signing.key"
-    executable: /bin/bash
-
-- name: Ensure Synapse signing key has correct ownership and permissions
-  become: true
-  ansible.builtin.file:
-    path: "{{ docker_volumes_path }}/synapse-data/signing.key"
-    owner: 991
-    group: 991
-    mode: '0644'
-  ignore_errors: true
-
-- name: Retrive secrets
-  ansible.builtin.include_tasks: "retrieve_password.yml"
-  vars:
-    secrets:
-      - name: synapse_postgres_password
-      - name: synapse_macaroon_secret_key
-        length: 32
-        chars: hexdigits
-      - name: matrix_registration_shared_secret
-        length: 32
-
-- name: Copy matrix_registration_shared_secret to secrets with containers uid
-  become: true
-  ansible.builtin.copy:
-    remote_src: true
-    src: "{{ docker_volumes_path }}/secrets/matrix_registration_shared_secret"
-    dest: "{{ docker_volumes_path }}/secrets/{{ item.dest }}"
-    mode: '0440'
-    owner: "{{ item.owner }}"
-    group: "{{ item.group }}"
-  loop:
-    - dest: mindroom_matrix_registration_shared_secret
-      owner: 1000
-      group: 1000
-    - dest: synapse_matrix_registration_shared_secret
-      owner: 991
-      group: 991
+    - ollama
+    - ollama-embeddings
+    - open-webui
+    - chromadb
 
 - name: Create Speaches cache directory (ubuntu-owned)
   become: true
@@ -119,7 +33,7 @@
   ansible.builtin.debug:
     msg: "IA GPU mode selected: effective={{ gpu_mode_effective | default('none') }}"
 
-- name: Configure Authentik OAuth Webui for IA
+- name: Configure Authentik OAuth applications for IA
   # delegate_to: localhost
   become: false
   when: authentik_api_token is defined
@@ -188,143 +102,6 @@
       when:
         - webui_oauth_client_secret is defined
         - webui_oauth_client_secret | length > 0
-
-- name: Configure Authentik access mindroom
-  # delegate_to: localhost
-  become: false
-  when: authentik_api_token is defined
-  block:
-    - name: Configure Authentik OAuth provider and application for IA Matrix
-      when: authentik_api_token is defined
-      ansible.builtin.include_tasks: "tasks/authentik_common.yml"
-      vars:
-        oauth_apps:
-          - provider:
-              name: "matrix-synapse-provider"
-              redirect_uris:
-                - url: "https://m.{{ app_domain_name }}/_synapse/client/oidc/callback"
-                  matching_mode: "strict"
-              client_type: "confidential"
-              sub_mode: "user_email"
-              include_claims_in_id_token: true
-              issuer_mode: "per_provider"
-              access_code_validity: "minutes=1"
-              access_token_validity: "minutes=10"
-              refresh_token_validity: "days=30"
-              scopes: "openid profile email"
-            app:
-              name: "Matrix Synapse"
-              slug: "{{ matrix_oauth_slug_name }}"
-              meta_launch_url: "https://chat.{{ app_domain_name }}"
-              meta_description: "Synapse Matrix server for secure messaging and collaboration."
-        provider_apps:
-          - provider:
-              name: "matrix-admin-provider"
-              external_host: "https://m-admin.{{ app_domain_name }}"
-            app:
-              name: "Matrix Admin"
-              slug: matrix-admin
-          - provider:
-              name: "mindroom-provider"
-              external_host: "https://mindroom.{{ app_domain_name }}"
-              property_mappings:
-                - name: "mindroom-mappings"
-                  expression: |
-                    email = user.email
-                    if email and '@' in email:
-                        localpart = email.split('@')[0]
-                        matrix_id = f"@{localpart}:m.leducd.duckdns.org"
-                    else:
-                        matrix_id = ""
-                    return {
-                        "ak_proxy": {
-                            "user_attributes": {
-                                "additionalHeaders": {
-                                    "X-MindRoom-User-Id": str(user.id),
-                                    "X-MindRoom-User-Email": str(user.email),
-                                    "X-MindRoom-Matrix-User-Id": matrix_id
-                                }
-                            }
-                        }
-                    }
-                  scope_name: "mindroom-scope"
-            app:
-              name: "MindRoom"
-              slug: "mindroom"
-
-    - name: Set Matrix OAuth credentials as facts
-      when:
-        - oauth_provider_client_id is defined
-        - oauth_provider_client_secret is defined
-        - current_oauth_provider_name == "matrix-synapse-provider"
-      ansible.builtin.set_fact:
-        matrix_oauth_client_id: "{{ oauth_provider_client_id }}"
-        matrix_oauth_client_secret: "{{ oauth_provider_client_secret }}"
-
-    - name: Ensure secrets directory exists for Docker secret mounts
-      become: true
-      ansible.builtin.file:
-        path: "{{ docker_volumes_path }}/secrets"
-        state: directory
-        mode: '0700'
-      when:
-        - matrix_oauth_client_id is defined
-        - matrix_oauth_client_id | length > 0
-
-    - name: Write OAuth client ID secret file
-      become: true
-      ansible.builtin.copy:
-        content: "{{ matrix_oauth_client_id }}"
-        dest: "{{ docker_volumes_path }}/secrets/matrix_oauth_client_id"
-        mode: '0600'
-      when:
-        - matrix_oauth_client_id is defined
-        - matrix_oauth_client_id | length > 0
-
-    - name: Write OAuth client secret file
-      become: true
-      ansible.builtin.copy:
-        content: "{{ matrix_oauth_client_secret }}"
-        dest: "{{ docker_volumes_path }}/secrets/matrix_oauth_client_secret"
-        mode: '0600'
-      when:
-        - matrix_oauth_client_secret is defined
-        - matrix_oauth_client_secret | length > 0
-
-- name: Create Synapse homeserver.yaml with Authentik OIDC config
-  become: true
-  ansible.builtin.template:
-    src: synapse_homeserver.yaml
-    dest: "{{ docker_volumes_path }}/synapse-data/homeserver.yaml"
-    mode: u=rw,g=o=r
-    owner: 991
-    group: 991
-- name: Create Synapse log.config with Authentik OIDC config
-  become: true
-  ansible.builtin.template:
-    src: synapse_log.config
-    dest: "{{ docker_volumes_path }}/synapse-data/log.config"
-    mode: u=rw,g=o=r
-    owner: 991
-    group: 991
-
-- name: Create Mindroom mindroom_config.yaml
-  become: true
-  ansible.builtin.template:
-    src: mindroom_config.yaml
-    dest: "{{ docker_volumes_path }}/mindroom-config/config.yaml"
-    mode: u=rw,g=o=r
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_group }}"
-- name: Create Mindroom-chat client-config.json
-  become: true
-  ansible.builtin.template:
-    src: mindroom_client-config.json
-    dest: "{{ docker_volumes_path }}/mindroom-config/client-config.json"
-    mode: u=rw,g=o=r
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_group }}"
-    force: true
 
 - name: Create docker-compose stack file
   ansible.builtin.template:
@@ -543,3 +320,5 @@
     label: "{{ item.item | default('unknown') }}"
   when:
     - (item.status | default(0) | int) == 500
+
+...

@@ -77,7 +77,7 @@ ollama_embeddings_num_threads: >-
 # Exposed IA runtime endpoints for cross-role integrations (e.g. hassio)
 ia_openai_base_url: "http://127.0.0.1:8080/v1"
 ia_embeddings_base_url: "http://127.0.0.1:8082"
-ia_homeassistant_agent_model: "gemma4:e4b"
+ia_homeassistant_agent_model: "ministral-3:3b"
 ia_ollama_embedding_model: "nomic-embed-text-v2-moe"
 ia_chromadb_host: "127.0.0.1"
 ia_chromadb_port: 8001
@@ -113,26 +113,5 @@ ollama_num_threads: >-
      if (ollama_cpu_limit | float) >= 1.0
      else 1 }}
 
-# Mindroom Configuration
-mindroom_image: "ghcr.io/mindroom-ai/mindroom"
-mindroom_version: "latest"
-
-# Synapse Configuration
-synapse_image: "ghcr.io/mindroom-ai/mindroom-synapse"
-synapse_version: "develop"
-
-# PostgreSQL Configuration for Synapse
-synapse_postgres_image: "postgres"
-synapse_postgres_version: "15"
-
-# Redis Configuration for Synapse
-synapse_redis_image: "redis"
-synapse_redis_version: "alpine"
-
-# OAuth credentials — overridden at runtime by the Authentik block
-matrix_oauth_client_id: ""
-matrix_oauth_client_secret: ""
-matrix_oauth_slug_name: "matrix-synapse"
-
-ia_openai_api_key: ""
-ia_openai_api_url: "https://api.mistral.ai/v1"
+IA_openai_api_key: ""
+IA_openai_api_url: "https://api.mistral.ai/v1"

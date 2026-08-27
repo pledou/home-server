@@ -11,7 +11,6 @@
     existing_app: {}
     existing_provider: {"json": {"results": []}}
     existing_provider_matches: []
-    _current_provider_property_mapping_pks: []
   when: authentik_api_token is defined
 
 - name: "Check if Forward Auth provider exists: {{ provider_app.provider.name }}"
@@ -36,63 +35,6 @@
   when:
     - authentik_api_token is defined
 
-- name: "Fetch all property mappings"
-  ansible.builtin.uri:
-    url: "{{ authentik_api_base_url }}/api/v3/propertymappings/provider/scope/"
-    method: GET
-    headers:
-      Authorization: "Bearer {{ authentik_api_token }}"
-    validate_certs: true
-  register: all_property_mappings
-  when: authentik_api_token is defined
-
-- name: "Determine which property mappings exist"
-  ansible.builtin.set_fact:
-    mapping_checks: |
-      {%- set results = [] -%}
-      {%- for p_map in provider_app.provider.property_mappings | default([]) -%}
-        {%- set match = all_property_mappings.json.results | selectattr('name', 'equalto', p_map.name) | default([]) -%}
-        {%- if match and match | length > 0 -%}
-          {%- set _ = results.append({'item': p_map, 'status': 200, 'pk': match[0].pk}) -%}
-        {%- else -%}
-          {%- set _ = results.append({'item': p_map, 'status': 404}) -%}
-        {%- endif -%}
-      {%- endfor -%}
-      {{ results }}  
-  when:
-    - authentik_api_token is defined
-    - all_property_mappings is defined
-
-- name: "Create missing property mappings"
-  ansible.builtin.uri:
-    url: "{{ authentik_api_base_url }}/api/v3/propertymappings/provider/scope/"
-    method: POST
-    headers:
-      Authorization: "Bearer {{ authentik_api_token }}"
-      Content-Type: "application/json"
-    body_format: json
-    body:
-      name: "{{ item.item.name }}"
-      expression: "{{ item.item.expression }}"
-      scope_name: "{{ item.item.scope_name }}"
-    status_code: [201]
-  loop: "{{ mapping_checks | selectattr('status', 'equalto', 404) | list }}"
-  register: mapping_create_results
-  when:
-    - authentik_api_token is defined
-    - mapping_checks is defined
-
-- name: "Collect all property mapping PKs"
-  ansible.builtin.set_fact:
-    _current_provider_property_mapping_pks: >-
-      {{
-        (mapping_checks | selectattr('status', 'equalto', 200) | map(attribute='pk') | list) +
-        (mapping_create_results.results | map(attribute='json.pk') | list if mapping_create_results.results is defined else [])
-      }}
-  when:
-    - authentik_api_token is defined
-    - (mapping_checks is defined) or (mapping_create_results.results is defined)
-    
 - name: "Create Forward Auth provider: {{ provider_app.provider.name }}"
   ansible.builtin.uri:
     url: "https://auth.{{ app_domain_name }}/api/v3/providers/proxy/"
@@ -107,7 +49,6 @@
       invalidation_flow: "{{ invalidation_flow_result.json.results[0].pk }}"
       external_host: "{{ provider_app.provider.external_host }}"
       mode: "{{ provider_app.provider.mode | default('forward_single') }}"
-      property_mappings: "{{ _current_provider_property_mapping_pks }}"
     status_code: [201]
   register: provider_result
   changed_when: provider_result.status == 201

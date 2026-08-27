@@ -42,8 +42,6 @@ python3 --version  # Should be 3.8+
 
 3. **Initial Server Setup**:
 
-**Note**: This guide assumes that the `ansible_user` is the primary user created on the server, typically having **UID 1000** and **GID 1000**.
-
 ```bash
 # On the server, create a user with sudo privileges
 sudo adduser your-username
