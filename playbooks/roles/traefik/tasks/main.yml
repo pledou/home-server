@@ -29,6 +29,7 @@
     path: "{{ docker_volumes_path }}/unbound"
     state: directory
     mode: u=rw,g=o=r
+    owner: "{{ ansible_user }}"
   when: unbound is defined and unbound
 
 - name: Detect DHCP upstream DNS server
@@ -50,7 +51,7 @@
 
 - name: Set unbound upstream DNS from DHCP or fallback
   ansible.builtin.set_fact:
-    unbound_forward_dns: >-
+    unbound_forward_dns: >
       {{
         (dhcp_upstream_dns.stdout | trim)
         if (dhcp_upstream_dns.stdout | trim | length > 0)
@@ -66,6 +67,7 @@
     src: "{{ item }}"
     dest: "{{ docker_volumes_path }}/unbound/{{ item }}"
     mode: u=rw,g=o=r
+    owner: "{{ ansible_user }}"
   loop:
     - unbound.conf
     - a-records.conf
@@ -319,7 +321,7 @@
 
 - name: Skip Traefik Authentik configuration when API is unavailable
   ansible.builtin.debug:
-    msg: >-
+    msg: >
       Authentik API unreachable at {{ authentik_api_base_url }}; skipping Traefik SSO setup for now.
       Re-run with --tags traefik after Authentik is healthy.
   when:
