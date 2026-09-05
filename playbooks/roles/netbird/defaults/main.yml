@@ -3,15 +3,15 @@
 
 # Core Settings
 netbird_enabled: true
-netbird_domain: "vpn.{{ app_domain_name }}"
 netbird_admin_email: "{{ admin_email | default('admin@example.com') }}"
 netbird_log_level: info
 
 # OIDC/Authentik Integration
-netbird_oidc_issuer: "https://{{ authentik_domain | default(app_domain_name) }}"
+netbird_oidc_issuer: "https://auth.{{ app_domain_name }}"
 netbird_oidc_client_id: netbird
 netbird_oidc_audience: netbird
-netbird_oidc_redirect_uri: "https://{{ netbird_domain }}/auth/callback"
+netbird_oidc_redirect_uri: "https://vpn.{{ app_domain_name }}/auth/callback"
+netbird_oauth_client_secret: ""
 
 # Signal Server
 netbird_signal_port: 51820
@@ -45,11 +45,6 @@ netbird_image: "netbirdio/netbird"
 netbird_signal_image: "netbirdio/signal"
 netbird_relay_image: "netbirdio/relay"
 netbird_version: "latest"
-
-# Volume paths
-netbird_volume_path: "{{ docker_volumes_path }}/netbird"
-netbird_data_path: "{{ netbird_volume_path }}/data"
-netbird_config_path: "{{ netbird_volume_path }}/config"
 
 # Database
 netbird_db_engine: sqlite  # or postgres

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # NetBird Management Server
   management:
@@ -25,7 +23,7 @@ services:
       NETBIRD_JWT_ISSUER: {{ netbird_oidc_issuer }}
       NETBIRD_JWT_AUDIENCE: {{ netbird_oidc_audience }}
       NETBIRD_OAUTH2_CLIENT_ID: {{ netbird_oidc_client_id }}
-      NETBIRD_OAUTH2_CLIENT_SECRET: "{{ netbird_oidc_client_secret | default('') }}"
+      NETBIRD_OAUTH2_CLIENT_SECRET: "{{ netbird_oauth_client_secret | default('') }}"
       NETBIRD_OAUTH2_REDIRECT_URI: {{ netbird_oidc_redirect_uri }}
       NETBIRD_DB_ENGINE: {{ netbird_db_engine }}
       NETBIRD_DB_PATH: {{ netbird_db_path }}
@@ -37,7 +35,7 @@ services:
       start_period: 40s
     labels:
       traefik.enable: "true"
-      traefik.http.routers.netbird-management.rule: "Host(`{{ netbird_domain }}`)"
+      traefik.http.routers.netbird-management.rule: "Host(`vpn.{{ app_domain_name }}`)"
       traefik.http.routers.netbird-management.entrypoints: "websecure"
       traefik.http.routers.netbird-management.tls: "true"
       traefik.http.routers.netbird-management.service: "netbird-management"
@@ -69,6 +67,20 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.netbird-signal.rule: "Host(`vpn.{{ app_domain_name }}`)"
+      traefik.http.routers.netbird-signal.entrypoints: "websecure"
+      traefik.http.routers.netbird-signal.tls: "true"
+      traefik.http.routers.netbird-signal.service: "netbird-signal"
+      # Note: UDP/TCP ports are typically handled by the docker-compose network setup,
+      # but adding labels for completeness if Traefik supports it for non-HTTP services.
+      # For now, we focus on the management service pattern.
+      # If Traefik needs specific labels for UDP/TCP, they must be confirmed via documentation.
+      # Assuming the primary exposure remains via the port definition for non-HTTP services.
+      # We will apply a label structure that mimics the management service for consistency.
+      traefik.http.services.netbird-signal.loadbalancer.server.port: "{{ netbird_signal_port }}"
+      traefik.http.services.netbird-signal.loadbalancer.server.scheme: "tcp"
 
 {% if netbird_relay_enabled %}
   # NetBird Relay Server (optional)
@@ -96,6 +108,14 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.netbird-relay.rule: "Host(`vpn.{{ app_domain_name }}`)"
+      traefik.http.routers.netbird-relay.entrypoints: "websecure"
+      traefik.http.routers.netbird-relay.tls: "true"
+      traefik.http.routers.netbird-relay.service: "netbird-relay"
+      traefik.http.services.netbird-relay.loadbalancer.server.port: "{{ netbird_relay_port }}"
+      traefik.http.services.netbird-relay.loadbalancer.server.scheme: "tcp"
 {% endif %}
 
 networks:

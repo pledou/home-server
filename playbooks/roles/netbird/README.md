@@ -75,8 +75,8 @@ netbird_enabled: true
 netbird_domain: "vpn.{{ app_domain_name }}"  # e.g., vpn.example.duckdns.org
 netbird_admin_email: "admin@example.com"
 netbird_oidc_client_id: "netbird"  # Auto-generated if not provided
-netbird_oidc_client_secret: !vault |  # Auto-generated, store securely
-  # Encrypted secret
+# netbird_oauth_client_secret is generated at runtime by the shared
+# authentik OAuth tasks (tasks/authentik_common.yml) — no vault needed.
 
 # Authentik OIDC Provider (created automatically)
 authentik_api_token: !vault |
@@ -110,7 +110,7 @@ netbird_idp_sign_key_refresh_duration: 3600
 
 ### Web Dashboard
 
-1. Navigate to `https://{{ netbird_domain }}`
+1. Navigate to `https://vpn.{{ app_domain_name }}`
 2. Click "Login with Authentik"
 3. Authenticate with your Authentik credentials
 4. Accept consent screen
@@ -218,8 +218,8 @@ Create groups to organize access control:
 
 1. Verify Authentik is running: `docker ps | grep authentik`
 2. Check OIDC application in Authentik (settings → applications)
-3. Verify callback URL matches: `https://{{ netbird_domain }}/auth/callback`
-4. Check role logs: `docker compose -f /opt/netbird/docker-compose.yml logs -f`
+3. Verify callback URL matches: `https://vpn.{{ app_domain_name }}/auth/callback`
+4. Check role logs: `docker compose -f /home/{{ ansible_user }}/home-server/stacks/netbird/docker-compose.yml logs -f`
 
 ### Performance Issues
 
