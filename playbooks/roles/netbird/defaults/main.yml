@@ -1,0 +1,62 @@
+---
+# NetBird VPN Configuration
+
+# Core Settings
+netbird_enabled: true
+netbird_admin_email: "{{ admin_email | default('admin@example.com') }}"
+netbird_log_level: info
+
+# OIDC/Authentik Integration
+netbird_oidc_issuer: "https://auth.{{ app_domain_name }}"
+netbird_oidc_client_id: netbird
+netbird_oidc_audience: netbird
+netbird_oidc_redirect_uri: "https://vpn.{{ app_domain_name }}/auth/callback"
+netbird_oauth_client_secret: ""
+
+# Signal Server
+netbird_signal_port: 51820
+netbird_signal_bind_addr: "0.0.0.0"
+
+# Relay Server (optional)
+netbird_relay_enabled: false
+netbird_relay_port: 3478
+netbird_relay_bind_addr: "0.0.0.0"
+
+# Management Server
+netbird_management_port: 443
+netbird_management_ssl: true
+netbird_management_log_level: info
+
+# Network Configuration
+netbird_network_cidr: "10.200.0.0/16"
+netbird_dns_enabled: true
+netbird_dns_port: 53
+netbird_dns_servers:
+  - "1.1.1.1"
+  - "8.8.8.8"
+
+# Security
+netbird_peer_login_expiration: 24h
+netbird_idp_sign_key_refresh_duration: 3600
+netbird_certificate_expiration: 8760h  # 1 year
+
+# Docker Configuration
+netbird_image: "netbirdio/netbird"
+netbird_signal_image: "netbirdio/signal"
+netbird_relay_image: "netbirdio/relay"
+netbird_version: "latest"
+
+# Database
+netbird_db_engine: sqlite  # or postgres
+netbird_db_path: "{{ netbird_data_path }}/netbird.db"
+
+# Environment
+netbird_environment:
+  NETBIRD_LOGLEVEL: "{{ netbird_log_level }}"
+  NETBIRD_BIND_ADDR: "0.0.0.0:{{ netbird_management_port }}"
+  NETBIRD_LOG_FORMAT: json
+  NETBIRD_CERTIFICATE_EXPIRATION: "{{ netbird_certificate_expiration }}"
+  NETBIRD_CERTIFICATE_KEY_EXPIRATION: "{{ netbird_certificate_expiration }}"
+  NETBIRD_IDEMPOTENT_NETWORK_CONFIG: "true"
+  NETBIRD_JWT_ISSUER: "{{ netbird_oidc_issuer }}"
+  NETBIRD_JWT_AUDIENCE: "{{ netbird_oidc_audience }}"

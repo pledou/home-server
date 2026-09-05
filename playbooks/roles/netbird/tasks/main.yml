@@ -1,0 +1,101 @@
+---
+- name: Configure Authentik OAuth application for NetBird
+  become: false
+  when: authentik_api_token is defined
+  block:
+    - name: Configure Authentik OAuth provider and application for NetBird
+      ansible.builtin.include_tasks: "tasks/authentik_common.yml"
+      vars:
+        oauth_apps:
+          - provider:
+              name: "netbird-oauth-provider"
+              redirect_uris:
+                - url: "https://vpn.{{ app_domain_name }}/auth/callback"
+                  matching_mode: "strict"
+              client_type: "confidential"
+              sub_mode: "user_email"
+              include_claims_in_id_token: true
+              issuer_mode: "per_provider"
+              access_code_validity: "minutes=1"
+              access_token_validity: "minutes=10"
+              refresh_token_validity: "days=30"
+              scopes: "openid profile email"
+            app:
+              name: "NetBird VPN"
+              slug: "netbird-vpn"
+              open_in_new_tab: true
+              meta_launch_url: "https://vpn.{{ app_domain_name }}"
+              meta_description: "NetBird VPN access with OIDC authentication"
+              meta_publisher: "NetBird"
+
+- name: Create NetBird directories
+  ansible.builtin.file:
+    path: "{{ docker_volumes_path }}/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "netbird"
+    - "netbird/data"
+    - "netbird/config"
+
+- name: Create NetBird environment file
+  ansible.builtin.template:
+    src: netbird.env.j2
+    dest: "{{ docker_volumes_path }}/config/.env"
+    mode: u=rwx,g=o=
+
+- name: Create NetBird docker-compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "/home/{{ ansible_user }}/home-server/stacks/netbird/docker-compose.yml"
+    mode: u=g=rwx,o=rx
+
+- name: Pull NetBird images
+  ansible.builtin.command:
+    cmd: "docker compose -f /home/{{ ansible_user }}/home-server/stacks/netbird/docker-compose.yml pull"
+  environment:
+    DOCKER_HOST: "unix:///var/run/docker.sock"
+  tags: netbird
+
+- name: Start NetBird services
+  ansible.builtin.command:
+    cmd: "docker compose -f /home/{{ ansible_user }}/home-server/stacks/netbird/docker-compose.yml up -d"
+  environment:
+    DOCKER_HOST: "unix:///var/run/docker.sock"
+  tags: netbird
+
+- name: Wait for NetBird Management API to be ready
+  ansible.builtin.uri:
+    url: "https://localhost:{{ netbird_management_port }}/health"
+    method: GET
+    validate_certs: false
+    status_code: [200, 404]
+  register: netbird_health
+  until: netbird_health.status in [200, 404]
+  retries: 30
+  delay: 10
+  tags: netbird
+
+- name: Configure Traefik for NetBird Management UI
+  ansible.builtin.template:
+    src: traefik-netbird.yml.j2
+    dest: "{{ docker_volumes_path }}/traefik/config/netbird.yml"
+    mode: '0644'
+  notify: restart traefik
+  tags: [netbird, traefik]
+
+- name: Output NetBird connection information
+  ansible.builtin.debug:
+    msg:
+      - "NetBird VPN Setup Complete!"
+      - "Management UI: https://vpn.{{ app_domain_name }}"
+      - "Signal Server: {{ inventory_hostname }}:{{ netbird_signal_port }}"
+      - "Virtual Network CIDR: {{ netbird_network_cidr }}"
+      - ""
+      - "Next steps:"
+      - "1. Access https://vpn.{{ app_domain_name }}"
+      - "2. Login with your Authentik credentials"
+      - "3. Download/Install NetBird client"
+      - "4. Run 'netbird up' to connect"
+      - "5. Configure firewall rules in dashboard"
+  tags: netbird
