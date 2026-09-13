@@ -83,7 +83,7 @@ desired_home_agent_data = {
     "llm_base_url": os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:8080/v1"),
     "llm_keep_alive": "-1",
     "llm_max_tokens": to_int("HOME_AGENT_MAX_TOKENS", 220),
-    "llm_model": os.getenv("HOME_AGENT_MODEL", "ministral-3:3b"),
+    "llm_model": os.getenv("HOME_AGENT_MODEL", "gemma4:e4b"),
     "llm_temperature": to_float("HOME_AGENT_TEMPERATURE", 0.5),
     "name": "Home Agent",
     "thinking_enabled": to_bool("HOME_AGENT_THINKING_ENABLED", False),
