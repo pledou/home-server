@@ -1,0 +1,60 @@
+## LLM Backend Configuration
+
+The IA role now supports multiple LLM backends: **Ollama** (default) and **vLLM**.
+
+### Configuration
+
+To switch LLM backends, set the `ia_llm_backend` variable in your inventory:
+
+```yaml
+# Use vLLM instead of Ollama
+ia_llm_backend: "vllm"
+
+# vLLM specific configuration
+vllm_image: "vllm/vllm-openai"
+vllm_version: "latest"
+vllm_gpu_memory_utilization: 0.9  # GPU memory utilization ratio (0.0-1.0)
+```
+
+### Backend Comparison
+
+| Feature | Ollama | vLLM |
+|---------|--------|------|
+| Model Format | Native, .gguf | HuggingFace |
+| Performance | CPU-friendly | GPU-optimized |
+| Memory Usage | Flexible | GPU-intensive |
+| Setup | Simple | Requires GPU |
+| Model Variety | Limited | Extensive |
+| Batch Processing | Single | Continuous Batching |
+
+### Switching Backends
+
+1. **Default (Ollama)**:
+   ```yaml
+   ia_llm_backend: "ollama"
+   ```
+   - Two services: `ollama` (main) + `ollama-embeddings` (separate)
+   - Port 8080 for main LLM, port 8082 for embeddings
+
+2. **vLLM** (GPU recommended):
+   ```yaml
+   ia_llm_backend: "vllm"
+   ```
+   - Single service: `vllm`
+   - Port 8080 for both LLM and metrics
+   - Requires NVIDIA GPU (currently)
+   - Optimized for continuous batching and high throughput
+
+### When to Use Each Backend
+
+- **Ollama**: 
+  - Limited GPU resources
+  - CPU-only systems
+  - Simple setup and maintenance
+  - .gguf quantized models
+
+- **vLLM**:
+  - High-throughput inference required
+  - Access to modern GPU hardware (NVIDIA)
+  - HuggingFace model ecosystem
+  - Batch processing needs

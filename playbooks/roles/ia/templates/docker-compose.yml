@@ -22,7 +22,11 @@ services:
         exec bash start.sh
       "
     environment:
+      {% if ia_llm_backend == 'vllm' %}
+      OLLAMA_BASE_URL: http://vllm-metrics:8080
+      {% else %}
       OLLAMA_BASE_URL: http://ollama-metrics:8080
+      {% endif %}
 
       # Generic OAuth
       OAUTH_PROVIDER_NAME: "authentik"
@@ -74,10 +78,14 @@ services:
       - webui_oauth_client_id
       - webui_oauth_client_secret
     depends_on:
-     - ollama
-     - ollama-embeddings
-     - speaches
-     - chromadb
+      {% if ia_llm_backend == 'vllm' %}
+      - vllm
+      {% else %}
+      - ollama
+      {% endif %}
+      - ollama-embeddings
+      - speaches
+      - chromadb
 
   webui-api-proxy:
     labels:
@@ -95,6 +103,7 @@ services:
       - ./webui-api-proxy.conf:/etc/nginx/conf.d/default.conf:ro
 
 
+  {% if ia_llm_backend == 'ollama' %}
   ollama:
     labels:
       - com.centurylinklabs.watchtower.enable=true
@@ -175,6 +184,62 @@ services:
       monitoring_backend:
         aliases:
           - ollama-metrics
+  {% endif %}
+
+  {% if ia_llm_backend == 'vllm' %}
+  vllm:
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    image: "{{ vllm_image }}:{{ vllm_version }}"
+    pull_policy: always
+    tty: true
+    restart: always
+    cpus: "{{ ollama_cpu_limit }}"
+    mem_limit: "{{ ollama_memory_limit_mb }}m"
+    environment:
+      - VLLM_CHAT_TEMPLATE=auto
+      - VLLM_ENABLE_PREFIX_CACHING=1
+      - VLLM_GPU_MEMORY_UTILIZATION={{ vllm_gpu_memory_utilization }}
+    command: >
+      --served-model-name ministral-3:3b
+      --max-model-len 4096
+      --gpu-memory-utilization {{ vllm_gpu_memory_utilization }}
+    volumes:
+      - vllm:/root/.cache/huggingface
+    networks:
+      network:
+        aliases:
+          - vllm
+    {% if gpu == 'nvidia' %}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+    {% endif %}
+
+  vllm-metrics:
+    labels:
+      - com.centurylinklabs.watchtower.enable=false
+    image: nginx:alpine
+    depends_on:
+      - vllm
+    expose:
+      - 8080/tcp
+    ports:
+      - 8080:8080/tcp
+    restart: unless-stopped
+    volumes:
+      - ./vllm-metrics-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      network:
+        aliases:
+          - vllm-metrics
+      monitoring_backend:
+        aliases:
+          - vllm-metrics
+  {% endif %}
 
   {% if not ollama_embeddings_use_gpu and gpu != 'intel' %}
   ollama-embeddings:
@@ -331,12 +396,22 @@ services:
           - chromadb
 
 volumes:
+  {% if ia_llm_backend == 'ollama' %}
   ollama:
     driver: local
     driver_opts:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/ollama"
+  {% endif %}
+  {% if ia_llm_backend == 'vllm' %}
+  vllm:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/vllm"
+  {% endif %}
   ollama-embeddings:
     driver: local
     driver_opts:
