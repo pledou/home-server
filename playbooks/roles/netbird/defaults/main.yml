@@ -32,8 +32,7 @@ netbird_network_cidr: "10.200.0.0/16"
 netbird_dns_enabled: true
 netbird_dns_port: 53
 netbird_dns_servers:
-  - "1.1.1.1"
-  - "8.8.8.8"
+  - "{{ ansible_host }}"
 
 # Security
 netbird_peer_login_expiration: 24h
@@ -41,14 +40,14 @@ netbird_idp_sign_key_refresh_duration: 3600
 netbird_certificate_expiration: 8760h  # 1 year
 
 # Docker Configuration
-netbird_image: "netbirdio/netbird"
+netbird_management_image: "netbirdio/netbird"
 netbird_signal_image: "netbirdio/signal"
 netbird_relay_image: "netbirdio/relay"
 netbird_version: "latest"
 
 # Database
 netbird_db_engine: sqlite  # or postgres
-netbird_db_path: "{{ netbird_data_path }}/netbird.db"
+netbird_db_path: "{{ docker_volumes_path }}/netbird/data/netbird.db"
 
 # Environment
 netbird_environment:

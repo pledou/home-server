@@ -1,4 +1,9 @@
 ---
+- name: Verify stacks directory exists
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}/home-server/stacks/netbird"
+    state: directory
+    mode: u=rwx,go=
 - name: Configure Authentik OAuth application for NetBird
   become: false
   when: authentik_api_token is defined
@@ -28,20 +33,24 @@
               meta_description: "NetBird VPN access with OIDC authentication"
               meta_publisher: "NetBird"
 
-- name: Create NetBird directories
+- name: Create NetBird provisioning directories
+  become: true
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item }}"
     state: directory
     mode: '0755'
   loop:
     - "netbird"
-    - "netbird/data"
     - "netbird/config"
+    - "netbird/signal"
+    - "netbird/management"
+    - "netbird/letsencrypt"
 
 - name: Create NetBird environment file
+  become: true
   ansible.builtin.template:
     src: netbird.env.j2
-    dest: "{{ docker_volumes_path }}/config/.env"
+    dest: "{{ docker_volumes_path }}/netbird/config/.env"
     mode: u=rwx,g=o=
 
 - name: Create NetBird docker-compose file
@@ -50,19 +59,25 @@
     dest: "/home/{{ ansible_user }}/home-server/stacks/netbird/docker-compose.yml"
     mode: u=g=rwx,o=rx
 
-- name: Pull NetBird images
-  ansible.builtin.command:
-    cmd: "docker compose -f /home/{{ ansible_user }}/home-server/stacks/netbird/docker-compose.yml pull"
-  environment:
-    DOCKER_HOST: "unix:///var/run/docker.sock"
-  tags: netbird
+- name: Try to pull latest images (continue on failure)
+  community.docker.docker_compose_v2:
+    pull: "always"
+    state: present
+    project_src: /home/{{ ansible_user }}/home-server/stacks/netbird
+  ignore_errors: true
+  register: pull_result
 
-- name: Start NetBird services
-  ansible.builtin.command:
-    cmd: "docker compose -f /home/{{ ansible_user }}/home-server/stacks/netbird/docker-compose.yml up -d"
-  environment:
-    DOCKER_HOST: "unix:///var/run/docker.sock"
-  tags: netbird
+- name: Warning - using local images
+  ansible.builtin.debug:
+    msg: "WARNING: Could not pull latest images. Deploying with existing local images."
+  when: pull_result is failed
+
+- name: Deploy stack from a compose file
+  community.docker.docker_compose_v2:
+    pull: "never"
+    build: "always"
+    state: present
+    project_src: /home/{{ ansible_user }}/home-server/stacks/netbird
 
 - name: Wait for NetBird Management API to be ready
   ansible.builtin.uri:
@@ -74,28 +89,4 @@
   until: netbird_health.status in [200, 404]
   retries: 30
   delay: 10
-  tags: netbird
 
-- name: Configure Traefik for NetBird Management UI
-  ansible.builtin.template:
-    src: traefik-netbird.yml.j2
-    dest: "{{ docker_volumes_path }}/traefik/config/netbird.yml"
-    mode: '0644'
-  notify: restart traefik
-  tags: [netbird, traefik]
-
-- name: Output NetBird connection information
-  ansible.builtin.debug:
-    msg:
-      - "NetBird VPN Setup Complete!"
-      - "Management UI: https://vpn.{{ app_domain_name }}"
-      - "Signal Server: {{ inventory_hostname }}:{{ netbird_signal_port }}"
-      - "Virtual Network CIDR: {{ netbird_network_cidr }}"
-      - ""
-      - "Next steps:"
-      - "1. Access https://vpn.{{ app_domain_name }}"
-      - "2. Login with your Authentik credentials"
-      - "3. Download/Install NetBird client"
-      - "4. Run 'netbird up' to connect"
-      - "5. Configure firewall rules in dashboard"
-  tags: netbird

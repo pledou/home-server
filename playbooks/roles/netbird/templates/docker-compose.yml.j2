@@ -1,135 +1,143 @@
+x-default: &default
+  restart: 'unless-stopped'
+  logging:
+    driver: 'json-file'
+    options:
+      max-size: '500m'
+      max-file: '2'
+
 services:
-  # NetBird Management Server
-  management:
-    image: {{ netbird_image }}:{{ netbird_version }}
-    container_name: netbird-management
-    restart: unless-stopped
-    networks:
-      - netbird
-      - traefik
-    ports:
-      - "{{ netbird_management_port }}:{{ netbird_management_port }}"
-    volumes:
-      - netbird_data:/var/lib/netbird
-      - netbird_config:/etc/netbird
-      - /etc/letsencrypt/live/{{ netbird_domain }}/cert.pem:/etc/netbird/tls.crt:ro
-      - /etc/letsencrypt/live/{{ netbird_domain }}/privkey.pem:/etc/netbird/tls.key:ro
+  # UI
+  dashboard:
+    <<: *default
+    image: netbirdio/dashboard:{{ netbird_version }}
     environment:
-      NETBIRD_LOGLEVEL: {{ netbird_log_level }}
-      NETBIRD_BIND_ADDR: 0.0.0.0:{{ netbird_management_port }}
-      NETBIRD_NETWORK_CIDR: {{ netbird_network_cidr }}
-      NETBIRD_DNS_ENABLED: "{{ netbird_dns_enabled | lower }}"
-      NETBIRD_DNS_PORT: "{{ netbird_dns_port }}"
-      NETBIRD_JWT_ISSUER: {{ netbird_oidc_issuer }}
-      NETBIRD_JWT_AUDIENCE: {{ netbird_oidc_audience }}
-      NETBIRD_OAUTH2_CLIENT_ID: {{ netbird_oidc_client_id }}
-      NETBIRD_OAUTH2_CLIENT_SECRET: "{{ netbird_oauth_client_secret | default('') }}"
-      NETBIRD_OAUTH2_REDIRECT_URI: {{ netbird_oidc_redirect_uri }}
-      NETBIRD_DB_ENGINE: {{ netbird_db_engine }}
-      NETBIRD_DB_PATH: {{ netbird_db_path }}
-    healthcheck:
-      test: ["CMD", "curl", "-f", "https://localhost:{{ netbird_management_port }}/health", "--insecure"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      # Endpoints
+      - NETBIRD_MGMT_API_API_ENDPOINT=https://vpn.{{ app_domain_name }}/api
+      - NETBIRD_MGMT_GRPC_API_ENDPOINT=https://vpn.{{ app_domain_name }}/grpc
+      # OIDC
+      - AUTH_AUDIENCE={{ netbird_oidc_audience }}
+      - AUTH_CLIENT_ID={{ netbird_oidc_client_id }}
+      - AUTH_CLIENT_SECRET={{ netbird_oauth_client_secret }}
+      - AUTH_AUTHORITY={{ netbird_oidc_issuer }}
+      - AUTH_REDIRECT_URI={{ netbird_oidc_redirect_uri }}
+      - AUTH_SILENT_REDIRECT_URI={{ netbird_oidc_redirect_uri }}
+      - NETBIRD_TOKEN_SOURCE=cookie
     labels:
       traefik.enable: "true"
-      traefik.http.routers.netbird-management.rule: "Host(`vpn.{{ app_domain_name }}`)"
-      traefik.http.routers.netbird-management.entrypoints: "websecure"
-      traefik.http.routers.netbird-management.tls: "true"
-      traefik.http.routers.netbird-management.service: "netbird-management"
-      traefik.http.services.netbird-management.loadbalancer.server.port: "{{ netbird_management_port }}"
-      traefik.http.services.netbird-management.loadbalancer.server.scheme: "https"
+      traefik.http.routers.netbird-dashboard.rule: "Host(`vpn.{{ app_domain_name }}`)"
+      traefik.http.routers.netbird-dashboard.entrypoints: "websecure"
+      traefik.http.routers.netbird-dashboard.tls: "true"
+      traefik.http.services.netbird-dashboard.loadbalancer.server.port: 80
 
-  # NetBird Signal Server
+  # Signal
   signal:
+    <<: *default
     image: {{ netbird_signal_image }}:{{ netbird_version }}
-    container_name: netbird-signal
-    restart: unless-stopped
-    networks:
-      - netbird
-    ports:
-      - "{{ netbird_signal_port }}:{{ netbird_signal_port }}/udp"
-      - "{{ netbird_signal_port }}:{{ netbird_signal_port }}/tcp"
     volumes:
-      - netbird_data:/var/lib/netbird
-      - netbird_config:/etc/netbird
+      - netbird_signal_volume:/var/lib/netbird
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.netbird-wsproxy-signal.rule: "Host(`vpn.{{ app_domain_name }}`) && PathPrefix(`/ws-proxy/signal`)"
+      traefik.http.routers.netbird-wsproxy-signal.service: "netbird-wsproxy-signal"
+      traefik.http.services.netbird-wsproxy-signal.loadbalancer.server.port: 80
+      traefik.http.routers.netbird-signal.rule: "Host(`vpn.{{ app_domain_name }}`) && PathPrefix(`/signalexchange.SignalExchange/`)"
+      traefim.http.routers.netbird-signal.service: "netbird-signal"
+      traefik.http.services.netbird-signal.loadbalancer.server.port: 10000
+      traefik.http.services.netbird-signal.loadbalancer.server.scheme: "h2c"
     environment:
       NETBIRD_LOGLEVEL: {{ netbird_log_level }}
       NETBIRD_BIND_ADDR: 0.0.0.0:{{ netbird_signal_port }}
       NETBIRD_BIND_ADDR_WEBSOCKET: 0.0.0.0:51821
     depends_on:
-      - management
+      - dashboard
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:51821/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # Relay
+  {% if netbird_relay_enabled %}
+  relay:
+    <<: *default
+    image: {{ netbird_relay_image }}:{{ netbird_version }}
+    environment:
+      - NB_LOG_LEVEL={{ netbird_log_level }}
+      - NB_LISTEN_ADDRESS=:{{ netbird_relay_port }}
+      - NB_EXPOSED_ADDRESS={{ netbird_relay_endpoint }}
+      - NB_AUTH_SECRET={{ netbird_relay_auth_secret | default('change-me') }}
     labels:
       traefik.enable: "true"
-      traefik.http.routers.netbird-signal.rule: "Host(`vpn.{{ app_domain_name }}`)"
-      traefik.http.routers.netbird-signal.entrypoints: "websecure"
-      traefik.http.routers.netbird-signal.tls: "true"
-      traefik.http.routers.netbird-signal.service: "netbird-signal"
-      # Note: UDP/TCP ports are typically handled by the docker-compose network setup,
-      # but adding labels for completeness if Traefik supports it for non-HTTP services.
-      # For now, we focus on the management service pattern.
-      # If Traefik needs specific labels for UDP/TCP, they must be confirmed via documentation.
-      # Assuming the primary exposure remains via the port definition for non-HTTP services.
-      # We will apply a label structure that mimics the management service for consistency.
-      traefik.http.services.netbird-signal.loadbalancer.server.port: "{{ netbird_signal_port }}"
-      traefik.http.services.netbird-signal.loadbalancer.server.scheme: "tcp"
-
-{% if netbird_relay_enabled %}
-  # NetBird Relay Server (optional)
-  relay:
-    image: {{ netbird_relay_image }}:{{ netbird_version }}
-    container_name: netbird-relay
-    restart: unless-stopped
-    networks:
-      - netbird
+      traeft.http.routers.netbird-relay.rule: "Host(`vpn.{{ app_domain_name }}`) && PathPrefix(`/relay`)"
+      traefik.http.services.netbird-relay.loadbalancer.server.port: {{ netbird_relay_port }}
     ports:
       - "{{ netbird_relay_port }}:{{ netbird_relay_port }}/udp"
       - "{{ netbird_relay_port }}:{{ netbird_relay_port }}/tcp"
-    volumes:
-      - netbird_data:/var/lib/netbird
-      - netbird_config:/etc/netbird
-    environment:
-      NETBIRD_LOGLEVEL: {{ netbird_log_level }}
-      NETBIRD_BIND_ADDR: 0.0.0.0:{{ netbird_relay_port }}
+  {% endif %}
+
+  # Management
+  management:
+    <<: *default
+    image: {{ netbird_management_image }}:{{ netbird_version }}
     depends_on:
-      - management
-      - signal
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:51821/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      - dashboard
+    volumes:
+      - netbird_mgmt_volume:/var/lib/netbird
+      - netbird_letsencrypt_volume:/etc/letsencrypt:ro
+      - ./management.json:/etc/netbird/management.json
+    command: [
+      "--port", "33073",
+      "--log-file", "console",
+      "--log-level", "{{ netbird_log_level }}",
+      "--disable-anonymous-metrics={{ netbird_disable_anonymous_metrics | default('true') }}",
+      "--single-account-mode-domain={{ netbird_management_single_account_mode_domain | default('') }}",
+      "--dns-domain={{ netbird_dns_domain | default('') }}"
+    ]
     labels:
       traefik.enable: "true"
-      traefik.http.routers.netbird-relay.rule: "Host(`vpn.{{ app_domain_name }}`)"
-      traefik.http.routers.netbird-relay.entrypoints: "websecure"
-      traefik.http.routers.netbird-relay.tls: "true"
-      traefik.http.routers.netbird-relay.service: "netbird-relay"
-      traefik.http.services.netbird-relay.loadbalancer.server.port: "{{ netbird_relay_port }}"
-      traefik.http.services.netbird-relay.loadbalancer.server.scheme: "tcp"
-{% endif %}
-
-networks:
-  netbird:
-    name: netbird
-    driver: bridge
-  traefik:
-    external: true
-    name: traefik
+      traefik.http.routers.netbird-api.rule: "Host(`vpn.{{ app_domain_name }}`) && PathPrefix(`/api`)"
+      traefik.http.routers.netbird-api.service: "netbird-api"
+      traefik.http.services.netbird-api.loadbalancer.server.port: 33073
+      traefik.http.routers.netbird-wsproxy-mgmt.rule: "Host(`vpn.{{ app_domain_name }}`) && PathPrefix(`/ws-proxy/management`)"
+      traefik.http.routers.netbird-wsproxy-mgmt.service: "netbird-wsproxy-mgmt"
+      traefik.http.services.netbird-wsproxy-mgmt.loadbalancer.server.port: 33073
+      traefik.http.routers.netbird-management.rule: "Host(`vpn.{{ app_domain_name }}`) && PathPrefix(`/management.ManagementService/`)"
+      traefik.http.routers.netbird-management.service: "netbird-management"
+      traefik.http.services.netbird-management.loadbalancer.server.port: 33073
+      traefik.http.services.netbird-management.loadbalancer.server.scheme: "h2c"
+    environment:
+      NETBIRD_STORE_ENGINE_POSTGRES_DSN: {{ netbird_store_engine_postgres_dsn | default('') }}
+      NETBIRD_STORE_ENGINE_MYSQL_DSN: {{ netbird_store_engine_mysql_dsn | default('') }}
+      NETBIRD_JWT_ISSUER: {{ netbird_oidc_issuer }}
+      NETBIRD_JWT_AUDIENCE: {{ netbird_oidc_audience }}
+      NETBIRD_OAUTH2_CLIENT_ID: {{ netbird_oidc_client_id }}
+      NETBIRD_OAUTH2_CLIENT_SECRET: "{{ netbird_oauth_client_secret }}"
+      NETBIRD_OAUTH2_REDIRECT_URI: {{ netbird_oidc_redirect_uri }}
 
 volumes:
-  netbird_data:
-    name: netbird_data
+  netbird_mgmt_volume:
     driver: local
-  netbird_config:
-    name: netbird_config
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/netbird/management"
+  netbird_signal_volume:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/netbird/signal"
+  netbird_letsencrypt_volume:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/netbird/letsencrypt"
+
+networks:
+  netbird_backend:
+    driver: bridge
+  traefik_backend:
+    external: true
