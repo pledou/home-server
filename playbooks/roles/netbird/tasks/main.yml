@@ -1,0 +1,116 @@
+# code: language=ansible
+---
+- name: Verify stacks directory exists
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}/home-server/stacks/netbird"
+    state: directory
+    mode: u=rwx,go=
+- name: Configure Authentik OAuth application for NetBird
+  become: false
+  when: authentik_api_token is defined
+  block:
+    - name: Configure Authentik OAuth provider and application for NetBird
+      ansible.builtin.include_tasks: "tasks/authentik_common.yml"
+      vars:
+        oauth_apps:
+          - provider:
+              name: "netbird-oauth-provider"
+              redirect_uris:
+                - url: "https://vpn.{{ app_domain_name }}/auth/callback"
+                  matching_mode: "strict"
+              client_type: "confidential"
+              sub_mode: "user_email"
+              include_claims_in_id_token: true
+              issuer_mode: "per_provider"
+              access_code_validity: "minutes=1"
+              access_token_validity: "minutes=10"
+              refresh_token_validity: "days=30"
+              scopes: "openid profile email"
+            app:
+              name: "netbird"
+              slug: "netbird-vpn"
+              open_in_new_tab: true
+              meta_launch_url: "https://vpn.{{ app_domain_name }}"
+              meta_description: "NetBird VPN access with OIDC authentication"
+              meta_publisher: "NetBird"
+
+- name: Create NetBird provisioning directories
+  become: true
+  ansible.builtin.file:
+    path: "{{ docker_volumes_path }}/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "netbird"
+    - "netbird/config"
+    - "netbird/data"
+
+- name: Retrive secret for encryption
+  ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
+  vars:
+    secrets:
+      - name: netbird_session_cookie_encryption_key
+        length: 64
+      - name: netbird_datastore_encryption_key
+        length: 64
+
+- name: Create NetBird config file
+  become: true
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: "{{ docker_volumes_path }}/netbird/config/config.yaml"
+    mode: u=rwx,g=o=
+
+- name: Create NetBird docker-compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "/home/{{ ansible_user }}/home-server/stacks/netbird/docker-compose.yml"
+    mode: u=g=rwx,o=rx
+
+- name: Try to pull latest images (continue on failure)
+  community.docker.docker_compose_v2:
+    pull: "always"
+    state: present
+    project_src: /home/{{ ansible_user }}/home-server/stacks/netbird
+  ignore_errors: true
+  register: pull_result
+
+- name: Warning - using local images
+  ansible.builtin.debug:
+    msg: "WARNING: Could not pull latest images. Deploying with existing local images."
+  when: pull_result is failed
+
+- name: Deploy stack from a compose file
+  community.docker.docker_compose_v2:
+    pull: "never"
+    build: "always"
+    state: present
+    project_src: /home/{{ ansible_user }}/home-server/stacks/netbird
+
+- name: Wait for NetBird Management API to be ready
+  ansible.builtin.uri:
+    url: "https://localhost:{{ netbird_management_port }}/health"
+    method: GET
+    validate_certs: false
+    status_code: [200, 404]
+  register: netbird_health
+  until: netbird_health.status in [200, 404]
+  retries: 30
+  delay: 10
+
+- name: Configure OIDC on netbird
+  ansible.builtin.uri:
+    url: "https://vpn.{{ app_domain_name }}/api/identity-providers"
+    method: POST
+    status_code: [200, 201]
+    headers:
+      Authorization: "Bearer {{ {{ netbird_api_token }} }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      type: "oidc"
+      name: "Authentik"
+      client_id: "{{ netbird_oauth_client_id }}"
+      client_secret: "{{ netbird_oauth_client_secret }}"
+      issuer: "https://auth.{{ app_domain_name }}"
+  when: netbird_api_token is defined and netbird_oauth_client_id is defined and netbird_oauth_client_id is defined
