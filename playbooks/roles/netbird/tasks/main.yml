@@ -1,3 +1,4 @@
+# code: language=ansible
 ---
 - name: Verify stacks directory exists
   ansible.builtin.file:
@@ -26,7 +27,7 @@
               refresh_token_validity: "days=30"
               scopes: "openid profile email"
             app:
-              name: "NetBird VPN"
+              name: "netbird"
               slug: "netbird-vpn"
               open_in_new_tab: true
               meta_launch_url: "https://vpn.{{ app_domain_name }}"
@@ -42,15 +43,22 @@
   loop:
     - "netbird"
     - "netbird/config"
-    - "netbird/signal"
-    - "netbird/management"
-    - "netbird/letsencrypt"
+    - "netbird/data"
 
-- name: Create NetBird environment file
+- name: Retrive secret for encryption
+  ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
+  vars:
+    secrets:
+      - name: netbird_session_cookie_encryption_key
+        length: 64
+      - name: netbird_datastore_encryption_key
+        length: 64
+
+- name: Create NetBird config file
   become: true
   ansible.builtin.template:
-    src: netbird.env.j2
-    dest: "{{ docker_volumes_path }}/netbird/config/.env"
+    src: config.yaml.j2
+    dest: "{{ docker_volumes_path }}/netbird/config/config.yaml"
     mode: u=rwx,g=o=
 
 - name: Create NetBird docker-compose file
@@ -90,3 +98,19 @@
   retries: 30
   delay: 10
 
+- name: Configure OIDC on netbird
+  ansible.builtin.uri:
+    url: "https://vpn.{{ app_domain_name }}/api/identity-providers"
+    method: POST
+    status_code: [200, 201]
+    headers:
+      Authorization: "Bearer {{ {{ netbird_api_token }} }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      type: "oidc"
+      name: "Authentik"
+      client_id: "{{ netbird_oauth_client_id }}"
+      client_secret: "{{ netbird_oauth_client_secret }}"
+      issuer: "https://auth.{{ app_domain_name }}"
+  when: netbird_api_token is defined and netbird_oauth_client_id is defined and netbird_oauth_client_id is defined
