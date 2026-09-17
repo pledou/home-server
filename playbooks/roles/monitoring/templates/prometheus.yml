@@ -56,12 +56,23 @@ scrape_configs:
   - job_name: fail2ban
     static_configs:
       - targets: ['fail2ban-exporter:9191']
-  - job_name: ollama-metrics
-    scrape_interval: 15s
-    static_configs:
-      - targets: ['ollama-metrics:8080','ollama-embeddings-metrics:8082']
 {% if gpu_nvidia_available | default(false) %}
   - job_name: nvidia-dcgm
     static_configs:
       - targets: ['nvidia-gpu-exporter:9400']
+{% endif %}
+{% if ia_llm_backend == 'vllm' %}
+  - job_name: ollama-metrics
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['ollama-embeddings-metrics:8082']
+  - job_name: vllm-metrics
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['vllm:8000']
+{% else %}
+  - job_name: ollama-metrics
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['ollama-metrics:8080','ollama-embeddings-metrics:8082']
 {% endif %}
