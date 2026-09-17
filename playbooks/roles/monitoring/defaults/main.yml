@@ -50,6 +50,11 @@ grafana_dashboard_updates:
     name: fail2ban
   - url: https://raw.githubusercontent.com/NorskHelsenett/ollama-metrics/main/prometheus/dashboard.json
     name: ollama-metrics
+  - url: https://github.com/vllm-project/vllm/raw/refs/heads/main/examples/observability/dashboards/grafana/performance_statistics.json
+    name: vllm performance
+  - url: https://github.com/vllm-project/vllm/raw/refs/heads/main/examples/observability/dashboards/grafana/query_statistics.json
+    name: vllm query
+    
 
 # Alerting configuration
 # These should be overridden in group_vars or host_vars
