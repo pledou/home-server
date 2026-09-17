@@ -23,7 +23,7 @@ services:
       "
     environment:
       {% if ia_llm_backend == 'vllm' %}
-      OLLAMA_BASE_URL: http://vllm-metrics:8080
+      OPENAI_API_BASE_URL: http://vllm:8080
       {% else %}
       OLLAMA_BASE_URL: http://ollama-metrics:8080
       {% endif %}
@@ -66,6 +66,7 @@ services:
       RAG_EMBEDDING_ENGINE: "ollama"
       RAG_OLLAMA_BASE_URL: "http://ollama-embeddings-metrics:8082"
       RAG_EMBEDDING_MODEL: "{{ ia_ollama_embedding_model }}"
+      RAG_SYSTEM_CONTEXT: True
     restart: always
     volumes:
       - open-webui:/app/backend/data
@@ -210,6 +211,9 @@ services:
       network:
         aliases:
           - vllm
+      monitoring_backend:
+        aliases:
+          - vllm
     {% if gpu == 'nvidia' %}
     deploy:
       resources:
@@ -218,27 +222,6 @@ services:
             - driver: nvidia
               capabilities: [gpu]
     {% endif %}
-
-  vllm-metrics:
-    labels:
-      - com.centurylinklabs.watchtower.enable=false
-    image: nginx:alpine
-    depends_on:
-      - vllm
-    expose:
-      - 8080/tcp
-    ports:
-      - 8080:8080/tcp
-    restart: unless-stopped
-    volumes:
-      - ./vllm-metrics-proxy.conf:/etc/nginx/conf.d/default.conf:ro
-    networks:
-      network:
-        aliases:
-          - vllm-metrics
-      monitoring_backend:
-        aliases:
-          - vllm-metrics
   {% endif %}
 
   {% if not ollama_embeddings_use_gpu and gpu != 'intel' %}
