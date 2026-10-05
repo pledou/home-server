@@ -5,17 +5,18 @@ server:
   listenAddress: ":80"
   exposedAddress: "https://vpn.{{ app_domain_name }}:443"
   stunPorts:
-    - ${{ netbird_stun_port }}
+    - {{ netbird_stun_port }}
   metricsPort: 9090
   healthcheckAddress: ":9000"
   logLevel: "info"
-  logFile: "console"
+  logFile: "console" 
 
   authSecret: "$NETBIRD_RELAY_AUTH_SECRET"
   dataDir: "/var/lib/netbird"
 
   auth:
-    issuer: "https://vpn.{{ app_domain_name }}/oauth2"
+    issuer: "https://auth.{{ app_domain_name }}/application/o/netbird-vpn/"
+    localAuthDisabled: true
     signKeyRefreshEnabled: true
     sessionCookieEncryptionKey: "{{ netbird_session_cookie_encryption_key }}"
     dashboardRedirectURIs:
