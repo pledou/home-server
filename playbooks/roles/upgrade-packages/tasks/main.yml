@@ -1,7 +1,7 @@
 # code: language=ansible
 ---
 - name: Upgrade all packages to the latest version
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.apt:
     name: "*"
     state: latest # noqa package-latest
@@ -14,13 +14,13 @@
   register: reboot_request
 
 - name: Reboot host(s) after package upgrade
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.reboot:
     reboot_timeout: 600
   when: reboot_request.stat.exists
 
 - name: Restic self update
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.command: /usr/local/bin/restic self-update
   changed_when: true
 ...

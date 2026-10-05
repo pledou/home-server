@@ -5,7 +5,7 @@
     name: fail2ban
     state: present
     update_cache: true
-  become: true
+  become: "{{ not local_safe }}"
 
 - name: Create fail2ban configuration directory
   ansible.builtin.file:
@@ -14,7 +14,7 @@
     owner: root
     group: root
     mode: '0755'
-  become: true
+  become: "{{ not local_safe }}"
 
 - name: Deploy fail2ban jail.local configuration
   ansible.builtin.template:
@@ -24,20 +24,20 @@
     group: root
     mode: '0644'
   notify: Restart fail2ban
-  become: true
+  become: "{{ not local_safe }}"
 
 - name: Ensure fail2ban service is enabled and started
   ansible.builtin.systemd:
     name: fail2ban
     enabled: true
     state: started
-  become: true
+  become: "{{ not local_safe }}"
 
 - name: Check fail2ban status
   ansible.builtin.command: fail2ban-client status
   register: fail2ban_status
   changed_when: false
-  become: true
+  become: "{{ not local_safe }}"
 
 - name: Display fail2ban status
   ansible.builtin.debug:

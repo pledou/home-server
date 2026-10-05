@@ -2,7 +2,7 @@
 ---
 - name: Verify stacks directory exists
   ansible.builtin.file:
-    path: "/home/{{ ansible_user }}/home-server/stacks/hassio"
+    path: "{{ stacks_base_path }}/hassio"
     state: directory
     mode: u=rwx,go=
 - name: Retrive secret
@@ -15,7 +15,7 @@
     gpu: "{{ 'intel' if gpu_intel_available and gpu_frigate_prefer_intel else gpu_mode_effective | default('none') }}"
     frigate_model_filename: "yolov9-{{ frigate_model_size }}-{{ frigate_image_size }}.onnx" 
 - name: Create homeassistant provisionning directories
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item.name }}"
     state: directory
@@ -47,34 +47,34 @@
       mode: u=rwx,g=rx,o=
 
 - name: Copy mosquitto config file
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.template:
     src: mosquitto.conf
     dest: "{{ docker_volumes_path }}/mosquitto/mosquitto.conf"
     mode: u=g=rwx,o=rx
     force: true
 - name: Install passlib system package
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.apt:
     name: python3-passlib
     state: present
     update_cache: true
 - name: Create mosquitto password file without mosquitto_passwd
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.copy:
     content: "{{ mqtt_user }}:{{ mqtt_password | mosquitto_passwd }}"
     dest: "{{ docker_volumes_path }}/mosquitto/mosquitto_passwords"
     mode: u=g=rwx,o=rx
     force: true
 - name: Copy myelectricaldata config file
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.template:
     src: myelectricaldata.yaml
     dest: "{{ docker_volumes_path }}/myelectricaldata/config.yaml"
     mode: u=g=rwx,o=rx
     force: false
 - name: Copy zigbee2mqtt config file
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.template:
     src: zigbee2mqtt.yaml
     dest: "{{ docker_volumes_path }}/zigbee2mqtt/configuration.yaml"
@@ -89,17 +89,17 @@
 - name: Create docker-compose file
   ansible.builtin.template:
     src: docker-compose.yml
-    dest: /home/{{ ansible_user }}/home-server/stacks/hassio/docker-compose.yml
+    dest: "{{ stacks_base_path }}/hassio/docker-compose.yml"
     mode: u=g=rwx,o=rx
 - name: Copy frigate config file
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.template:
     src: frigate.yaml
     dest: "{{ docker_volumes_path }}/frigate_config/config.yaml"
     mode: u=g=rwx,o=rx
     force: false
 - name: Update frigate managed configuration (auth, proxy, mqtt)
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.blockinfile:
     path: "{{ docker_volumes_path }}/frigate_config/config.yaml"
     marker: "# ANSIBLE_MANAGED_{mark}"
@@ -108,7 +108,7 @@
     block: "{{ lookup('template', 'frigate-managed-config.yaml') }}"
     mode: u=g=rwx,o=rx
 - name: Copy frigate proxy trusted headers config
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.template:
     src: proxy_trusted_headers.conf
     dest: "{{ docker_volumes_path }}/frigate_config/proxy_trusted_headers.conf"
@@ -139,7 +139,7 @@
     var:
       load_model
 - name: Configure homeassistant for proxy
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.blockinfile:
     path: "{{ docker_volumes_path }}/homeassistant/configuration.yaml"
     block: |
@@ -150,7 +150,7 @@
           - 172.0.0.0/8
 
 - name: Configure UFW rules for Home Assistant services
-  become: true
+  become: "{{ not local_safe }}"
   vars:
     local_networks_v4:
       - "{{ (ansible_default_ipv4.address ~ '/' ~ ansible_default_ipv4.prefix) | ansible.utils.ipaddr('network/prefix') }}"
@@ -225,11 +225,11 @@
   loop: "{{ ufw_rules | subelements('cidrs') }}"
 
 - name: Try to pull latest images (continue on failure)
-  become: true
+  become: "{{ not local_safe }}"
   community.docker.docker_compose_v2:
     pull: "always"
     state: present
-    project_src: /home/{{ ansible_user }}/home-server/stacks/hassio
+    project_src: "{{ stacks_base_path }}/hassio"
   ignore_errors: true
   register: pull_result
 
@@ -239,12 +239,12 @@
   when: pull_result is failed
 
 - name: Deploy compose from a compose file
-  become: true
+  become: "{{ not local_safe }}"
   community.docker.docker_compose_v2:
     pull: "never"
     build: "always"
     state: present
-    project_src: /home/{{ ansible_user }}/home-server/stacks/hassio
+    project_src: "{{ stacks_base_path }}/hassio"
 
 - name: Setup HACS and custom integrations
   when: homeassistant_hacs_enabled | bool
