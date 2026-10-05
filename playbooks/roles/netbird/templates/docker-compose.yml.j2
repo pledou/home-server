@@ -10,9 +10,9 @@ services:
       NETBIRD_MGMT_GRPC_API_ENDPOINT: "https://vpn.{{ app_domain_name }}"
       # OIDC - using embedded IdP
       AUTH_AUDIENCE: "netbird-dashboard"
-      AUTH_CLIENT_ID: "netbird-dashboard"
+      AUTH_CLIENT_ID: "{{ netbird_oauth_client_id }}"
       AUTH_CLIENT_SECRET: ""
-      AUTH_AUTHORITY: "https://vpn.{{ app_domain_name }}/oauth2"
+      AUTH_AUTHORITY: "https://auth.{{ app_domain_name }}/application/o/netbird-vpn/"
       USE_AUTH0: "false"
       AUTH_SUPPORTED_SCOPES: "openid profile email groups"
       AUTH_REDIRECT_URI: "/nb-auth"
@@ -27,8 +27,10 @@ services:
       #NETBIRD_AGENT_NETWORK_ONLY=true
     labels:
       traefik.enable: "true"
+      traefik.docker.network: "traefik_backend"
+      traefik.constraint-label: "traefik_backend"
       traefik.http.routers.netbird-dashboard.rule: "Host(`vpn.{{ app_domain_name }}`)"
-      traefik.http.routers.netbird-dashboard.entrypoints: "websecure"
+      traefik.http.routers.netbird-dashboard.entrypoints: "https"
       traefik.http.routers.netbird-dashboard.tls: "true"
       traefik.http.routers.netbird-dashboard.priority: 1
       traefik.http.services.netbird-dashboard.loadbalancer.server.port: 80
@@ -42,22 +44,24 @@ services:
     container_name: netbird-server
     restart: unless-stopped
     ports:
-      - '${{ netbird_stun_port }}:${{ netbird_stun_port }}/udp'
+      - "{{ netbird_stun_port }}:{{ netbird_stun_port }}/udp"
     volumes:
       - netbird_data:/var/lib/netbird
       - "{{ docker_volumes_path }}/netbird/config/config.yaml:/etc/netbird/config.yaml"
     command: ["--config", "/etc/netbird/config.yaml"]
     labels:
       traefik.enable: "true"
+      traefik.docker.network: "traefik_backend"
+      traefik.constraint-label: "traefik_backend"
       # gRPC router (needs h2c backend for HTTP/2 cleartext)
       traefik.http.routers.netbird-grpc.rule: "Host(`vpn.{{ app_domain_name }}`) && (PathPrefix(`/signalexchange.SignalExchange/`) || PathPrefix(`/management.ManagementService/`))"
-      traefik.http.routers.netbird-grpc.entrypoints: "websecure"
+      traefik.http.routers.netbird-grpc.entrypoints: "https"
       traefik.http.routers.netbird-grpc.tls: "true"
       traefik.http.routers.netbird-grpc.service: "netbird-server-h2c"
       # Backend router (relay, WebSocket, API, OAuth2)
-      traefik.http.routers.netbird-backend.rule: "Host(`vpn.{{ app_domain_name }}`) && (PathPrefix(`/relay`) || PathPrefix(`/ws-proxy/`) || PathPrefix(`/api`) || PathPrefix(`/oauth2`))"
-      traefik.http.routers.netbird-backend.entrypoints: "websecure"
-      traefik.http.routers.netbird-backend.tls: "true"
+      traefik.http.routers.netbird-backend.rule: "Host(`vpn.{{ app_domain_name }}`) && (PathPrefix(`/relay`) || PathPrefix(`/ws-proxy/`) || PathPrefix(`/api`) || PathPrefix(`/oauth2`) || PathPrefix(`/health/`))"
+      traefik.http.routers.netbird-backend.entrypoints: "https"
+      traefik.http.routers.netbird-backend.tls: "true" 
       traefik.http.routers.netbird-backend.service: "netbird-server"
       # Services
       traefik.http.services.netbird-server.loadbalancer.server.port: 80
