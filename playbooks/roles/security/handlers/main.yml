@@ -4,11 +4,11 @@
   ansible.builtin.systemd:
     name: ssh
     state: restarted
-  become: true
+  become: "{{ not local_safe }}"
 
 - name: Restart fail2ban
   ansible.builtin.systemd:
     name: fail2ban
     state: restarted
-  become: true
+  become: "{{ not local_safe }}"
 ...

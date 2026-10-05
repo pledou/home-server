@@ -1,13 +1,13 @@
 # code: language=ansible
 ---
 - name: Check if dashboard file exists
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.stat:
     path: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/{{ dashboard_gnet_id }}.json"
   register: dashboard_file
 
 - name: Read dashboard file
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.slurp:
     src: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/{{ dashboard_gnet_id }}.json"
   register: dashboard_content
@@ -71,7 +71,7 @@
   when: dashboard_file.stat.exists
 
 - name: Add missing dashboard datasource variables
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.copy:
     dest: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/{{ dashboard_gnet_id }}.json"
     owner: "{{ ansible_user }}"

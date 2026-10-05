@@ -2,12 +2,12 @@
 ---
 - name: Verify stacks directory exists
   ansible.builtin.file:
-    path: "/home/{{ ansible_user }}/home-server/stacks/ia"
+    path: "{{ stacks_base_path }}/ia"
     state: directory
     mode: u=rwx,g=o=rx
 
 - name: Create ia provisionning directories (root-owned)
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item }}"
     state: directory
@@ -21,7 +21,7 @@
     - chromadb
 
 - name: Create Speaches cache directory (ubuntu-owned)
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/speaches-hf-cache"
     state: directory
@@ -36,7 +36,7 @@
 - name: Create docker-compose stack file
   ansible.builtin.template:
     src: docker-compose.yml
-    dest: /home/{{ ansible_user }}/home-server/stacks/ia/docker-compose.yml
+    dest: "{{ stacks_base_path }}/ia/docker-compose.yml"
     mode: u=rwx,g=o=rx
   vars:
     gpu: "{{ gpu_mode_effective | default('none') }}"
@@ -44,19 +44,19 @@
 - name: Create Speaches model aliases file
   ansible.builtin.template:
     src: speaches_model_aliases.json
-    dest: /home/{{ ansible_user }}/home-server/stacks/ia/model_aliases.json
+    dest: "{{ stacks_base_path }}/ia/model_aliases.json"
     mode: u=rw,g=o=r
 
 - name: Create override Dockerfile for ollama-metrics
   ansible.builtin.template:
     src: ollama-metrics.Dockerfile
-    dest: /home/{{ ansible_user }}/home-server/stacks/ia/ollama-metrics.Dockerfile
+    dest: "{{ stacks_base_path }}/ia/ollama-metrics.Dockerfile"
     mode: u=rwx,g=o=rx
 
 - name: Create OpenWebUI API proxy config
   ansible.builtin.template:
     src: webui-api-proxy.conf
-    dest: /home/{{ ansible_user }}/home-server/stacks/ia/webui-api-proxy.conf
+    dest: "{{ stacks_base_path }}/ia/webui-api-proxy.conf"
     mode: u=rw,g=o=r
 
 - name: Deploy stack from a compose file
@@ -64,7 +64,7 @@
     pull: "always"
     build: "always"
     state: present
-    project_src: /home/{{ ansible_user }}/home-server/stacks/ia
+    project_src: "{{ stacks_base_path }}/ia"
 
 - name: Wait for Ollama API tags endpoint
   ansible.builtin.uri:

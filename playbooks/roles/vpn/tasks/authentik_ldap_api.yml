@@ -7,27 +7,27 @@
 - name: Upload LDAP provisioning script to remote host
   ansible.builtin.copy:
     src: "{{ role_path }}/files/authentik_provision_ldap.py"
-    dest: "/home/{{ ansible_user }}/home-server/stacks/vpn/authentik_provision_ldap.py"
+    dest: "{{ stacks_base_path }}/vpn/authentik_provision_ldap.py"
     mode: '0700'
 
 - name: Copy LDAP provisioning script into Authentik container
   ansible.builtin.command:
     cmd: >-
-      docker cp /home/{{ ansible_user }}/home-server/stacks/vpn/authentik_provision_ldap.py
+      docker cp {{ stacks_base_path }}/vpn/authentik_provision_ldap.py
       authentik-server-1:/tmp/authentik_provision_ldap.py
   changed_when: false
 
 - name: Write env file for LDAP provisioning script
   ansible.builtin.template:
     src: authentik_ldap_env.j2
-    dest: "/home/{{ ansible_user }}/home-server/stacks/vpn/authentik_ldap.env"
+    dest: "{{ stacks_base_path }}/vpn/authentik_ldap.env"
     mode: '0600'
 
 - name: Provision Authentik LDAP objects (service account, bind flow, provider, outpost, bindings)
   ansible.builtin.command:
     cmd: >-
       docker exec
-      --env-file /home/{{ ansible_user }}/home-server/stacks/vpn/authentik_ldap.env
+      --env-file {{ stacks_base_path }}/vpn/authentik_ldap.env
       authentik-server-1
       python3 /tmp/authentik_provision_ldap.py
     # Use Authentik's internal HTTPS listener to avoid the HTTP→HTTPS redirect
