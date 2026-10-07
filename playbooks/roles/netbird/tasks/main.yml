@@ -16,13 +16,9 @@
           - provider:
               name: "netbird-oauth-provider"
               redirect_uris:
-                - url: "https://vpn.{{ app_domain_name }}/nb-auth"
+                - url: "https://vpn.{{ app_domain_name }}/oauth2/callback"
                   matching_mode: "strict"
-                - url: "https://vpn.{{ app_domain_name }}/nb-silent-auth"
-                  matching_mode: "strict"
-                - url: "http://localhost:53000/"
-                  matching_mode: "strict"
-              client_type: "public"
+              client_type: "confidential"
               token_endpoint_auth_method: "none"   # important pour PKCE public SPA
               sub_mode: "user_email"
               include_claims_in_id_token: true
@@ -32,7 +28,6 @@
               refresh_token_validity: "days=30"
               grant_types:
                 - "authorization_code"
-                - "refresh_token"
               scopes: "openid profile email"
             app:
               name: "netbird"
@@ -57,8 +52,6 @@
   ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
   vars:
     secrets:
-      - name: netbird_session_cookie_encryption_key
-        length: 64
       - name: netbird_datastore_encryption_key
         length: 48 #  FATL management/internals/server/boot.go:97: failed to create field encryptor: encryption key must be 32 bytes, got 24 -> We should have openssl rand -base64 32 ending by ==
 
@@ -103,30 +96,9 @@
     proto: udp
     comment: "netbird STUN"
 
-# - name: Wait for NetBird Management API to be ready
-#   ansible.builtin.uri:
-#     url: "https://vpn.{{ app_domain_name }}/health"
-#     method: GET
-#     validate_certs: false
-#     status_code: [200, 404]
-#   register: netbird_health
-#   until: netbird_health.status in [200, 404]
-#   retries: 30
-#   delay: 10
-
-# - name: Configure OIDC on netbird
-#   ansible.builtin.uri:
-#     url: "https://vpn.{{ app_domain_name }}/api/identity-providers"
-#     method: POST
-#     status_code: [200, 201]
-#     headers:
-#       Authorization: "Bearer {{ netbird_api_token }}"
-#       Content-Type: "application/json"
-#     body_format: json
-#     body:
-#       type: "oidc"
-#       name: "Authentik"
-#       client_id: "{{ netbird_oauth_client_id }}"
-#       client_secret: "{{ netbird_oauth_client_secret }}"
-#       issuer: "https://auth.{{ app_domain_name }}"
-#   when: netbird_api_token is defined and netbird_oauth_client_id is defined and netbird_oauth_client_id is defined
+- name: Describe configuration of Authentik in Netbird management IHM
+  ansible.builtin.debug: 
+     msg: |
+      "Issuer: https://auth.{{ app_domain_name }}/application/o/netbird-vpn/"
+      "Client Id: {{ netbird_oauth_client_id }}"
+      "Client Secret: {{ netbird_oauth_client_secret }}"
