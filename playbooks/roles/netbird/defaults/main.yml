@@ -7,10 +7,5 @@ netbird_combined_version: "latest"
 netbird_dashboard_image: "netbirdio/dashboard"
 netbird_dashboard_version: "latest"
 
-# Environment
-netbird_environment:
-  NETBIRD_JWT_ISSUER: "{{ netbird_oidc_issuer }}"
-  NETBIRD_JWT_AUDIENCE: "{{ netbird_oidc_audience }}"
-
 netbird_stun_port: 3479 # To avoid same port as Nextcloud Turn Server
   
