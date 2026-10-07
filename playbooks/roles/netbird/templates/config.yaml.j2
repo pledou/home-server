@@ -15,10 +15,8 @@ server:
   dataDir: "/var/lib/netbird"
 
   auth:
-    issuer: "https://auth.{{ app_domain_name }}/application/o/netbird-vpn/"
-    localAuthDisabled: true
+    issuer: "https://vpn.{{app_domain_name}}/oauth2"
     signKeyRefreshEnabled: true
-    sessionCookieEncryptionKey: "{{ netbird_session_cookie_encryption_key }}"
     dashboardRedirectURIs:
       - "https://vpn.{{ app_domain_name }}/nb-auth"
       - "https://vpn.{{ app_domain_name }}/nb-silent-auth"
