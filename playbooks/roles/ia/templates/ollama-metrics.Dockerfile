@@ -1,4 +1,4 @@
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 
 ARG OLLAMA_METRICS_REPO_URL="{{ ollama_metrics_repo_url }}"
 ARG OLLAMA_METRICS_REPO_REF="{{ ollama_metrics_repo_ref }}"
