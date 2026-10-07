@@ -5,7 +5,7 @@
     name: openssh-server
     state: present
     update_cache: true
-  become: "{{ not local_safe }}"
+  become: true
 
 - name: Create .ssh directory for ansible user
   ansible.builtin.file:
@@ -14,7 +14,7 @@
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
     mode: '0700'
-  become: "{{ not local_safe }}"
+  become: true
 
 - name: Add authorized SSH keys for ansible user
   ansible.builtin.authorized_key:
@@ -24,7 +24,7 @@
     exclusive: false
   loop: "{{ ssh_authorized_keys }}"
   when: ssh_authorized_keys | length > 0
-  become: "{{ not local_safe }}"
+  become: true
 
 - name: Backup original sshd_config
   ansible.builtin.copy:
@@ -32,7 +32,7 @@
     dest: /etc/ssh/sshd_config.backup.{{ ansible_date_time.iso8601_basic_short }}
     remote_src: true
     force: false
-  become: "{{ not local_safe }}"
+  become: true
 
 - name: Deploy hardened sshd_config
   ansible.builtin.template:
@@ -43,14 +43,14 @@
     mode: '0644'
     validate: '/usr/sbin/sshd -t -f %s'
   notify: Restart ssh
-  become: "{{ not local_safe }}"
+  become: true
 
 - name: Ensure SSH service is enabled and started
   ansible.builtin.systemd:
     name: ssh
     enabled: true
     state: started
-  become: "{{ not local_safe }}"
+  become: true
 
 - name: Display SSH key authentication reminder
   ansible.builtin.debug:

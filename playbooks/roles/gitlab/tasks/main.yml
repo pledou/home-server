@@ -2,11 +2,11 @@
 ---
 - name: Verify stacks directory exists
   ansible.builtin.file:
-    path: "{{ stacks_base_path }}/gitlab"
+    path: "/home/{{ ansible_user }}/home-server/stacks/gitlab"
     state: directory
     mode: u=g=rwx,o=rx
 - name: Create gitlab provisionning directories
-  become: "{{ not local_safe }}"
+  become: true
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item.name }}"
     state: directory
@@ -17,7 +17,7 @@
     - name: gitlab-data
     - name: gitlab-config
 - name: Copy gitlab config
-  become: "{{ not local_safe }}"
+  become: true
   ansible.builtin.template:
     src: gitlab.rb
     dest: "{{ docker_volumes_path }}/gitlab-config/gitlab.rb"
@@ -31,14 +31,14 @@
 - name: Create docker-compose file
   ansible.builtin.template:
     src: docker-compose.yml
-    dest: "{{ stacks_base_path }}/gitlab/docker-compose.yml"
+    dest: /home/{{ ansible_user }}/home-server/stacks/gitlab/docker-compose.yml
     mode: u=g=rwx,o=rx
 
 - name: Try to pull latest images (continue on failure)
   community.docker.docker_compose_v2:
     pull: "always"
     state: present
-    project_src: "{{ stacks_base_path }}/gitlab"
+    project_src: /home/{{ ansible_user }}/home-server/stacks/gitlab
   ignore_errors: true
   register: pull_result
 
@@ -52,4 +52,4 @@
     pull: "never"
     build: "always"
     state: present
-    project_src: "{{ stacks_base_path }}/gitlab"
+    project_src: /home/{{ ansible_user }}/home-server/stacks/gitlab

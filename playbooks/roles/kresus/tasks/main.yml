@@ -2,7 +2,7 @@
 ---
 - name: Verify stacks directory exists
   ansible.builtin.file:
-    path: "{{ stacks_base_path }}/kresus"
+    path: "/home/{{ ansible_user }}/home-server/stacks/kresus"
     state: directory
     mode: u=g=rwx,o=rx
 
@@ -13,7 +13,7 @@
       - k_db_password
 
 - name: Create kresus provisionning directories
-  become: "{{ not local_safe }}"
+  become: true
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item.name }}"
     state: directory
@@ -35,19 +35,19 @@
     pg_password: "{{ k_db_password }}"
     pg_target_version: "{{ kresus_postgres_version | default('15') }}"
     pg_data_dir: "{{ docker_volumes_path }}/kresus-database"
-    project_src: "{{ stacks_base_path }}/kresus"
+    project_src: "/home/{{ ansible_user }}/home-server/stacks/kresus"
 
 - name: Create docker-compose stack file
   ansible.builtin.template:
     src: docker-compose.yml
-    dest: "{{ stacks_base_path }}/kresus/docker-compose.yml"
+    dest: /home/{{ ansible_user }}/home-server/stacks/kresus/docker-compose.yml
     mode: u=g=rwx,o=rx
 
 - name: Try to pull latest images (continue on failure)
   community.docker.docker_compose_v2:
     pull: "always"
     state: present
-    project_src: "{{ stacks_base_path }}/kresus"
+    project_src: /home/{{ ansible_user }}/home-server/stacks/kresus
   ignore_errors: true
   register: pull_result
 
@@ -61,7 +61,7 @@
     pull: "never"
     build: "always"
     state: present
-    project_src: "{{ stacks_base_path }}/kresus"
+    project_src: /home/{{ ansible_user }}/home-server/stacks/kresus
 
 - name: PostgreSQL restore after upgrade for Kresus k-db
   ansible.builtin.include_tasks: "tasks/restore_postgres_service.yml"
@@ -71,7 +71,7 @@
     pg_database_name: "kresus"
     pg_username: "kresus"
     pg_password: "{{ k_db_password }}"
-    project_src: "{{ stacks_base_path }}/kresus"
+    project_src: "/home/{{ ansible_user }}/home-server/stacks/kresus"
     pg_backup_retention_days: "{{ postgres_backup_retention_days | default(7) }}"
 
 - name: PostgreSQL restore after upgrade for Kresus k-db1
@@ -82,7 +82,7 @@
     pg_database_name: "kresus"
     pg_username: "kresus"
     pg_password: "{{ k_db1_password }}"
-    project_src: "{{ stacks_base_path }}/kresus"
+    project_src: "/home/{{ ansible_user }}/home-server/stacks/kresus"
     pg_backup_retention_days: "{{ postgres_backup_retention_days | default(7) }}"
 
 - name: Configure Authentik providers and applications for Kresus

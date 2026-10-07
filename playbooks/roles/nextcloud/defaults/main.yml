@@ -12,7 +12,7 @@ harp_version: "release"
 redis_image: "redis"
 redis_version: "8-alpine"
 nextcloud_image: "nextcloud"
-nextcloud_version: "34"
+nextcloud_version: "32"
 
 nextcloud_defaultapp_list:
   - viewer
