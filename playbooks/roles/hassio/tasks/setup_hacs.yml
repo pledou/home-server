@@ -3,7 +3,7 @@
 # HACS (Home Assistant Community Store) automated setup
 
 - name: Check if HACS is already installed
-  become: "{{ not local_safe }}"
+  become: true
   ansible.builtin.stat:
     path: "{{ docker_volumes_path }}/homeassistant/custom_components/hacs"
   register: hacs_directory
@@ -12,7 +12,7 @@
   when: not hacs_directory.stat.exists
   block:
     - name: Create custom_components directory
-      become: "{{ not local_safe }}"
+      become: true
       ansible.builtin.file:
         path: "{{ docker_volumes_path }}/homeassistant/custom_components"
         state: directory
@@ -28,14 +28,14 @@
       register: hacs_release
 
     - name: Download HACS zip
-      become: "{{ not local_safe }}"
+      become: true
       ansible.builtin.get_url:
         url: "{{ hacs_release.json.assets | selectattr('name', 'equalto', 'hacs.zip') | map(attribute='browser_download_url') | first }}"
         dest: "/tmp/hacs.zip"
         mode: '0644'
 
     - name: Unzip HACS to custom_components
-      become: "{{ not local_safe }}"
+      become: true
       ansible.builtin.unarchive:
         src: "/tmp/hacs.zip"
         dest: "{{ docker_volumes_path }}/homeassistant/custom_components"
@@ -45,7 +45,7 @@
         mode: u=rwx,g=rx,o=
 
     - name: Remove HACS zip file
-      become: "{{ not local_safe }}"
+      become: true
       ansible.builtin.file:
         path: "/tmp/hacs.zip"
         state: absent

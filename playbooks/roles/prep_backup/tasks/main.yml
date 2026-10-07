@@ -6,7 +6,7 @@
   ansible.builtin.include_tasks: install_restic.yml
 
 - name: Verify databases volume path
-  become: "{{ not local_safe }}"
+  become: true
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item }}"
     state: directory
@@ -21,7 +21,7 @@
       - restic_backup_secret
 
 - name: Initialize repository
-  become: "{{ not local_safe }}"
+  become: true
   ansible.builtin.command: 'restic init'
   environment:
     RESTIC_REPOSITORY: "{{ restic_repo }}"
@@ -47,7 +47,7 @@
   when: aws_access_key_id is defined and aws_secret_access_key is defined
 
 - name: Create restic backup script
-  become: "{{ not local_safe }}"
+  become: true
   ansible.builtin.template:
     src: 'backup_volumes.sh.j2'
     dest: '/usr/local/bin/backup_volumes.sh'
@@ -57,7 +57,7 @@
     force: true
 
 - name: Cron volume backup
-  become: "{{ not local_safe }}"
+  become: true
   ansible.builtin.cron:
     name: "backup selfhosted"
     day: "{{ prep_backup_day }}"

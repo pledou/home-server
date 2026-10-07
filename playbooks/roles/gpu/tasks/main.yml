@@ -13,7 +13,7 @@
   when: gpu_nvidia_device.stat.exists | default(false)
 
 - name: Try to recover NVIDIA runtime when driver appears unloaded
-  become: "{{ not local_safe }}"
+  become: true
   when:
     - gpu_attempt_recovery | bool
     - gpu_nvidia_device.stat.exists | default(false)

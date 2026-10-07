@@ -23,7 +23,7 @@
     creates: "/tmp/restic_{{ restic_latest_version }}_linux_amd64"
 
 - name: Install restic binary
-  become: "{{ not local_safe }}"
+  become: true
   ansible.builtin.copy:
     src: "/tmp/restic_{{ restic_latest_version }}_linux_amd64"
     dest: /usr/local/bin/restic

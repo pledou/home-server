@@ -19,4 +19,3 @@ inventories/group_vars/all.yml
 
 # Ignore pycache
 **/__pycache__/**
-ansible.cfg

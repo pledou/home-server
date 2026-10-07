@@ -1,7 +1,7 @@
 # code: language=ansible
 ---
 - name: Restart systemd-resolved
-  become: "{{ not local_safe }}"
+  become: true
   ansible.builtin.systemd:
     name: systemd-resolved
     state: restarted
