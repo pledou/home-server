@@ -2,12 +2,12 @@
 ---
 - name: Verify stacks directory exists
   ansible.builtin.file:
-    path: "/home/{{ ansible_user }}/home-server/stacks/monitoring"
+    path: "{{ stacks_base_path }}/monitoring"
     state: directory
     mode: u=g=rwx,o=rx
 
 - name: Create Monitoring provisionning directories
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item.name }}"
     state: directory
@@ -47,7 +47,7 @@
     - grafana-provisioning/dashboards
 
 - name: Deploy Prometheus configuration
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.template:
     src: prometheus.yml
     dest: "{{ docker_volumes_path }}/prometheus-conf/prometheus.yml"
@@ -57,7 +57,7 @@
   notify: Restart Prometheus
 
 - name: Deploy Prometheus alert rules
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.copy:
     src: alerts.rules
     dest: "{{ docker_volumes_path }}/prometheus-conf/alerts.rules"
@@ -66,7 +66,7 @@
   notify: Restart Prometheus
 
 - name: Create configurations files as root
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.template:
     src: "{{ item.file }}"
     dest: "{{ docker_volumes_path }}/{{ item.dest }}"
@@ -202,7 +202,7 @@
     repo: https://github.com/pledou/nextcloud-talk-webhook-bot.git
     # add Alertmanager json format support to https://github.com/weichwaren-schmiede/nextcloud-talk-webhook-bot.git
     # A MR has been opened here: https://github.com/weichwaren-schmiede/nextcloud-talk-webhook-bot/pull/1
-    dest: /home/{{ ansible_user }}/home-server/stacks/monitoring/nextcloud-talk-bot
+    dest: "{{ stacks_base_path }}/monitoring/nextcloud-talk-bot"
     version: main
     force: true
   when: alertmanager_nextcloud_conversation_token is defined and alertmanager_nextcloud_conversation_token
@@ -210,11 +210,11 @@
 - name: Create docker-compose stack file
   ansible.builtin.template:
     src: docker-compose.yml
-    dest: /home/{{ ansible_user }}/home-server/stacks/monitoring/docker-compose.yml
+    dest: "{{ stacks_base_path }}/monitoring/docker-compose.yml"
     mode: u=g=rwx,o=rx
 
 - name: Download NorskHelsenett Ollama Metrics dashboard
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.get_url:
     url: "{{ ollama_metrics_dashboard_url }}"
     dest: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/ollama-metrics-dashboard.json"
@@ -224,7 +224,7 @@
     force: true
 
 - name: Download Grafana.com dashboards
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.get_url:
     url: "https://grafana.com/api/dashboards/{{ item.gnet_id }}/revisions/latest/download"
     dest: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/{{ item.gnet_id }}.json"
@@ -263,7 +263,7 @@
   changed_when: false
 
 - name: Replace Prometheus dashboard datasource variables with fixed UID
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.replace:
     path: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/{{ item.gnet_id }}.json"
     regexp: '\$\{DS_(?:PROM[A-Z_]*|PRM[A-Z_]*)\}'
@@ -273,7 +273,7 @@
     label: "{{ item.gnet_id }}.json"
 
 - name: Normalize Ollama dashboard Prometheus datasource references
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.shell: |
     set -o pipefail
     jq '
@@ -303,7 +303,7 @@
   changed_when: false
 
 - name: Replace Loki dashboard datasource variables with fixed UID
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.replace:
     path: "{{ docker_volumes_path }}/grafana-provisioning/dashboards/{{ item.gnet_id }}.json"
     regexp: '\$\{DS_LOKI[A-Z_]*\}'
@@ -316,7 +316,7 @@
   community.docker.docker_compose_v2:
     pull: "always"
     state: present
-    project_src: /home/{{ ansible_user }}/home-server/stacks/monitoring
+    project_src: "{{ stacks_base_path }}/monitoring"
   ignore_errors: true
   register: pull_result
 
@@ -330,7 +330,7 @@
     pull: "never"
     build: "always"
     state: present
-    project_src: /home/{{ ansible_user }}/home-server/stacks/monitoring
+    project_src: "{{ stacks_base_path }}/monitoring"
 
 - name: Check if Nextcloud container exists
   ansible.builtin.shell:

@@ -36,13 +36,13 @@
 # ---- Stack directory -------------------------------------------------------
 - name: Ensure stack directory exists
   ansible.builtin.file:
-    path: "/home/{{ ansible_user }}/home-server/stacks/vpn"
+    path: "{{ stacks_base_path }}/vpn"
     state: directory
     mode: u=rwx,g=o=rx
 
 # ---- Configuration directories for bind-mount volumes ----------------------
 - name: Create VPN volume directories
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item }}"
     state: directory
@@ -63,7 +63,7 @@
 
 # ---- FreeRADIUS LDAP module ------------------------------------------------
 - name: Deploy FreeRADIUS LDAP module configuration
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.template:
     src: freeradius-ldap.j2
     dest: "{{ docker_volumes_path }}/vpn-freeradius/mods-enabled/ldap"
@@ -73,7 +73,7 @@
 
 # ---- FreeRADIUS clients (strongSwan NAS) -----------------------------------
 - name: Deploy FreeRADIUS clients configuration
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.template:
     src: freeradius-clients.j2
     dest: "{{ docker_volumes_path }}/vpn-freeradius/clients.conf.d/strongswan.conf"
@@ -85,7 +85,7 @@
 - name: Deploy VPN stack files
   ansible.builtin.template:
     src: "{{ item.src }}"
-    dest: "/home/{{ ansible_user }}/home-server/stacks/vpn/{{ item.src }}"
+    dest: "{{ stacks_base_path }}/vpn/{{ item.src }}"
     mode: "{{ item.mode }}"
   loop:
     - { src: docker-compose.yml,      mode: 'u=rwx,g=rx,o=rx' }
@@ -94,7 +94,7 @@
 
 # ---- UFW -------------------------------------------------------------------
 - name: Allow IKEv2 UDP 500 through UFW
-  become: true
+  become: "{{ not local_safe }}"
   community.general.ufw:
     rule: allow
     port: "{{ vpn_listen_port_ike }}"
@@ -102,7 +102,7 @@
     comment: "strongSwan IKEv2"
 
 - name: Allow IKEv2 NAT-T UDP 4500 through UFW
-  become: true
+  become: "{{ not local_safe }}"
   community.general.ufw:
     rule: allow
     port: "{{ vpn_listen_port_nat_t }}"
@@ -111,7 +111,7 @@
 
 # ---- Enable IP forwarding --------------------------------------------------
 - name: Enable IPv4 forwarding for VPN routing
-  become: true
+  become: "{{ not local_safe }}"
   ansible.posix.sysctl:
     name: net.ipv4.ip_forward
     value: '1'
@@ -123,7 +123,7 @@
   community.docker.docker_compose_v2:
     pull: "always"
     state: present
-    project_src: "/home/{{ ansible_user }}/home-server/stacks/vpn"
+    project_src: "{{ stacks_base_path }}/vpn"
   ignore_errors: true
   register: vpn_pull_result
 
@@ -137,4 +137,4 @@
   community.docker.docker_compose_v2:
     pull: "never"
     state: present
-    project_src: "/home/{{ ansible_user }}/home-server/stacks/vpn"
+    project_src: "{{ stacks_base_path }}/vpn"

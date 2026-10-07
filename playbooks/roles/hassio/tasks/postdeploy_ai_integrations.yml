@@ -1,7 +1,7 @@
 # code: language=ansible
 ---
 - name: Detect required IA services currently running
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.command:
     cmd: >-
       docker ps
@@ -44,7 +44,7 @@
       Skipping Home Assistant AI post-deploy bootstrap.
 
 - name: Resolve Home Assistant container name from compose labels
-  become: true
+  become: "{{ not local_safe }}"
   vars:
     hassio_compose_project_name: "{{ ('/home/' ~ ansible_user ~ '/home-server/stacks/hassio') | basename }}"
     hassio_compose_service_name: "homeassistant"
@@ -65,7 +65,7 @@
   when: hassio_ai_bootstrap_should_run
 
 - name: Wait for Home Assistant container to be running
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.command:
     cmd: >-
       docker inspect -f {{ '{{.State.Running}}' }} {{ hassio_homeassistant_container_name }}
@@ -79,7 +79,7 @@
   when: hassio_ai_bootstrap_should_run
 
 - name: Wait for Home Assistant config entries file in container
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.command:
     cmd: >-
       docker exec {{ hassio_homeassistant_container_name }}
@@ -100,7 +100,7 @@
   when: hassio_ai_bootstrap_should_run
 
 - name: Check required custom components are already installed
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.stat:
     path: "{{ docker_volumes_path }}/homeassistant/custom_components/{{ item }}"
   loop: "{{ hassio_ai_required_custom_components }}"
@@ -133,7 +133,7 @@
   when: (hassio_ai_missing_custom_components | default([]) | length) > 0
 
 - name: Bootstrap Home Assistant AI integrations in core.config_entries
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.command:
     cmd: >-
       docker exec
@@ -178,7 +178,7 @@
   when: hassio_ai_bootstrap_should_run
 
 - name: Restart Home Assistant container when AI integrations changed
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.command:
     cmd: docker restart {{ hassio_homeassistant_container_name }}
   when:
@@ -187,7 +187,7 @@
     - hassio_ai_bootstrap_result.changed
 
 - name: Wait after Home Assistant restart
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.command:
     cmd: >-
       docker inspect -f {{ '{{.State.Running}}' }} {{ hassio_homeassistant_container_name }}

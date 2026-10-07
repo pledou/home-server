@@ -2,7 +2,7 @@
 ---
 - name: Verify stacks directory exists
   ansible.builtin.file:
-    path: "/home/{{ ansible_user }}/home-server/stacks/nc"
+    path: "{{ stacks_base_path }}/nc"
     state: directory
     mode: u=g=rwx,o=rx
 - name: Retrive secret
@@ -18,7 +18,7 @@
       - turn_secret
 
 - name: Create nextcloud provisionning directories
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item.name }}"
     state: directory
@@ -46,7 +46,7 @@
     - name: nextcloud-elastic-data
       owner: 1000
 - name: Copy nginx configuration file
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.copy:
     src: "{{ item }}"
     dest: "{{ docker_volumes_path }}/nextcloud-nginx-config"
@@ -56,23 +56,23 @@
     - fastcgi_params
   register: nginx1
 - name: Copy nginx configuration file
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.template:
     src: "nginx.conf"
     dest: "{{ docker_volumes_path }}/nextcloud-nginx-config"
     mode: u=rw,g=o=r
   register: nginx2
 - name: Copy docker file
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.template:
     src: "nextcloud/Dockerfile"
-    dest: "/home/{{ ansible_user }}/home-server/stacks/nc/nextcloud.Dockerfile"
+    dest: "{{ stacks_base_path }}/nc/nextcloud.Dockerfile"
     mode: u=rw,g=o=r
   register: nginx2
 - name: Copy associated docker files
   ansible.builtin.copy:
     src: "{{ item.src }}"
-    dest: "/home/{{ ansible_user }}/home-server/stacks/nc/{{ item.dest }}"
+    dest: "{{ stacks_base_path }}/nc/{{ item.dest }}"
     mode: u=rw,g=o=r
   loop:
     - src: nextcloud/supervisord.conf
@@ -89,21 +89,23 @@
     pg_password: "{{ database_user_secret }}"
     pg_target_version: "{{ nextcloud_postgres_version | default('15') }}"
     pg_data_dir: "{{ docker_volumes_path }}/nextcloud-database"
-    project_src: "/home/{{ ansible_user }}/home-server/stacks/nc"
+    project_src: "{{ stacks_base_path }}/nc"
 
 - name: Create docker-compose stack file
   ansible.builtin.template:
     src: docker-compose.yml
-    dest: /home/{{ ansible_user }}/home-server/stacks/nc/docker-compose.yml
+    dest: "{{ stacks_base_path }}/nc/docker-compose.yml"
     mode: u=rw,g=o=r
 
 - name: Try to pull latest images (continue on failure)
   community.docker.docker_compose_v2:
     pull: "always"
     state: present
-    project_src: /home/{{ ansible_user }}/home-server/stacks/nc
+    project_src: "{{ stacks_base_path }}/nc"
   ignore_errors: true
   register: pull_result
+
+  #TODO We should build nextcloud.Dockerfile Image
 
 - name: Warning - using local images
   ansible.builtin.debug:
@@ -115,7 +117,7 @@
     pull: "never"
     build: "always"
     state: "{{ 'restarted' if (nginx1 is changed or nginx2 is changed) else 'present' }}"
-    project_src: /home/{{ ansible_user }}/home-server/stacks/nc
+    project_src: "{{ stacks_base_path }}/nc"
 
 - name: PostgreSQL restore after upgrade for Nextcloud
   ansible.builtin.include_tasks: "tasks/restore_postgres_service.yml"
@@ -125,15 +127,15 @@
     pg_database_name: "nextcloud"
     pg_username: "nextcloud"
     pg_password: "{{ database_user_secret }}"
-    project_src: "/home/{{ ansible_user }}/home-server/stacks/nc"
+    project_src: "{{ stacks_base_path }}/nc"
     pg_backup_retention_days: "{{ postgres_backup_retention_days | default(7) }}"
 
 - name: Wait for nextcloud container to come up
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.wait_for:
     path: "{{ docker_volumes_path }}/nextcloud-www/lib/versioncheck.php"
 - name: Check if init is necessary
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.stat:
     path: "{{ docker_volumes_path }}/nextcloud-config/config.php"
   register: config_php
@@ -158,7 +160,7 @@
       changed_when: true
 
 - name: Install apps
-  become: true # necessary to read docker_volumes_path content
+  become: "{{ not local_safe }}" # necessary to read docker_volumes_path content
   ansible.builtin.command:
     cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app:install {{ item }} --no-interaction --no-warnings'
     creates: '{{ docker_volumes_path }}/nextcloud-www/apps/{{ item }}'
@@ -235,7 +237,7 @@
   failed_when: "enable_exapp.rc != 0 and 'already enabled' not in (enable_exapp.stdout | lower)"
 
 - name: Install context_chat app after backend registration
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.command:
     cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app:install context_chat --no-interaction --no-warnings'
     creates: '{{ docker_volumes_path }}/nextcloud-www/apps/context_chat'
@@ -261,4 +263,12 @@
   register: add_db_objects
   failed_when: false
   changed_when: add_db_objects.rc == 0
+
+- name: Configure UFW rules for nextcloud TURN
+  become: "{{ not local_safe }}"
+  community.general.ufw:
+    rule: allow
+    port: "3478"
+    proto: udp
+    comment: "nextcloud TURN"
 ...

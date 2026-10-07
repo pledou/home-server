@@ -11,6 +11,8 @@ duckdns_subdomain: your_subdomain
 app_domain_name: "{{ duckdns_subdomain }}.duckdns.org"
 authentik_api_base_url: "https://auth.{{ app_domain_name }}"
 docker_volumes_path: /opt
+stacks_base_path: "{{ lookup('env', 'HOME') }}/home-server-test/stacks"
+local_safe: false     # Override this for local testing without root actions
 docker_volume_device: /dev/disk/by-id/YOUR_DISK_ID
 
 traefik_duckdns_token: !vault |

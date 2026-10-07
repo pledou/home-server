@@ -2,7 +2,7 @@
 ---
 
 - name: Install python3 dependencies
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.apt:
     name: "{{ item }}"
     state: present
@@ -14,20 +14,20 @@
     - python3-passlib
 
 - name: Install Docker GPG key
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.apt_key:
     url: https://download.docker.com/linux/ubuntu/gpg
     state: present
 
 - name: Add Docker repository
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.apt_repository:
     validate_certs: true
     update_cache: true
     repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
 
 - name: Install Docker
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.apt:
     pkg:
       - docker-ce
@@ -73,14 +73,14 @@
   when: docker_enable_nvidia_runtime_effective
 
 - name: Install NVIDIA Container Toolkit GPG key
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.apt_key:
     url: https://nvidia.github.io/libnvidia-container/gpgkey
     state: present
   when: docker_enable_nvidia_runtime_effective
 
 - name: Add NVIDIA Container Toolkit repository
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.apt_repository:
     validate_certs: true
     update_cache: true
@@ -90,7 +90,7 @@
   when: docker_enable_nvidia_runtime_effective
 
 - name: Install NVIDIA Container Toolkit
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.apt:
     name: nvidia-container-toolkit
     state: present
@@ -98,7 +98,7 @@
   when: docker_enable_nvidia_runtime_effective
 
 - name: Add user to "docker" group
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.user:
     name: "{{ ansible_user }}"
     group: docker
@@ -113,19 +113,19 @@
   register: reboot_request
 
 - name: Reboot host(s) after package upgrade
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.reboot:
     reboot_timeout: 60
   when: reboot_request.stat.exists
 
 - name: Ndppd_install
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.package:
     name: ndppd
     state: present
 
 - name: Configure Ndppd
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.template:
     src: ndppd.conf
     dest: /etc/ndppd.conf
@@ -133,7 +133,7 @@
   register: ndppd_conf
 
 - name: Ndppd_restart
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.service:
     name: ndppd
     state: restarted
@@ -141,7 +141,7 @@
   when: (ndppd_conf is defined) and (ndppd_conf.changed)
 
 - name: Ndppd_started
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.service:
     name: ndppd
     state: started
@@ -149,7 +149,7 @@
   when: (ndppd_conf is not defined)
 
 - name: Docker_sysctl_fix_proxy
-  become: true
+  become: "{{ not local_safe }}"
   ansible.posix.sysctl:
     sysctl_file: /etc/sysctl.d/99-docker-router.conf
     name: net.ipv6.conf.{{ ansible_default_ipv6.interface }}.proxy_ndp
@@ -157,7 +157,7 @@
     sysctl_set: true
 
 - name: Docker_sysctl_fix_ra
-  become: true
+  become: "{{ not local_safe }}"
   ansible.posix.sysctl:
     sysctl_file: /etc/sysctl.d/99-docker-router.conf
     name: net.ipv6.conf.{{ ansible_default_ipv6.interface }}.accept_ra
@@ -165,7 +165,7 @@
     sysctl_set: true
 
 - name: Configure Docker daemon
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.template:
     src: daemon.json
     dest: /etc/docker/daemon.json
@@ -176,14 +176,14 @@
   ansible.builtin.meta: flush_handlers
 
 - name: Ensure docker volumes path exists
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}"
     state: directory
     mode: '0755'
 
 - name: Add entry to /etc/fstab for docker volume
-  become: true
+  become: "{{ not local_safe }}"
   ansible.builtin.lineinfile:
     path: /etc/fstab
     regexp: "^{{ docker_volume_device }}\\s"
@@ -192,7 +192,7 @@
   when: docker_volume_device is defined
 
 - name: Mount docker volume
-  become: true
+  become: "{{ not local_safe }}"
   ansible.posix.mount:
     src: "{{ docker_volume_device }}"  # Replace with the actual device, e.g., /dev/sdX1
     path: "{{ docker_volumes_path }}"  # Replace with the actual mount path, e.g., /var/lib/docker/volumes

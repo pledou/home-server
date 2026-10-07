@@ -5,8 +5,8 @@
   roles:
     # - role: nut # TODO debug ansible scripting
     #   tags: nut
-    - role: vpn
-      tags: vpn
+    - role: netbird
+      tags: netbird
     - role: prep_backup
       tags: prep_backup
     - role: upgrade-packages
