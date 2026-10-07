@@ -1,13 +1,13 @@
 # NetBird VPN Role
 
-This role deploys NetBird, an open-source VPN solution with Authentik SSO integration via OIDC.
+This role deploys NetBird, an open-source VPN solution. Its dashboard and management server use NetBird's embedded OIDC issuer by default; Authentik is not connected as an external identity provider automatically.
 
 ## Overview
 
 NetBird is a modern VPN/mesh networking solution that:
 - Works peer-to-peer without VPN server overhead
 - Supports multiple platforms (Linux, macOS, Windows, iOS, Android)
-- Integrates with Authentik via OIDC for user authentication
+- Supports adding Authentik as an external OIDC provider after initial setup
 - Zero-trust network architecture
 - Built-in firewall rules and access control
 
@@ -16,18 +16,19 @@ NetBird is a modern VPN/mesh networking solution that:
 ```
 Internet → NetBird Management API (Port 443)
            ↓
-        NetBird Signal Server (Port 51820/UDP)
+        NetBird Signal Server (UDP)
            ↓
         NetBird Relay Server (STUN/TURN)
-           ↓
-        Authentik OIDC Provider ← User Authentication
+
+NetBird Dashboard/Management → embedded OIDC by default
+                            → Authentik (optional external OIDC provider)
 ```
 
 ## Components
 
 ### NetBird Management Server
 - API server for peer management
-- OIDC integration with Authentik
+- OIDC authentication using NetBird's embedded issuer by default
 - Admin dashboard
 - Access control policies
 
@@ -44,19 +45,20 @@ Internet → NetBird Management API (Port 443)
 ## Dependencies
 
 This role requires:
-- **authentik** role - Provides OIDC authentication
 - **docker** role - Container runtime
 - **traefik** role - Reverse proxy for Management API
 
 ## Usage
 
-### Web Dashboard
+### Initial setup and Authentik OIDC
 
-1. Navigate to `https://vpn.{{ app_domain_name }}`
-2. Click "Login with Authentik"
-3. Authenticate with your Authentik credentials
-4. Accept consent screen
-5. Download client configuration or install NetBird client
+1. Deploy the role and open the NetBird management web page at `https://vpn.{{ app_domain_name }}`.
+2. Use NetBird's internal initialization flow to create the first administrator account.
+3. Sign in with that account and add Authentik as an external OIDC provider in the management interface.
+
+The role does not automatically connect NetBird to Authentik. Its dashboard and management server are configured to use NetBird's embedded OIDC issuer (`https://vpn.{{ app_domain_name }}/oauth2/`). If `authentik_api_token` is defined, Ansible may create the corresponding Authentik provider and application, but that does not replace the NetBird administrator initialization or adding the external provider in NetBird.
+
+After completing setup, sign in through the configured provider and install the NetBird client.
 
 ## Network Access Control
 
