@@ -19,7 +19,8 @@
                 - url: "https://vpn.{{ app_domain_name }}/oauth2/callback"
                   matching_mode: "strict"
               client_type: "confidential"
-              token_endpoint_auth_method: "none"   # important pour PKCE public SPA
+              # client_type: "public"
+              # token_endpoint_auth_method: "none"   # important for PKCE public SPA (direct use of authentik in netbird https://docs.netbird.io/selfhosted/identity-providers/advanced/authentik)
               sub_mode: "user_email"
               include_claims_in_id_token: true
               issuer_mode: "per_provider"
