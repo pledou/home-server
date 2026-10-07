@@ -53,7 +53,30 @@
   vars:
     secrets:
       - name: netbird_datastore_encryption_key
-        length: 48 #  FATL management/internals/server/boot.go:97: failed to create field encryptor: encryption key must be 32 bytes, got 24 -> We should have openssl rand -base64 32 ending by ==
+        length: 32
+
+- name: Validate NetBird datastore encryption key
+  ansible.builtin.assert:
+    that:
+      - >-
+        (netbird_datastore_encryption_key | trim | length == 32)
+        or
+        (
+          (netbird_datastore_encryption_key | trim) is match('^[A-Za-z0-9+/]{43}=$')
+          and (netbird_datastore_encryption_key | trim | b64decode | length == 32)
+        )
+    fail_msg: >-
+      NetBird datastore encryption key must be 32 raw characters for a new install
+      or Base64 encoding of exactly 32 bytes for an existing install.
+
+- name: Format NetBird datastore encryption key
+  ansible.builtin.set_fact:
+    netbird_datastore_encryption_key_config: >-
+      {{
+        (netbird_datastore_encryption_key | trim)
+        if (netbird_datastore_encryption_key | trim | length == 44)
+        else (netbird_datastore_encryption_key | trim | b64encode)
+      }}
 
 - name: Create NetBird config file
   become: "{{ not local_safe }}"
