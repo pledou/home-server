@@ -249,7 +249,7 @@ The role now includes a post-deploy step that:
 6. installs missing models from `speaches_postdeploy_models` via `POST /v1/models/{model_id}`.
 
 **Model Distribution:**
-- **Main Ollama (port 8080)**: LLM models for chat/completion (e.g., `ministral-3:3b`, `llama3.2`)
+- **Main Ollama (port 8080)**: LLM models for chat/completion (e.g., `gemma4:e4b`, `llama3.2`)
 - **Ollama Embeddings (port 8082)**: Embedding models for RAG/vector search (e.g., `nomic-embed-text-v2-moe`)
 
 Default Ollama embedding model:
