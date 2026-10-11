@@ -69,6 +69,72 @@
         else ('intel' if (gpu_intel_render_device.stat.exists | default(false)) else 'none')
       }}
 
+- name: Query NVIDIA GPU memory and PCIe link
+  ansible.builtin.command:
+    cmd: >-
+      nvidia-smi --id={{ gpu_nvidia_index }}
+      --query-gpu=memory.total,memory.free,pcie.link.width.current,pcie.link.width.max
+      --format=csv,noheader,nounits
+  register: gpu_nvidia_info
+  changed_when: false
+  when: gpu_nvidia_available | bool
+
+- name: Validate NVIDIA eGPU detection mode
+  ansible.builtin.assert:
+    that:
+      - gpu_nvidia_egpu_mode | string | lower in ['auto', 'true', 'false']
+    fail_msg: "gpu_nvidia_egpu_mode must be 'auto', true, or false."
+  when: gpu_nvidia_available | bool
+
+- name: Validate NVIDIA GPU information format
+  ansible.builtin.assert:
+    that:
+      - gpu_nvidia_info.stdout.split(',') | length == 4
+      - gpu_nvidia_info.stdout.split(',')[0] | trim is match('^[0-9]+$')
+      - gpu_nvidia_info.stdout.split(',')[1] | trim is match('^[0-9]+$')
+      - gpu_nvidia_info.stdout.split(',')[2] | trim is match('^[0-9]+$')
+      - gpu_nvidia_info.stdout.split(',')[3] | trim is match('^[0-9]+$')
+    fail_msg: >-
+      Could not parse NVIDIA GPU memory/PCIe information from nvidia-smi:
+      {{ gpu_nvidia_info.stdout | default('no output') }}.
+  when: gpu_nvidia_available | bool
+
+- name: Set NVIDIA GPU resource facts
+  ansible.builtin.set_fact:
+    gpu_nvidia_vram_total_mb: "{{ gpu_nvidia_info.stdout.split(',')[0] | trim | int }}"
+    gpu_nvidia_vram_free_mb: "{{ gpu_nvidia_info.stdout.split(',')[1] | trim | int }}"
+    gpu_nvidia_pcie_width_current: "{{ gpu_nvidia_info.stdout.split(',')[2] | trim | int }}"
+    gpu_nvidia_pcie_width_max: "{{ gpu_nvidia_info.stdout.split(',')[3] | trim | int }}"
+    gpu_nvidia_is_egpu: >-
+      {{
+        (gpu_nvidia_egpu_mode | string | lower == 'true')
+        or (
+          gpu_nvidia_egpu_mode | string | lower == 'auto'
+          and (gpu_nvidia_info.stdout.split(',')[2] | trim | int) > 0
+          and (gpu_nvidia_info.stdout.split(',')[3] | trim | int)
+              > (gpu_nvidia_info.stdout.split(',')[2] | trim | int)
+        )
+      }}
+  when: gpu_nvidia_available | bool
+
+- name: Validate NVIDIA GPU memory values
+  ansible.builtin.assert:
+    that:
+      - gpu_nvidia_vram_total_mb | int > 0
+      - gpu_nvidia_vram_free_mb | int >= 0
+    fail_msg: "nvidia-smi returned invalid NVIDIA GPU memory information."
+  when: gpu_nvidia_available | bool
+
+- name: Report NVIDIA GPU resources and eGPU heuristic
+  ansible.builtin.debug:
+    msg: >-
+      NVIDIA GPU {{ gpu_nvidia_index }}: {{ gpu_nvidia_vram_free_mb }} MiB free
+      of {{ gpu_nvidia_vram_total_mb }} MiB; PCIe link
+      x{{ gpu_nvidia_pcie_width_current }}/x{{ gpu_nvidia_pcie_width_max }};
+      reduced-link eGPU heuristic={{ gpu_nvidia_is_egpu }}.
+      Set gpu_nvidia_egpu_mode explicitly to override the heuristic.
+  when: gpu_nvidia_available | bool
+
 - name: Report NVIDIA runtime issue
   ansible.builtin.debug:
     msg: >-

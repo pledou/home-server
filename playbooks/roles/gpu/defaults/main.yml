@@ -1,3 +1,5 @@
 ---
 gpu_attempt_recovery: true
 gpu_fail_if_nvidia_unhealthy: false
+gpu_nvidia_index: 0
+gpu_nvidia_egpu_mode: "auto"

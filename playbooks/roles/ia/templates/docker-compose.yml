@@ -119,6 +119,16 @@ services:
       {% if gpu == 'intel' %}
       - DEVICE=iGPU
       {% endif %}
+      {% if gpu == 'nvidia' %}
+      {% if ollama_nvidia_debug | bool %}
+      - OLLAMA_DEBUG=1
+      {% endif %}
+      - OLLAMA_GPU_OVERHEAD={{ (ia_ollama_gpu_overhead_mb | int) * 1024 * 1024 }}
+      {% if gpu_nvidia_is_egpu | bool %}
+      - GGML_CUDA_NO_PINNED=1
+      {% endif %}
+      - OLLAMA_FLASH_ATTENTION={{ 1 if ollama_flash_attention | bool else 0 }}
+      {% endif %}
       - OLLAMA_KEEP_ALIVE={{ '24h' if gpu == 'none' else '2h' }}
       - OLLAMA_NUM_THREADS={{ ollama_num_threads }}
       - OLLAMA_HOST=0.0.0.0
@@ -176,81 +186,61 @@ services:
         aliases:
           - ollama-metrics
 
-  {% if not ollama_embeddings_use_gpu and gpu != 'intel' %}
   ollama-embeddings:
     labels:
       - com.centurylinklabs.watchtower.enable=true
+    {% if embedding_gpu == 'intel' %}
+    user: root
+    image: "{{ ollama_embeddings_intel_image }}:{{ ollama_embeddings_intel_version }}"
+    {% else %}
     image: "{{ ollama_embeddings_image }}:{{ ollama_embeddings_version }}"
     healthcheck:
       test: ollama --version || exit 1
     command: serve
-    pull_policy: always
-    tty: true
-    restart: always
-    environment:
-      - OLLAMA_KEEP_ALIVE=24h
-      - OLLAMA_NUM_THREADS={{ ollama_embeddings_num_threads }}
-      - OLLAMA_HOST=0.0.0.0
-    networks:
-      network:
-        aliases:
-          - ollama-embeddings
-    volumes:
-      - ollama-embeddings:/root/.ollama
-    
-    cpus: "{{ ollama_embeddings_cpu_limit }}"
-    mem_limit: "{{ ollama_embeddings_memory_limit_mb }}m"
-    shm_size: "{{ ollama_embeddings_shm_size_mb }}m"
-
-    {% if gpu == 'nvidia' %}
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              capabilities: [gpu]
     {% endif %}
-  {% else %}
-  ollama-embeddings:
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
-    user: root
-    image: "{{ ollama_embeddings_intel_image }}:{{ ollama_embeddings_intel_version }}"
-    cpus: "{{ ollama_embeddings_cpu_limit }}"
-    mem_limit: "{{ ollama_embeddings_memory_limit_mb }}m"
-    shm_size: "{{ ollama_embeddings_shm_size_mb }}m" 
     pull_policy: always
     tty: true
     restart: always
     environment:
+      {% if embedding_gpu == 'intel' %}
       - DEVICE=iGPU
+      {% else %}
+      - NVIDIA_VISIBLE_DEVICES=void
+      {% endif %}
       - OLLAMA_KEEP_ALIVE=24h
       - OLLAMA_NUM_THREADS={{ ollama_embeddings_num_threads }}
       - OLLAMA_HOST=0.0.0.0
+      {% if embedding_gpu == 'intel' %}
       - no_proxy=localhost,127.0.0.1
       - OLLAMA_NUM_GPU=999
       - ZES_ENABLE_SYSMAN=1
       - SYCL_CACHE_PERSISTENT=1
       - SYCL_PI_LEVEL_ZERO_USE_IMMEDIATE_COMMANDLISTS=1
+      {% endif %}
+    {% if embedding_gpu == 'intel' %}
     working_dir: /llm/scripts/
     command: ["bash", "-c", "source ipex-llm-init --gpu --device iGPU && bash start-ollama.sh"]
-    
-    volumes:
-      - ollama-embeddings:/root/.ollama
-    devices:
-      - /dev/dri:/dev/dri
+    {% endif %}
     networks:
       network:
         aliases:
           - ollama-embeddings
+    volumes:
+      - ollama-embeddings:/root/.ollama
+    cpus: "{{ ollama_embeddings_cpu_limit }}"
+    mem_limit: "{{ ollama_embeddings_memory_limit_mb }}m"
+    shm_size: "{{ ollama_embeddings_shm_size_mb }}m"
+    {% if embedding_gpu == 'intel' %}
+    devices:
+      - /dev/dri:/dev/dri
     deploy:
       resources:
         reservations:
           devices:
             - driver: intel
               capabilities: [gpu]
-  {% endif %}
-
+    {% endif %}
+ 
   ollama-embeddings-metrics:
     labels:
       - com.centurylinklabs.watchtower.enable=false

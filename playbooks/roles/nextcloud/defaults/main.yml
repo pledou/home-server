@@ -54,13 +54,11 @@ nextcloud_defaultapp_list:
   - integration_openai # OpenAI-compatible provider app (Ollama/LocalAI/OpenAI)
 
 nextcloud_integration_openai_url: "http://webui-api-proxy:8080/v1"
-nextcloud_integration_openai_default_completion_model_id: "ministral-3:3b"
+nextcloud_integration_openai_default_completion_model_id: "{{ ia_ollama_agent_model }}"
 nextcloud_integration_openai_request_timeout: 3600
 nextcloud_integration_openai_max_tokens: 768
 nextcloud_context_chat_request_timeout: 3600
-# nomic-embed-text v1.5: 8192-token context, Q4 GGUF (stable, no NaN), works well for French.
-# bge-m3 F16 was tried but produces NaN values in Ollama for many document types.
-nextcloud_context_chat_embedding_model: "nomic-embed-text"
+nextcloud_context_chat_embedding_model: "{{ ia_ollama_agent_model }}"
 
 nextcloud_context_agent_tool_status:
   mail: true

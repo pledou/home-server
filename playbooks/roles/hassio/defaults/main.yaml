@@ -24,7 +24,7 @@ homeassistant_ai_postdeploy_wait_seconds: 300
 
 # home_agent
 homeassistant_ai_ollama_base_url: "{{ ia_openai_base_url }}"
-homeassistant_ai_home_agent_model: "{{ ia_homeassistant_agent_model }}"
+homeassistant_ai_home_agent_model: "{{ ia_ollama_agent_model }}"
 homeassistant_ai_home_agent_max_tokens: 220
 homeassistant_ai_home_agent_temperature: 0.5
 homeassistant_ai_home_agent_thinking_enabled: false
