@@ -33,6 +33,41 @@
   ansible.builtin.debug:
     msg: "IA GPU mode selected: effective={{ gpu_mode_effective | default('none') }}"
 
+- name: Set Ollama embeddings GPU mode
+  ansible.builtin.set_fact:
+    embedding_gpu: >-
+      {{
+        'intel'
+        if (gpu_intel_available | default(false) | bool)
+        and (
+          gpu_mode_effective | default('none') == 'intel'
+          or ollama_embeddings_use_gpu | bool
+        )
+        else 'none'
+      }}
+
+- name: Compute Ollama NVIDIA tuning
+  ansible.builtin.set_fact:
+    ia_ollama_gpu_overhead_mb: >-
+      {{
+        [
+          ollama_gpu_overhead_min_mb | int,
+          [
+            ((gpu_nvidia_vram_total_mb | int) * (ollama_gpu_overhead_ratio | float))
+            | round(0, 'ceil') | int,
+            ollama_gpu_overhead_max_mb | int
+          ] | min
+        ] | max
+      }}
+  when: gpu_mode_effective | default('none') == 'nvidia'
+
+- name: Report Ollama NVIDIA memory reservation
+  ansible.builtin.debug:
+    msg: >-
+      Based on {{ gpu_nvidia_vram_total_mb }} MiB GPU VRAM, Ollama will reserve
+      {{ ia_ollama_gpu_overhead_mb }} MiB from available memory.
+  when: gpu_mode_effective | default('none') == 'nvidia'
+
 - name: Configure Authentik OAuth applications for IA
   # delegate_to: localhost
   become: false
@@ -163,7 +198,7 @@
       {{ (ia_ollama_embeddings_tags.json.models | default([])) | map(attribute='name') | list }}
     ia_ollama_required_llm_models: >-
       {{
-        [ia_homeassistant_agent_model]
+        [ia_ollama_agent_model]
         | select('string')
         | map('trim')
         | reject('equalto', '')

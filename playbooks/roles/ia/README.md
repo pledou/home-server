@@ -143,7 +143,8 @@ This stack deploys **two separate Ollama instances** to prevent resource content
 - Embedding models (nomic-embed-text-v2-moe, etc.) are automatically pulled to the Ollama Embeddings instance (port 8082)
 - Both instances are monitored via their respective ollama-metrics proxies
 
-Both instances support GPU acceleration (NVIDIA/Intel) when available.
+Main Ollama supports GPU acceleration (NVIDIA/Intel) when available. Embeddings
+use CPU on non-Intel hosts by default and the Intel iGPU backend on Intel hosts.
 
 ## ChromaDB Vector Database
 
@@ -213,7 +214,7 @@ Defined in `playbooks/roles/ia/defaults/main.yml`:
 - `speaches_stt_model`, `speaches_tts_model`, `speaches_preload_models`
 - `speaches_postdeploy_models`
 - `chromadb_image`, `chromadb_version`
-- `ia_homeassistant_agent_model`, `ia_ollama_embedding_model`
+- `ia_ollama_agent_model`, `ia_ollama_embedding_model`
 - `ia_openai_base_url`, `ia_embeddings_base_url` (cross-role integration endpoints)
 
 Default french-oriented setup:
@@ -242,7 +243,7 @@ Aliases are also generated in `stacks/ia/model_aliases.json`:
 The role now includes a post-deploy step that:
 
 1. waits for both Ollama instances (main on port 8080 and embeddings on port 8082),
-2. installs missing LLM models to the **main Ollama instance** (`ia_homeassistant_agent_model`),
+2. installs missing LLM models to the **main Ollama instance** (`ia_ollama_agent_model`),
 3. installs missing embedding models to the **Ollama Embeddings instance** (`ia_ollama_embedding_model`),
 4. waits for Speaches health (`/health`),
 5. reads local Speaches models (`/v1/models`),
