@@ -106,24 +106,6 @@ services:
     volumes:
       - unbound:/etc/unbound
     restart: unless-stopped
-
-  unbound-exporter:
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
-    build:
-      context: ./unbound_exporter
-      dockerfile: Dockerfile
-    image: "{{ unbound_exporter_image }}:{{ unbound_exporter_version }}"
-    network_mode: service:unbound
-    command:
-      - -unbound.host=tcp://127.0.0.1:8953
-      - -unbound.ca=
-      - -unbound.cert=
-      - -unbound.key=
-      - -web.listen-address=0.0.0.0:9167
-    depends_on:
-      - unbound
-    restart: unless-stopped
   
   doh-proxy:
     labels:

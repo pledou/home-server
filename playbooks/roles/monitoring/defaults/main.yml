@@ -42,8 +42,6 @@ grafana_dashboard_updates:
     name: cadvisor
   - gnet_id: 23005 # Watchtower
     name: watchtower
-  - gnet_id: 18077 # Unbound (Prometheus + Loki)
-    name: unbound
   - gnet_id: 25526 # NVIDIA DCGM Exporter
     name: nvidia-dcgm-exporter
   - gnet_id: 16125 # Fail2ban
