@@ -29,12 +29,17 @@ services:
       OAUTH_SCOPES: "openid profile email"
       OPENID_PROVIDER_URL: "https://auth.{{ app_domain_name }}/application/o/{{ webui_oauth_slug_name }}/.well-known/openid-configuration"
       WEBUI_URL: "https://ia.{{ app_domain_name }}"
+      CORS_ALLOW_ORIGIN: "https://ia.{{ app_domain_name }}"
       ENABLE_OAUTH_SIGNUP: True
       ENABLE_LOGIN_FORM: False
       DEFAULT_LOCALE: "fr"
       DEFAULT_MODELS: "ministral-3"
       DEFAULT_USER_ROLE: "user"
       OAUTH_MERGE_ACCOUNTS_BY_EMAIL: True
+      ENABLE_PLUGINS: True
+      ENABLE_TOOLS: True
+      ENABLE_FUNCTIONS: True
+      ENABLE_TOOL_SERVERS: True
 
       AUDIO_OPENAI_API_BASE_URL: "http://speaches:8000/v1"
       AUDIO_OPENAI_API_KEY: "openai-api-key"
@@ -128,6 +133,9 @@ services:
       - GGML_CUDA_NO_PINNED=1
       {% endif %}
       - OLLAMA_FLASH_ATTENTION={{ 1 if ollama_flash_attention | bool else 0 }}
+      {% if ollama_flash_attention | bool %}
+      - OLLAMA_KV_CACHE_TYPE=q8_0
+      {% endif %}
       {% endif %}
       - OLLAMA_KEEP_ALIVE={{ '24h' if gpu == 'none' else '2h' }}
       - OLLAMA_NUM_THREADS={{ ollama_num_threads }}
