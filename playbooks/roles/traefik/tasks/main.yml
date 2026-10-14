@@ -52,7 +52,7 @@
 
 - name: Set unbound upstream DNS from DHCP or fallback
   ansible.builtin.set_fact:
-    unbound_forward_dns: >
+    unbound_forward_dns: >-
       {{
         (dhcp_upstream_dns.stdout | trim)
         if (dhcp_upstream_dns.stdout | trim | length > 0)
@@ -174,17 +174,6 @@
     repo: 'https://github.com/m13253/dns-over-https.git'
     dest: "{{ stacks_base_path }}/traefik/doh"
     version: 'master'
-    single_branch: true
-  environment:
-    GIT_TERMINAL_PROMPT: "0" # reports "terminal prompts disabled" on missing password
-  when: unbound is defined and unbound
-
-- name: Restore unbound_exporter git repo
-  become: "{{ not local_safe }}"
-  ansible.builtin.git:
-    repo: "{{ unbound_exporter_git_repo }}"
-    dest: "{{ stacks_base_path }}/traefik/unbound_exporter"
-    version: "{{ unbound_exporter_git_version }}"
     single_branch: true
   environment:
     GIT_TERMINAL_PROMPT: "0" # reports "terminal prompts disabled" on missing password

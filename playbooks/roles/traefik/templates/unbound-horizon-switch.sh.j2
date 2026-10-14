@@ -33,7 +33,7 @@ if [[ ! -f "${ACTIVE_FILE}" ]] || ! cmp -s "${desired_file}" "${ACTIVE_FILE}"; t
   container_id="$(docker ps \
     --filter "label=com.docker.compose.project=${PROJECT_NAME}" \
     --filter "label=com.docker.compose.service=unbound" \
-    --format '{{\"{\\"{{\\"}}\\"}}}{{{{{\\"}}}}' | head -n 1)"
+    --format '{% raw %}{{.ID}}{% endraw %}' | head -n 1)"
 
   if [[ -n "${container_id}" ]]; then
     # Reload Unbound config without restarting the process to keep runtime cache.
