@@ -1,7 +1,8 @@
 ---
 roles:
-- src: geerlingguy.firewall
+  - src: geerlingguy.firewall
 collections:
-- name: community.docker
-- name: community.general
+  - name: community.docker
+  - name: community.general
+  - name: ansible.posix
 ...
