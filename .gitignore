@@ -23,3 +23,4 @@ ansible.cfg
 .mcp.json
 AGENTS.md
 .github/*
+.codebase-memory/*
