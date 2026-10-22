@@ -216,6 +216,7 @@ Defined in `playbooks/roles/ia/defaults/main.yml`:
 - `chromadb_image`, `chromadb_version`
 - `ia_ollama_agent_model`, `ia_ollama_embedding_model`
 - `ia_openai_base_url`, `ia_embeddings_base_url` (cross-role integration endpoints)
+- `ollama_context_length`, `ollama_kv_cache_type`, `ollama_embeddings_context_length`
 
 Default french-oriented setup:
 
@@ -252,6 +253,77 @@ The role now includes a post-deploy step that:
 **Model Distribution:**
 - **Main Ollama (port 8080)**: LLM models for chat/completion (e.g., `ministral-3:3b`, `llama3.2`)
 - **Ollama Embeddings (port 8082)**: Embedding models for RAG/vector search (e.g., `nomic-embed-text-v2-moe`)
+
+### Context window and KV cache
+
+Ollama defaults to a **4096-token** context window, which silently truncates
+long prompts: the beginning of the conversation is dropped and the model
+answers as if it had never received it. The `/v1/chat/completions` OpenAI-
+compatible endpoint cannot fix this from the client side — its compatibility
+layer rebuilds the option map from scratch and never forwards a per-request
+`num_ctx`. The server-side `OLLAMA_CONTEXT_LENGTH` is therefore the only
+lever, which is why it is set on the `ollama` service:
+
+```yaml
+# playbooks/roles/ia/defaults/main.yml
+ollama_context_length: 65536
+ollama_embeddings_context_length: 8192
+ollama_kv_cache_type: ""
+```
+
+**Why an explicit value is required.** Ollama derives its default context
+from the VRAM it can see *after* subtracting `OLLAMA_GPU_OVERHEAD`
+(`OLLAMA_GPU_OVERHEAD` is set from `ollama_gpu_overhead_max_mb`). On a 24 GB
+card with the 1 GB overhead this role reserves, Ollama sees 23 GiB, which
+falls below its own 23 GiB threshold, so the automatic choice lands on 4096.
+The server log states it explicitly:
+
+```
+vram-based default context  total_vram=23.00 GiB  default_num_ctx=4096
+```
+
+Setting `OLLAMA_CONTEXT_LENGTH` overrides that automatic detection.
+
+- `ollama_context_length` (default `32768`): context window of the main
+  instance, in tokens. A 26B Q4_K_M model on a 24 GB GPU needs roughly
+  860 MB of KV cache for 32k tokens in f16, which fits next to the weights.
+  Raise it towards 64k for long-context RAG, at the cost of VRAM.
+- `ollama_embeddings_context_length` (default `8192`): embedding models only
+  need a few thousand tokens.
+- `ollama_kv_cache_type` (default `""`): KV cache quantization. Left unset
+  so Ollama applies its own default (f16) rather than pinning `q8_0`, which
+  is known to degrade generation speed and trigger repetition loops on
+  Gemma3/4 (ollama/ollama#11949). Set it to `f16` to pin it explicitly, or
+  to `q8_0` to trade quality for VRAM. When the value is empty the
+  `OLLAMA_KV_CACHE_TYPE` variable is not emitted at all.
+
+Verify the effective value after deployment:
+
+```bash
+curl -s http://<host>:8080/api/ps | jq '.models[] | {name, context_length}'
+```
+
+`context_length` must report the configured value and no longer `4096`. A
+model must be loaded for this to be meaningful — a cold `ollama ps` shows
+nothing, so send one request first.
+
+A long prompt must then be reported at its real size rather than truncated:
+
+```bash
+curl -s http://<host>:8080/v1/chat/completions -H 'Content-Type: application/json' \
+  -d '{"model":"gemma4:26b","messages":[{"role":"user","content":"…~9000 tokens…"}],"max_tokens":5}' \
+  | jq '.usage.prompt_tokens'
+```
+
+### Reasoning and repetition
+
+Gemma models emit a thinking trace before the answer. When a client does not
+ask for it (`reasoning_effort: "none"` in the OpenAI-compatible API), the
+whole token budget can be consumed by the trace and the visible `content`
+comes back empty with `finish_reason: "length"`. Clients that drive agent
+loops should send `reasoning_effort: "none"` for models whose thinking is not
+needed, and treat an empty `content` with a non-empty `reasoning` as a
+truncated turn rather than as an engine failure.
 
 Default Ollama embedding model:
 

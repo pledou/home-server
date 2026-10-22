@@ -95,10 +95,31 @@ ollama_shm_size_mb: 20480 # Sufficient for 8b, 13b, 20b models
 
 # Ollama GPU tuning
 ollama_gpu_overhead_ratio: 0.083333
-ollama_gpu_overhead_min_mb: 512
-ollama_gpu_overhead_max_mb: 2048
+ollama_gpu_overhead_min_mb: 256
+ollama_gpu_overhead_max_mb: 1024
 ollama_nvidia_debug: false
 ollama_flash_attention: true
+
+# Ollama context window, in tokens. Ollama defaults to 4096, which silently
+# truncates long prompts (agent / coding / RAG workloads lose the beginning of
+# the conversation). 32768 fits comfortably next to a 26B Q4_K_M model on a
+# 24 GB GPU (~860 MB of KV cache in f16).
+#
+# This must be set explicitly: Ollama picks its default context from the VRAM
+# it can see AFTER subtracting OLLAMA_GPU_OVERHEAD. On a 24 GB card with a
+# 2 GB overhead that is 22 GiB, below Ollama's 23 GiB threshold, so the
+# automatic choice falls back to 4096.
+ollama_context_length: 65536
+
+# KV cache quantization. Left empty on purpose: Ollama picks its own default
+# (f16) instead of pinning q8_0, which is known to trigger repetition loops
+# and degraded token/s on Gemma3/4 (ollama/ollama#11949). Set to "f16" to pin
+# it explicitly, or to "q8_0" to trade quality for VRAM.
+ollama_kv_cache_type: ""
+
+# Context window of the dedicated embeddings instance (nomic-embed-text
+# style models only need a few thousand tokens).
+ollama_embeddings_context_length: 8192
 
 ollama_detected_vcpus: "{{ ansible_facts.processor_vcpus | default(ansible_processor_vcpus) | default(2) | int }}"
 ollama_detected_mem_mb: "{{ ansible_facts.memtotal_mb | default(ansible_memtotal_mb) | default(8192) | int }}"

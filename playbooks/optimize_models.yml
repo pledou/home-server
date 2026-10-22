@@ -1,0 +1,53 @@
+---
+- name: Optimize Ollama Models
+  hosts: all
+  become: false
+
+  vars:
+    ollama_api_url: "http://localhost:8080"
+    # List of models to optimize: [base_model, optimized_name]
+    models_to_optimize:
+      - ["gemma4:26b", "gemma4-optimized"]
+      - ["bonsai-2:27b", "bonsai-optimized"]
+
+  tasks:
+    - name: Ensure Python 3 and requests are installed
+      become: true
+      package:
+        name:
+          - python3
+          - python3-pip
+          - python3-requests
+        state: present
+
+    - name: Run GPU role to gather facts
+      include_role:
+        name: gpu
+
+    - name: Check available GPU VRAM from facts
+      set_fact:
+        # Using the facts from the gpu role
+        # We assume gpu_nvidia_vram_total_mb is available
+        target_vram_gib: "{{ (gpu_nvidia_vram_total_mb | default(0) | float / 1024) - 1.0 }}"
+      when: gpu_nvidia_available | default(false) | bool
+
+    - name: Fail if GPU VRAM facts are missing
+      fail:
+        msg: "GPU VRAM facts not found. Ensure the 'gpu' role has run."
+      when: target_vram_gib is not defined
+
+    - name: Run Optimizer for each model
+      script: >
+        {{ playbook_dir }}/scripts/ollama_optimizer.py
+        --model "{{ item[0] }}"
+        --target-vram {{ target_vram_gib }}
+        --ollama-url {{ ollama_api_url }}
+        --create "{{ item[1] }}"
+        --container ia-ollama-1
+      loop: "{{ models_to_optimize }}"
+      register: optimizer_output
+
+    - name: Display optimization results
+      debug:
+        msg: "{{ item.stdout_lines }}"
+      loop: "{{ optimizer_output.results }}"

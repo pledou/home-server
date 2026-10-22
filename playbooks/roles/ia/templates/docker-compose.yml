@@ -133,10 +133,11 @@ services:
       - GGML_CUDA_NO_PINNED=1
       {% endif %}
       - OLLAMA_FLASH_ATTENTION={{ 1 if ollama_flash_attention | bool else 0 }}
-      {% if ollama_flash_attention | bool %}
-      - OLLAMA_KV_CACHE_TYPE=q8_0
       {% endif %}
+      {% if ollama_kv_cache_type | length > 0 %}
+      - OLLAMA_KV_CACHE_TYPE={{ ollama_kv_cache_type }}
       {% endif %}
+      - OLLAMA_CONTEXT_LENGTH={{ ollama_context_length }}
       - OLLAMA_KEEP_ALIVE={{ '24h' if gpu == 'none' else '2h' }}
       - OLLAMA_NUM_THREADS={{ ollama_num_threads }}
       - OLLAMA_HOST=0.0.0.0
@@ -215,6 +216,7 @@ services:
       {% else %}
       - NVIDIA_VISIBLE_DEVICES=void
       {% endif %}
+      - OLLAMA_CONTEXT_LENGTH={{ ollama_embeddings_context_length }}
       - OLLAMA_KEEP_ALIVE=24h
       - OLLAMA_NUM_THREADS={{ ollama_embeddings_num_threads }}
       - OLLAMA_HOST=0.0.0.0
