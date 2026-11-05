@@ -2,13 +2,13 @@
 ---
 # Docker image versions for Monitoring role
 prometheus_image: "prom/prometheus"
-prometheus_version: "v3.15.1"
+prometheus_version: "v3.16.0"
 alertmanager_image: "prom/alertmanager"
-alertmanager_version: "v0.34.1"
+alertmanager_version: "v0.34.2"
 node_exporter_image: "quay.io/prometheus/node-exporter"
 node_exporter_version: "v1.12.1"
 grafana_image: "grafana/grafana"
-grafana_version: "13.2.4"
+grafana_version: "13.3.0"
 loki_image: "grafana/loki"
 loki_version: "3.7.9"
 promtail_image: "grafana/promtail"
