@@ -1,0 +1,8 @@
+{{ wazuh_manager_config_base | regex_replace('</ossec_config>\\s*$', '') }}
+<integration>
+  <name>custom-alertmanager</name>
+  <hook_url>{{ wazuh_alertmanager_url }}</hook_url>
+  <level>{{ wazuh_alert_min_level }}</level>
+  <alert_format>json</alert_format>
+</integration>
+</ossec_config>

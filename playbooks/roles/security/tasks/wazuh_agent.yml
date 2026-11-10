@@ -1,0 +1,65 @@
+---
+- name: Ensure apt keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+
+- name: Install Wazuh repository signing key
+  ansible.builtin.get_url:
+    url: https://packages.wazuh.com/key/GPG-KEY-WAZUH
+    dest: /etc/apt/keyrings/wazuh.asc
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+
+- name: Configure Wazuh agent package repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/wazuh.asc] https://packages.wazuh.com/4.x/apt/ stable main"
+    filename: wazuh
+    state: present
+    update_cache: true
+  become: true
+
+- name: Install the Wazuh host agent
+  ansible.builtin.apt:
+    name: "wazuh-agent={{ security_wazuh_agent_version }}"
+    state: present
+    update_cache: true
+  environment:
+    WAZUH_MANAGER: "{{ security_wazuh_agent_manager_address }}"
+    WAZUH_AGENT_NAME: "{{ inventory_hostname }}"
+  become: true
+
+- name: Configure Wazuh agent manager address
+  ansible.builtin.replace:
+    path: /var/ossec/etc/ossec.conf
+    regexp: "(<server>\\s*<address>)[^<]*(</address>)"
+    replace: '\g<1>{{ security_wazuh_agent_manager_address }}\g<2>'
+  notify: Restart wazuh-agent
+  become: true
+
+- name: Configure Wazuh to collect Traefik JSON logs
+  ansible.builtin.blockinfile:
+    path: /var/ossec/etc/ossec.conf
+    marker: "  <!-- {mark} ANSIBLE MANAGED TRAEFIK LOG -->"
+    insertafter: "<ossec_config>"
+    block: |
+      <localfile>
+        <log_format>json</log_format>
+        <location>{{ traefik_coraza_log_path | default('/var/log/traefik/traefik.log') }}</location>
+      </localfile>
+  notify: Restart wazuh-agent
+  become: true
+
+- name: Ensure Wazuh agent is enabled and started
+  ansible.builtin.systemd:
+    name: wazuh-agent
+    enabled: true
+    state: started
+  become: true
+...

@@ -1,0 +1,17 @@
+---
+# This file is managed by Ansible.
+_meta:
+  type: "internalusers"
+  config_version: 2
+
+admin:
+  hash: "{{ wazuh_indexer_admin_password_hash }}"
+  reserved: true
+  backend_roles:
+    - "admin"
+  description: "Wazuh administrator"
+
+kibanaserver:
+  hash: "{{ wazuh_dashboard_password_hash }}"
+  reserved: true
+  description: "Wazuh dashboard service user"

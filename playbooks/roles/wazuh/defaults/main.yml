@@ -1,0 +1,11 @@
+---
+wazuh_version: "4.14.10"
+wazuh_certs_generator_version: "0.0.5"
+wazuh_indexer_java_opts: "-Xms1g -Xmx1g"
+wazuh_repository: "https://github.com/wazuh/wazuh-docker.git"
+wazuh_stack_path: "{{ (stacks_base_path ~ '/wazuh') if local_safe else '/opt/wazuh' }}"
+wazuh_single_node_path: "{{ wazuh_stack_path }}/single-node"
+wazuh_secrets_path: "{{ docker_volumes_path }}/secrets"
+wazuh_dashboard_hostname: "wazuh.{{ app_domain_name }}"
+wazuh_alertmanager_url: "http://alertmanager:9093/api/v2/alerts"
+wazuh_alert_min_level: 10
