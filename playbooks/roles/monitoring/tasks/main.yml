@@ -87,7 +87,7 @@
 
 - name: Deploy Prometheus alert rules
   become: "{{ not local_safe }}"
-  ansible.builtin.copy:
+  ansible.builtin.template:
     src: alerts.rules
     dest: "{{ docker_volumes_path }}/prometheus-conf/alerts.rules"
     mode: u=rwx,g=o=rx
@@ -265,7 +265,12 @@
     dest: "{{ stacks_base_path }}/monitoring/nextcloud-talk-bot"
     version: main
     force: true
-  when: alertmanager_nextcloud_conversation_token is defined and alertmanager_nextcloud_conversation_token
+  when: alertmanager_nextcloud_conversation_token is defined and alertmanager_nextcloud_conversation_token is not none
+
+- name: Ensure Wazuh notification network exists
+  community.docker.docker_network:
+    name: wazuh_notifications
+    state: present
 
 - name: Create docker-compose stack file
   ansible.builtin.template:

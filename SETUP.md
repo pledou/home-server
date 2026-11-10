@@ -393,7 +393,7 @@ Automatically configured with:
 
 ### Nextcloud
 
-**Version**: Configured in `inventories/group_vars/all.yml`:
+**Version**: Configured in role variables and can be overrided.
 
 ```yaml
 nextcloud_version: 32  # Adjust as needed

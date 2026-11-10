@@ -132,6 +132,7 @@ This document maps Docker images used in Ansible templates to their correspondin
 | turn_server | `instrumentisto/coturn:{{ coturn_version }}` | `coturn_version` | `"4.6"` |
 | nextcloud | *Custom build (Dockerfile)* | N/A | Built from Dockerfile |
 | harp | `ghcr.io/nextcloud/nextcloud-appapi-harp:release` | `harp_version` | `"release"` *(not used in template)* |
+| nextcloud-mcp | `ghcr.io/cbcoutinho/nextcloud-mcp-server:{{ nextcloud_mcp_version }}` | `nextcloud_mcp_version` | `"latest"` *(standalone backend only)* |
 
 **Note:** The nextcloud service is built from a custom Dockerfile, not pulled from a registry. The harp image has a hardcoded tag.
 

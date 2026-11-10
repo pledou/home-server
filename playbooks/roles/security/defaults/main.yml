@@ -1,5 +1,10 @@
 # code: language=ansible
 ---
+# Wazuh host agent
+security_wazuh_agent_enabled: true
+security_wazuh_agent_version: "{{ wazuh_version | default('4.14.10') }}-1"
+security_wazuh_agent_manager_address: "127.0.0.1"
+
 # SSH Security Configuration
 ssh_port: 22
 ssh_permit_root_login: "no"
@@ -33,6 +38,11 @@ fail2ban_maxretry: 5
 fail2ban_destemail: "root@localhost"
 fail2ban_sender: "fail2ban@{{ ansible_fqdn }}"
 fail2ban_action: "action_mw"  # action_mw = mail with whois report
+
+# Wazuh host agent
+security_wazuh_agent_enabled: true
+security_wazuh_agent_version: "{{ wazuh_version | default('4.14.10') }}-1"
+security_wazuh_agent_manager_address: "127.0.0.1"
 
 # Additional SSH hardening
 ssh_protocol: 2

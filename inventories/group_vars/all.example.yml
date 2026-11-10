@@ -52,8 +52,6 @@ nextcloud_exporter_auth_token: !vault |
                                $ANSIBLE_VAULT;1.1;AES256
                                YOUR_ENCRYPTED_NEXTCLOUD_EXPORTER_TOKEN_HERE
 
-nextcloud_version: 32
-
 authentik_mail_from: "{{ kresus_email_from }}"
 authentik_mail_smtpname: "{{ kresus_email_user }}"
 authentik_mail_smtphost: "{{ kresus_email_host }}"

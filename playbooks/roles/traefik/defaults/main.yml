@@ -19,6 +19,7 @@ traefik_coraza_image: "ghcr.io/le0developer/traefik-waf"
 traefik_coraza_version: "v0.1.2"
 traefik_coraza_crs_version: "v4.22.0"
 traefik_coraza_log_path: "{{ traefik_accesslog_host_path }}/traefik.log"
+traefik_coraza_wazuh_log_path: "{{ traefik_accesslog_host_path }}/coraza.log"
 
 # Buffering middleware – 0 means no limit, which avoids restricting Nextcloud large-file transfers
 traefik_max_response_body_bytes: 0

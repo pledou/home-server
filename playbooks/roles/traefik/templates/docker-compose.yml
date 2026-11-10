@@ -56,6 +56,10 @@ services:
       - --entrypoints.https.http.tls.domains[0].sans=*.{{ app_domain_name }}
       - --entrypoints.https.http.middlewares=global-security@docker
       - --entrypoints.https.forwardedheaders.insecure
+{% if traefik_coraza_enabled | bool %}
+      - --experimental.plugins.coraza.moduleName=github.com/jcchavezs/coraza-http-wasm-traefik
+      - --experimental.plugins.coraza.version={{ traefik_coraza_plugin_version }}
+{% endif %}
       - --accesslog
       - --accesslog.filepath=/var/log/traefik/access.log
       - --log
@@ -168,6 +172,11 @@ services:
       - coraza_internal
     labels:
       - com.centurylinklabs.watchtower.enable=false
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "unixgram:///dev/log"
+        tag: "coraza-waf"
     restart: unless-stopped
 {% endif %}
 

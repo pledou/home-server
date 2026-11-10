@@ -29,6 +29,7 @@ services:
       OAUTH_SCOPES: "openid profile email"
       OPENID_PROVIDER_URL: "https://auth.{{ app_domain_name }}/application/o/{{ webui_oauth_slug_name }}/.well-known/openid-configuration"
       WEBUI_URL: "https://ia.{{ app_domain_name }}"
+      WEBUI_SECRET_KEY: $(cat /run/secrets/webui_secret_key)
       CORS_ALLOW_ORIGIN: "https://ia.{{ app_domain_name }}"
       ENABLE_OAUTH_SIGNUP: True
       ENABLE_LOGIN_FORM: False
@@ -78,6 +79,7 @@ services:
     secrets:
       - webui_oauth_client_id
       - webui_oauth_client_secret
+      - webui_secret_key
     depends_on:
      - ollama
      - ollama-embeddings
@@ -330,6 +332,51 @@ services:
         aliases:
           - chromadb
 
+  {% if nextcloud_mcp_backend == 'standalone' %}
+  nextcloud-mcp:
+    image: "{{ nextcloud_mcp_image }}:{{ nextcloud_mcp_version }}"
+    command: --oauth
+    environment:
+      NEXTCLOUD_HOST: "https://{{ app_domain_name }}"
+      MCP_DEPLOYMENT_MODE: "login_flow"
+      TOKEN_ENCRYPTION_KEY: "{{ ia_nextcloud_mcp_token_encryption_key }}"
+      TOKEN_STORAGE_DB: "/app/data/tokens.db"
+      NEXTCLOUD_MCP_SERVER_URL: "https://mcp.{{ app_domain_name }}"
+      NEXTCLOUD_PUBLIC_ISSUER_URL: "https://{{ app_domain_name }}"
+      # NEXTCLOUD_PUBLIC_URL: "https://{{ app_domain_name }}"
+      # NEXTCLOUD_RESOURCE_URI: "https://{{ app_domain_name }}"
+      NEXTCLOUD_OIDC_CLIENT_ID: {{ nextcloud_mcp_oidc_client_id | to_json }}
+      NEXTCLOUD_OIDC_CLIENT_SECRET: {{ nextcloud_mcp_oidc_client_secret | replace('$', '$$') | to_json }}
+      ALLOWED_MCP_CLIENTS: {{ nextcloud_mcp_allowed_clients | join(',') | replace('$', '$$') | to_json }}
+      ALLOWED_MGMT_CLIENT: {{ nextcloud_mcp_allowed_mgmt_client | replace('$', '$$') | to_json }}
+    restart: unless-stopped
+    volumes:
+      - nextcloud-mcp-data:/app/data
+    networks:
+      - network
+      - traefik_backend
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+      - traefik.enable=true
+      - traefik.docker.network=traefik_backend
+      - traefik.constraint-label=traefik_backend
+      - traefik.http.routers.nextcloud-mcp.rule=Host(`mcp.{{ app_domain_name }}`)
+      - traefik.http.routers.nextcloud-mcp.entrypoints=https
+      - traefik.http.routers.nextcloud-mcp.tls=true
+      - traefik.http.routers.nextcloud-mcp.tls.certresolver=le
+      - traefik.http.services.nextcloud-mcp.loadbalancer.server.port=8000
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live')"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+  {% endif %}
+
 volumes:
   ollama:
     driver: local
@@ -361,6 +408,12 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/chromadb"
+  nextcloud-mcp-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/nextcloud-mcp-data"
 
 networks:
   network:
@@ -374,3 +427,5 @@ secrets:
     file: {{ docker_volumes_path }}/secrets/webui_oauth_client_id
   webui_oauth_client_secret:
     file: {{ docker_volumes_path }}/secrets/webui_oauth_client_secret
+  webui_secret_key:
+    file: {{ docker_volumes_path }}/secrets/webui_secret_key

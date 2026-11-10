@@ -32,7 +32,12 @@
 
 - name: Derive ups.conf from scanner output if available
   ansible.builtin.set_fact:
-    nut_scanner_ups_conf: "{{ (nut_scan.stdout | regex_replace('^\[[^\]]+\]', '[' ~ nut_ups_name ~ ']')) if (nut_scan.stdout is search('^\[')) else '' }}"
+    nut_scanner_ups_conf: >-
+      {{
+        (nut_scan.stdout | regex_replace('^\[[^\]]+\]', '[' ~ nut_ups_name ~ ']'))
+        if (nut_scan.stdout is search('^\['))
+        else ''
+      }}
 
 - name: Use scanned ups.conf when found
   ansible.builtin.copy:
@@ -92,15 +97,3 @@
 - name: Show UPS variables
   ansible.builtin.debug:
     msg: "{{ upsc_out.stdout | default('No UPS data available') }}"
-
-handlers:
-  - name: Restart NUT services
-    ansible.builtin.service:
-      name: nut-server
-      state: restarted
-    listen: Restart NUT services
-  - name: Restart NUT monitor
-    ansible.builtin.service:
-      name: nut-client
-      state: restarted
-    listen: Restart NUT services

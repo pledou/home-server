@@ -54,7 +54,13 @@ The `security` role installs the matching Wazuh agent package on Debian-family
 hosts by default. Run `ansible-playbook playbooks/security-hardening.yml` after
 the Wazuh manager is up; the local agent connects to `127.0.0.1`. Override
 `security_wazuh_agent_manager_address` when the manager is on another host, or
-set `security_wazuh_agent_enabled: false` to disable agent installation.
+set `security_wazuh_agent_enabled: false` to disable agent installation. The
+host agent always enables the Docker listener and installs its Python Docker
+API dependencies from system packages, avoiding conflicts with Debian-managed
+Python libraries. When Traefik Coraza is enabled, Docker sends the
+sidecar's syslog output to `/var/log/traefik/coraza.log`, and the agent collects
+that file. This requires the Traefik stack to be redeployed after enabling
+Coraza's syslog logging.
 
 The manager forwards alerts at level 10 or higher to the existing Alertmanager
 API. Alertmanager then delivers them using the configured Nextcloud Talk

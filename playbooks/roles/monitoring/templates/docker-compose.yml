@@ -54,6 +54,7 @@ services:
     networks:
       - backend
       - traefik_backend
+      - wazuh_notifications
 
   node-exporter:
     labels:
@@ -192,6 +193,7 @@ services:
       backend:
         aliases:
           - nvidia-gpu-exporter
+    restart: unless-stopped
     deploy:
       mode: global
       resources:
@@ -332,6 +334,8 @@ networks:
   backend:
     external: true
     name: monitoring_backend
+  wazuh_notifications:
+    external: true
 
 volumes:
   loki-config:

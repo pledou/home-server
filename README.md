@@ -196,6 +196,9 @@ ansible-playbook playbooks/install.yml --tags hassio
 ansible-playbook playbooks/install.yml --tags authentik
 ansible-playbook playbooks/install.yml --tags monitoring
 
+# Security monitoring
+ansible-playbook playbooks/install.yml --tags wazuh
+
 # Backup system
 ansible-playbook playbooks/install.yml --tags prep_backup
 

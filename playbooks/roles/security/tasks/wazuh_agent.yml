@@ -35,6 +35,17 @@
     WAZUH_AGENT_NAME: "{{ inventory_hostname }}"
   become: true
 
+- name: Install system Python dependencies for the Wazuh Docker listener
+  ansible.builtin.apt:
+    name:
+      - python3
+      - python3-docker
+      - python3-requests
+      - python3-urllib3
+    state: present
+    update_cache: true
+  become: true
+
 - name: Configure Wazuh agent manager address
   ansible.builtin.replace:
     path: /var/ossec/etc/ossec.conf
@@ -43,18 +54,127 @@
   notify: Restart wazuh-agent
   become: true
 
-- name: Configure Wazuh to collect Traefik JSON logs
+- name: Enable the Wazuh Docker listener
   ansible.builtin.blockinfile:
     path: /var/ossec/etc/ossec.conf
-    marker: "  <!-- {mark} ANSIBLE MANAGED TRAEFIK LOG -->"
+    marker: "  <!-- {mark} ANSIBLE MANAGED DOCKER LISTENER -->"
+    insertafter: "<ossec_config>"
+    block: |
+      <wodle name="docker-listener">
+        <disabled>no</disabled>
+      </wodle>
+  notify: Restart wazuh-agent
+  become: true
+
+- name: Install rsyslog for Coraza container logs
+  ansible.builtin.apt:
+    name: rsyslog
+    state: present
+  become: true
+  when: traefik_coraza_enabled | default(true) | bool
+
+- name: Ensure rsyslog is enabled and running for Coraza logs
+  ansible.builtin.systemd:
+    name: rsyslog
+    enabled: true
+    state: started
+  become: true
+  when: traefik_coraza_enabled | default(true) | bool
+
+- name: Ensure Coraza log directory exists
+  ansible.builtin.file:
+    path: "{{ traefik_coraza_wazuh_log_path | default('/var/log/traefik/coraza.log') | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+  when: traefik_coraza_enabled | default(true) | bool
+
+- name: Ensure Coraza log file exists
+  ansible.builtin.file:
+    path: "{{ traefik_coraza_wazuh_log_path | default('/var/log/traefik/coraza.log') }}"
+    state: touch
+    owner: root
+    group: root
+    mode: "0640"
+  become: true
+  when: traefik_coraza_enabled | default(true) | bool
+
+- name: Route Coraza container logs to a dedicated file
+  ansible.builtin.copy:
+    dest: /etc/rsyslog.d/30-coraza-waf.conf
+    content: |
+      if ($programname == 'coraza-waf') then {
+          action(type="omfile" file="{{ traefik_coraza_wazuh_log_path | default('/var/log/traefik/coraza.log') }}")
+          stop
+      }
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  notify: Restart rsyslog
+  when: traefik_coraza_enabled | default(true) | bool
+
+- name: Rotate Coraza logs
+  ansible.builtin.copy:
+    dest: /etc/logrotate.d/coraza-waf
+    content: |
+      {{ traefik_coraza_wazuh_log_path | default('/var/log/traefik/coraza.log') }} {
+          daily
+          rotate 14
+          compress
+          delaycompress
+          missingok
+          notifempty
+          create 0640 root root
+          postrotate
+              systemctl kill -s HUP rsyslog.service
+          endscript
+      }
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  when: traefik_coraza_enabled | default(true) | bool
+
+- name: Configure Wazuh to collect Coraza logs
+  ansible.builtin.blockinfile:
+    path: /var/ossec/etc/ossec.conf
+    marker: "  <!-- {mark} ANSIBLE MANAGED CORAZA LOG -->"
     insertafter: "<ossec_config>"
     block: |
       <localfile>
-        <log_format>json</log_format>
-        <location>{{ traefik_coraza_log_path | default('/var/log/traefik/traefik.log') }}</location>
+        <log_format>syslog</log_format>
+        <location>{{ traefik_coraza_wazuh_log_path | default('/var/log/traefik/coraza.log') }}</location>
       </localfile>
   notify: Restart wazuh-agent
   become: true
+  when: traefik_coraza_enabled | default(true) | bool
+
+- name: Stop Wazuh collecting Coraza logs when Coraza is disabled
+  ansible.builtin.blockinfile:
+    path: /var/ossec/etc/ossec.conf
+    marker: "  <!-- {mark} ANSIBLE MANAGED CORAZA LOG -->"
+    state: absent
+  notify: Restart wazuh-agent
+  become: true
+  when: not (traefik_coraza_enabled | default(true) | bool)
+
+- name: Remove Coraza rsyslog routing when Coraza is disabled
+  ansible.builtin.file:
+    path: /etc/rsyslog.d/30-coraza-waf.conf
+    state: absent
+  become: true
+  notify: Restart rsyslog
+  when: not (traefik_coraza_enabled | default(true) | bool)
+
+- name: Remove Coraza log rotation when Coraza is disabled
+  ansible.builtin.file:
+    path: /etc/logrotate.d/coraza-waf
+    state: absent
+  become: true
+  when: not (traefik_coraza_enabled | default(true) | bool)
 
 - name: Ensure Wazuh agent is enabled and started
   ansible.builtin.systemd:

@@ -47,10 +47,11 @@ image (`{{ traefik_coraza_version }}`). The role downloads the Coraza
 Traefik sends request headers to the sidecar before forwarding requests.
 Request bodies are not sent to Coraza, preserving streaming and large uploads;
 response bodies are not inspected. Coraza runs in detection-only mode, so
-detections are logged but do not block requests. View Coraza logs with
-`docker compose logs coraza`; Traefik's JSON log remains at
-`{{ traefik_coraza_log_path }}` for Wazuh collection. The sidecar only shares
-an internal Docker network with Traefik.
+detections are logged but do not block requests. Docker sends the Coraza
+container's syslog output to
+`{{ traefik_coraza_wazuh_log_path | default('/var/log/traefik/coraza.log') }}`,
+which the Wazuh agent collects. The sidecar only shares an internal Docker
+network with Traefik.
 
 The upstream image was last updated in January 2026 and has no GitHub releases;
 its source repository has no published license. The role pins its published

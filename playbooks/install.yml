@@ -21,6 +21,8 @@
       tags: ['docker-apps', 'monitoring', 'ia', 'hassio', 'gpu']
     - role: traefik
       tags: ['traefik', 'docker-apps']
+    - role: wazuh
+      tags: ['wazuh', 'docker-apps']
     - role: authentik
       tags: ['authentik', 'docker-apps']
     - role: monitoring

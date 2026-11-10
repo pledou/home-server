@@ -1,5 +1,12 @@
 # code: language=ansible
 ---
+- name: Include Wazuh agent tasks
+  ansible.builtin.include_tasks: wazuh_agent.yml
+  when: security_wazuh_agent_enabled | bool
+  tags:
+    - security
+    - wazuh
+
 - name: Include SSH hardening tasks
   ansible.builtin.include_tasks: ssh_hardening.yml
   tags:
@@ -12,4 +19,13 @@
   tags:
     - security
     - fail2ban
+
+- name: Include Wazuh agent tasks
+  ansible.builtin.include_tasks: wazuh_agent.yml
+  when:
+    - security_wazuh_agent_enabled | bool
+    - not local_safe
+  tags:
+    - security
+    - wazuh
 ...
