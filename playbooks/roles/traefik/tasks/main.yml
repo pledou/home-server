@@ -18,10 +18,57 @@
   ansible.builtin.file:
     path: "{{ docker_volumes_path }}/{{ item }}"
     state: directory
-    mode: u=rw,g=o=r
+    mode: u=rwx,g=rx,o=rx
   loop:
     - traefik-public-certificates
     - traefik-rules
+
+- name: Deploy Coraza middleware configuration
+  become: "{{ not local_safe }}"
+  ansible.builtin.template:
+    src: coraza.yml.j2
+    dest: "{{ docker_volumes_path }}/traefik-rules/coraza.yml"
+    owner: "{{ ansible_user }}"
+    mode: u=rw,g=r,o=r
+  when: traefik_coraza_enabled | bool
+
+- name: Create Coraza rules directory
+  become: "{{ not local_safe }}"
+  ansible.builtin.file:
+    path: "{{ docker_volumes_path }}/traefik-coraza-rules"
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: u=rwx,g=rx,o=rx
+  when: traefik_coraza_enabled | bool
+
+- name: Download Coraza recommended configuration
+  become: "{{ not local_safe }}"
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/corazawaf/coraza/v3.3.3/coraza.conf-recommended
+    dest: "{{ docker_volumes_path }}/traefik-coraza-rules/00-coraza.conf"
+    checksum: sha256:84389d00eabf41f352812949d88d841e1e4f09b719794d85fd86eccace3e3a55
+    mode: u=rw,g=r,o=r
+  when: traefik_coraza_enabled | bool
+
+- name: Download OWASP CRS rules
+  become: "{{ not local_safe }}"
+  ansible.builtin.git:
+    repo: https://github.com/coreruleset/coreruleset.git
+    dest: "{{ docker_volumes_path }}/traefik-coraza-rules/coreruleset"
+    version: "{{ traefik_coraza_crs_version }}"
+    depth: 1
+    single_branch: true
+  when: traefik_coraza_enabled | bool
+
+- name: Copy OWASP CRS setup configuration
+  become: "{{ not local_safe }}"
+  ansible.builtin.copy:
+    src: "{{ docker_volumes_path }}/traefik-coraza-rules/coreruleset/crs-setup.conf.example"
+    dest: "{{ docker_volumes_path }}/traefik-coraza-rules/01-crs-setup.conf"
+    remote_src: true
+    owner: "{{ ansible_user }}"
+    mode: u=rw,g=r,o=r
+  when: traefik_coraza_enabled | bool
 
 
 - name: Create unbound directory
@@ -121,6 +168,13 @@
     src: docker-compose.yml
     dest: "{{ stacks_base_path }}/traefik/docker-compose.yml"
     mode: u=rwx,g=o=rx
+
+- name: Remove Coraza middleware configuration when disabled
+  become: "{{ not local_safe }}"
+  ansible.builtin.file:
+    path: "{{ docker_volumes_path }}/traefik-rules/coraza.yml"
+    state: absent
+  when: not (traefik_coraza_enabled | bool)
 
 - name: Set DNS as 127.0.0.1 in systemd-resolved configuration
   become: "{{ not local_safe }}"
