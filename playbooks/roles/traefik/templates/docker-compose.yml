@@ -56,10 +56,6 @@ services:
       - --entrypoints.https.http.tls.domains[0].sans=*.{{ app_domain_name }}
       - --entrypoints.https.http.middlewares=global-security@docker
       - --entrypoints.https.forwardedheaders.insecure
-{% if traefik_coraza_enabled | bool %}
-      - --experimental.plugins.coraza.moduleName=github.com/jcchavezs/coraza-http-wasm-traefik
-      - --experimental.plugins.coraza.version={{ traefik_coraza_plugin_version }}
-{% endif %}
       - --accesslog
       - --accesslog.filepath=/var/log/traefik/access.log
       - --log
@@ -156,9 +152,9 @@ services:
     user: "10001:10001"
     environment:
       - WAF_RULESET_ENABLED=true
-      - WAF_RULESET_PATH=/rules/00-coraza.conf,/rules/01-crs-setup.conf,/rules/coreruleset/rules/*.conf
+      - WAF_RULESET_PATH=/rules/00-coraza.conf,/rules/01-crs-setup.conf,/rules/coreruleset/rules/*.conf,/rules/99-coraza-engine.conf
       - WAF_REQUIRE_JS=false
-      - WAF_VERBOSITY=4
+      - WAF_VERBOSITY=1
     volumes:
       - "{{ docker_volumes_path }}/traefik-coraza-rules:/rules:ro"
     tmpfs:

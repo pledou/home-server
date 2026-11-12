@@ -13,4 +13,10 @@
     name: fail2ban
     state: restarted
     enabled: true
+
+- name: Restart rsyslog
+  become: "{{ not local_safe }}"
+  ansible.builtin.systemd:
+    name: rsyslog
+    state: restarted
 ...

@@ -57,10 +57,11 @@ the Wazuh manager is up; the local agent connects to `127.0.0.1`. Override
 set `security_wazuh_agent_enabled: false` to disable agent installation. The
 host agent always enables the Docker listener and installs its Python Docker
 API dependencies from system packages, avoiding conflicts with Debian-managed
-Python libraries. When Traefik Coraza is enabled, Docker sends the
-sidecar's syslog output to `/var/log/traefik/coraza.log`, and the agent collects
-that file. This requires the Traefik stack to be redeployed after enabling
-Coraza's syslog logging.
+Python libraries. The Traefik role configures rsyslog to route Coraza sidecar
+logs to `traefik_coraza_wazuh_log_path` (default `/var/log/traefik/coraza.log`).
+When the Wazuh agent is enabled, the security role configures it to collect
+that file. Apply the Traefik role to set up log routing and redeploy the stack,
+then apply the security role to enable collection.
 
 The manager forwards alerts at level 10 or higher to the existing Alertmanager
 API. Alertmanager then delivers them using the configured Nextcloud Talk
