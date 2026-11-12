@@ -11,4 +11,10 @@
     name: fail2ban
     state: restarted
   become: "{{ not local_safe }}"
+
+- name: Restart wazuh-agent
+  ansible.builtin.systemd:
+    name: wazuh-agent
+    state: restarted
+  become: "{{ not local_safe }}"
 ...

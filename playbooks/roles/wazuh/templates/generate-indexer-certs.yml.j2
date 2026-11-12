@@ -1,0 +1,10 @@
+services:
+  generator:
+    image: "wazuh/wazuh-certs-generator:{{ wazuh_certs_generator_version }}"
+    hostname: wazuh-certs-generator
+    environment:
+      CERT_TOOL_VERSION: "{{ wazuh_version.split('.')[0] }}.{{ wazuh_version.split('.')[1] }}"
+      CERT_TOOL_REPOSITORY: prod
+    volumes:
+      - ./config/wazuh_indexer_ssl_certs/:/certificates/
+      - ./config/certs.yml:/config/certs.yml:ro

@@ -22,7 +22,7 @@ services:
       - traefik.http.middlewares.authentik.forwardauth.maxResponseBodySize=536870912
 
       # Global security middleware chain for all HTTPS routers
-      - traefik.http.middlewares.global-security.chain.middlewares=global-hsts@docker,global-ratelimit@docker,global-inflightreq@docker
+      - traefik.http.middlewares.global-security.chain.middlewares=global-hsts@docker,global-ratelimit@docker,global-inflightreq@docker{{ ',coraza@file' if traefik_coraza_enabled | bool else '' }}
       - traefik.http.middlewares.global-hsts.headers.stsSeconds={{ traefik_security_hsts_seconds }}
       - traefik.http.middlewares.global-hsts.headers.stsIncludeSubdomains={{ traefik_security_hsts_include_subdomains | lower }}
       - traefik.http.middlewares.global-hsts.headers.stsPreload={{ traefik_security_hsts_preload | lower }}
@@ -59,14 +59,24 @@ services:
       - --accesslog
       - --accesslog.filepath=/var/log/traefik/access.log
       - --log
+      - --log.filePath={{ traefik_coraza_log_path }}
+      - --log.format=json
       - --log.level=INFO
       - --api
       - --metrics.prometheus=true
       - --metrics.prometheus.addrouterslabels=true
       - --entryPoints.metrics.address=:8082
       - --metrics.prometheus.entryPoint=metrics
+{% if traefik_coraza_enabled | bool %}
+    depends_on:
+      coraza:
+        condition: service_started
+{% endif %}
     networks:
       backend:
+{% if traefik_coraza_enabled | bool %}
+      coraza_internal:
+{% endif %}
     extra_hosts:
       host.docker.internal: host-gateway
 
@@ -136,6 +146,36 @@ services:
     restart: unless-stopped
 {% endif %}
 
+{% if traefik_coraza_enabled | bool %}
+  coraza:
+    image: "{{ traefik_coraza_image }}:{{ traefik_coraza_version }}"
+    user: "10001:10001"
+    environment:
+      - WAF_RULESET_ENABLED=true
+      - WAF_RULESET_PATH=/rules/00-coraza.conf,/rules/01-crs-setup.conf,/rules/coreruleset/rules/*.conf,/rules/99-coraza-engine.conf
+      - WAF_REQUIRE_JS=false
+      - WAF_VERBOSITY=1
+    volumes:
+      - "{{ docker_volumes_path }}/traefik-coraza-rules:/rules:ro"
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - coraza_internal
+    labels:
+      - com.centurylinklabs.watchtower.enable=false
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "unixgram:///dev/log"
+        tag: "coraza-waf"
+    restart: unless-stopped
+{% endif %}
+
   updateDuckDNSIP:
     labels:
       - com.centurylinklabs.watchtower.enable=true
@@ -158,6 +198,10 @@ networks:
     attachable: true
   monitoring_backend:
     name: monitoring_backend
+{% if traefik_coraza_enabled | bool %}
+  coraza_internal:
+    internal: true
+{% endif %}
 
 volumes:
   unbound:

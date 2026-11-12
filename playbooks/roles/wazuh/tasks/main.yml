@@ -1,0 +1,285 @@
+---
+- name: Ensure Wazuh stack directory exists
+  become: "{{ not local_safe }}"
+  ansible.builtin.file:
+    path: "{{ wazuh_stack_path }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: "0755"
+
+- name: Ensure Wazuh secrets directory exists
+  become: "{{ not local_safe }}"
+  ansible.builtin.file:
+    path: "{{ wazuh_secrets_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Retrieve Wazuh service passwords
+  ansible.builtin.include_tasks: "tasks/retrieve_password.yml"
+  vars:
+    secrets:
+      - name: wazuh_indexer_admin_password
+        length: 32
+      - name: wazuh_dashboard_password
+        length: 32
+      - name: wazuh_api_password
+        length: 32
+        chars: "ascii_letters,digits,!@#%^&*()-_+="
+
+- name: Validate Wazuh service passwords
+  ansible.builtin.assert:
+    that:
+      - wazuh_indexer_admin_password | length >= 8
+      - wazuh_dashboard_password | length >= 8
+      - wazuh_api_password | length >= 8
+      - wazuh_api_password | length <= 64
+      - wazuh_api_password | regex_search('[A-Z]') is not none
+      - wazuh_api_password | regex_search('[a-z]') is not none
+      - wazuh_api_password | regex_search('[0-9]') is not none
+      - wazuh_api_password | regex_search('[^A-Za-z0-9]') is not none
+    fail_msg: "Wazuh passwords must meet the Wazuh API password requirements."
+
+- name: Generate or load Wazuh indexer user password hashes
+  ansible.builtin.include_tasks: generate_password_hash.yml
+  loop:
+    - name: admin
+      secret_name: wazuh_indexer_admin_password
+      password: "{{ wazuh_indexer_admin_password }}"
+      hash_fact: wazuh_indexer_admin_password_hash
+    - name: kibanaserver
+      secret_name: wazuh_dashboard_password
+      password: "{{ wazuh_dashboard_password }}"
+      hash_fact: wazuh_dashboard_password_hash
+  loop_control:
+    loop_var: wazuh_password_item
+
+- name: Check whether the Wazuh deployment checkout exists
+  ansible.builtin.stat:
+    path: "{{ wazuh_stack_path }}/.git"
+  register: wazuh_git_directory
+
+- name: Read the current Wazuh deployment tag
+  ansible.builtin.command:
+    argv:
+      - git
+      - -C
+      - "{{ wazuh_stack_path }}"
+      - describe
+      - --tags
+      - --exact-match
+      - HEAD
+  register: wazuh_current_git_tag
+  changed_when: false
+  failed_when: false
+  when: wazuh_git_directory.stat.isdir | default(false)
+
+- name: Check out the pinned Wazuh Docker deployment when its tag changes
+  ansible.builtin.git:
+    repo: "{{ wazuh_repository }}"
+    dest: "{{ wazuh_stack_path }}"
+    version: "v{{ wazuh_version }}"
+    depth: 1
+    force: true
+  when: >-
+    not (wazuh_git_directory.stat.isdir | default(false))
+    or (wazuh_current_git_tag.stdout | default('')) != ('v' ~ wazuh_version)
+
+- name: Validate Wazuh alert integration settings
+  ansible.builtin.assert:
+    that:
+      - wazuh_alert_min_level | int >= 1
+      - wazuh_alert_min_level | int <= 15
+      - wazuh_alertmanager_url is match('^https?://')
+    fail_msg: "Wazuh alert level must be 1-15 and the Alertmanager URL must use HTTP or HTTPS."
+
+- name: Ensure Wazuh notification network exists
+  community.docker.docker_network:
+    name: wazuh_notifications
+    state: present
+
+- name: Ensure Wazuh custom integrations directory exists
+  ansible.builtin.file:
+    path: "{{ wazuh_single_node_path }}/custom-integrations"
+    state: directory
+    mode: "0755"
+
+- name: Deploy Wazuh Alertmanager integration script
+  ansible.builtin.copy:
+    src: alertmanager_integration.py
+    dest: "{{ wazuh_single_node_path }}/custom-integrations/alertmanager_integration.py"
+    owner: "{{ 'root' if not local_safe else ansible_user }}"
+    group: "{{ 'root' if not local_safe else ansible_user }}"
+    mode: "0755"
+  become: "{{ not local_safe }}"
+
+- name: Read the upstream Wazuh manager configuration
+  ansible.builtin.slurp:
+    src: "{{ wazuh_single_node_path }}/config/wazuh_cluster/wazuh_manager.conf"
+  register: wazuh_manager_config_source
+
+- name: Validate the upstream Wazuh manager configuration
+  ansible.builtin.assert:
+    that:
+      - "'<ossec_config>' in (wazuh_manager_config_source.content | b64decode)"
+      - "'</ossec_config>' in (wazuh_manager_config_source.content | b64decode)"
+    fail_msg: "The checked-out Wazuh manager configuration has no ossec_config root element."
+
+- name: Set upstream Wazuh manager configuration fact
+  ansible.builtin.set_fact:
+    wazuh_manager_config_base: "{{ wazuh_manager_config_source.content | b64decode }}"
+
+- name: Deploy Wazuh manager configuration with Alertmanager integration
+  ansible.builtin.template:
+    src: wazuh_manager.conf.j2
+    dest: "{{ wazuh_single_node_path }}/config/wazuh_cluster/wazuh_manager.generated.conf"
+    mode: "0644"
+
+- name: Configure Wazuh host virtual memory
+  become: "{{ not local_safe }}"
+  ansible.posix.sysctl:
+    name: vm.max_map_count
+    value: "262144"
+    state: present
+    sysctl_file: /etc/sysctl.d/99-wazuh.conf
+    sysctl_set: true
+  when: not local_safe
+
+- name: Deploy Wazuh dashboard reverse-proxy configuration
+  become: "{{ not local_safe }}"
+  ansible.builtin.template:
+    src: opensearch_dashboards.yml.j2
+    dest: "{{ wazuh_single_node_path }}/config/wazuh_dashboard/opensearch_dashboards.yml"
+    owner: "{{ '1000' if not local_safe else ansible_user }}"
+    group: "{{ '1000' if not local_safe else ansible_user }}"
+    mode: "0644"
+
+- name: Deploy Wazuh indexer users configuration
+  become: "{{ not local_safe }}"
+  ansible.builtin.template:
+    src: internal_users.yml.j2
+    dest: "{{ wazuh_single_node_path }}/config/wazuh_indexer/internal_users.yml"
+    owner: "{{ '1000' if not local_safe else ansible_user }}"
+    group: "{{ '1000' if not local_safe else ansible_user }}"
+    mode: "0640"
+  register: wazuh_internal_users_config
+  no_log: true
+
+- name: Deploy Wazuh dashboard API configuration
+  become: "{{ not local_safe }}"
+  ansible.builtin.template:
+    src: wazuh.yml.j2
+    dest: "{{ wazuh_single_node_path }}/config/wazuh_dashboard/wazuh.yml"
+    owner: "{{ '1000' if not local_safe else ansible_user }}"
+    group: "{{ '1000' if not local_safe else ansible_user }}"
+    mode: "0640"
+  no_log: true
+
+- name: Deploy Wazuh Docker Compose configuration
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ wazuh_single_node_path }}/docker-compose.yml"
+    mode: "0600"
+  no_log: true
+
+- name: Deploy Wazuh certificate generator configuration
+  ansible.builtin.template:
+    src: generate-indexer-certs.yml.j2
+    dest: "{{ wazuh_single_node_path }}/generate-indexer-certs.yml"
+    mode: "0644"
+
+- name: Ensure Traefik network exists
+  community.docker.docker_network:
+    name: traefik_backend
+    state: present
+
+- name: Generate Wazuh node certificates
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - wazuh
+      - -f
+      - generate-indexer-certs.yml
+      - run
+      - --rm
+      - generator
+    chdir: "{{ wazuh_single_node_path }}"
+    creates: "{{ wazuh_single_node_path }}/config/wazuh_indexer_ssl_certs/root-ca.pem"
+
+- name: Start Wazuh indexer
+  community.docker.docker_compose_v2:
+    project_src: "{{ wazuh_single_node_path }}"
+    project_name: wazuh
+    services:
+      - wazuh.indexer
+    state: present
+    pull: missing
+
+- name: Wait for Wazuh indexer to accept connections
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - wazuh
+      - exec
+      - -T
+      - wazuh.indexer
+      - bash
+      - -c
+      - "exec 3<>/dev/tcp/127.0.0.1/9200"
+    chdir: "{{ wazuh_single_node_path }}"
+  register: wazuh_indexer_ready
+  changed_when: false
+  retries: 60
+  delay: 5
+  until: wazuh_indexer_ready.rc == 0
+
+- name: Apply Wazuh indexer user configuration  # noqa: no-handler
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - wazuh
+      - exec
+      - -T
+      - wazuh.indexer
+      - bash
+      - -c
+      - >-
+        export OPENSEARCH_JAVA_HOME=/usr/share/wazuh-indexer/jdk;
+        exec bash /usr/share/wazuh-indexer/plugins/opensearch-security/tools/securityadmin.sh "$@"
+      - securityadmin.sh
+      - -f
+      - /usr/share/wazuh-indexer/config/opensearch-security/internal_users.yml
+      - -t
+      - internalusers
+      - -nhnv
+      - -cacert
+      - /usr/share/wazuh-indexer/config/certs/root-ca.pem
+      - -cert
+      - /usr/share/wazuh-indexer/config/certs/admin.pem
+      - -key
+      - /usr/share/wazuh-indexer/config/certs/admin-key.pem
+      - -p
+      - "9200"
+      - -icl
+    chdir: "{{ wazuh_single_node_path }}"
+  register: wazuh_securityadmin_result
+  changed_when: wazuh_internal_users_config.changed
+  retries: 30
+  delay: 10
+  until: wazuh_securityadmin_result.rc == 0
+  when: wazuh_internal_users_config.changed
+
+- name: Deploy Wazuh services
+  community.docker.docker_compose_v2:
+    project_src: "{{ wazuh_single_node_path }}"
+    project_name: wazuh
+    state: present
+    pull: missing
+...
