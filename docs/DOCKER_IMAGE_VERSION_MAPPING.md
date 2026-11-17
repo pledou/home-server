@@ -56,7 +56,6 @@ This document maps Docker images used in Ansible templates to their correspondin
 | Service | Docker Image | Variable | Default Value |
 |---------|--------------|----------|---------------|
 | homeassistant | `homeassistant/home-assistant:stable` | `homeassistant_version` | `"stable"` *(not used in template)* |
-| zigbee2mqtt | `koenkk/zigbee2mqtt:{{ zigbee2mqtt_version }}` | `zigbee2mqtt_version` | `2` |
 | esphome | `esphome/esphome:{{ esphome_version }}` | `esphome_version` | `stable` |
 | mosquitto | `eclipse-mosquitto:{{ mosquitto_version }}` | `mosquitto_version` | `2.0` |
 | myelectricaldata | `m4dm4rtig4n/myelectricaldata:{{ myelectricaldata_version }}` | `myelectricaldata_version` | `"latest"` |

@@ -11,11 +11,6 @@ frigate_image: "ghcr.io/blakeblackshear/frigate"
 frigate_version: "stable"
 esphome_image: "esphome/esphome"
 esphome_version: "stable"
-zigbee2mqtt_image: "koenkk/zigbee2mqtt"
-zigbee2mqtt_version: "2"
-
-# HACS (Home Assistant Community Store) setup
-homeassistant_hacs_enabled: true
 
 # Home Assistant AI integrations post-deploy bootstrap
 homeassistant_ai_postdeploy_enabled: true

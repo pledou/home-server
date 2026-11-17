@@ -430,7 +430,6 @@ chmod 600 {{ docker_volumes_path }}/secrets/turn_secret
 **Default services included**:
 - Home Assistant Core
 - Mosquitto MQTT (with authentication)
-- Zigbee2MQTT
 - ESPHome
 - Frigate NVR
 - EnOcean2MQTT
@@ -438,7 +437,6 @@ chmod 600 {{ docker_volumes_path }}/secrets/turn_secret
 
 **Configuration files location** (after deployment):
 - Home Assistant: `/opt/homeassistant/homeassistant/`
-- Zigbee2MQTT: `/opt/homeassistant/zigbee2mqtt/data/configuration.yaml`
 - Frigate: `/opt/homeassistant/frigate_config/config.yaml`
 
 ### Authentik

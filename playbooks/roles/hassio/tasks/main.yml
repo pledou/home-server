@@ -26,9 +26,6 @@
     - name: homeassistant
       mode: u=rwx,g=rx,o=
       group: 0998
-    - name: zigbee2mqtt
-      mode: u=rwx,g=rx,o=
-      group: 0998
     - name: enocean2mqtt
       mode: u=rwx,g=rx,o=
       group: 0998
@@ -73,14 +70,6 @@
     dest: "{{ docker_volumes_path }}/myelectricaldata/config.yaml"
     mode: u=g=rwx,o=rx
     force: false
-- name: Copy zigbee2mqtt config file
-  become: "{{ not local_safe }}"
-  ansible.builtin.template:
-    src: zigbee2mqtt.yaml
-    dest: "{{ docker_volumes_path }}/zigbee2mqtt/configuration.yaml"
-    mode: u=g=rwx,o=rx
-    force: false
-  when: zigbee2mqtt_device_id is defined
 - name: Create Bluetooth Dockerfile from template
   ansible.builtin.template:
     src: Dockerfile.bluetooth
@@ -174,9 +163,6 @@
       - name: "ESPHome"
         port: "6052"
         cidrs: "{{ internal_only_networks }}"
-      - name: "Zigbee2MQTT"
-        port: "6053"
-        cidrs: "{{ local_networks }}"
       - name: "CoAP"
         port: "5683"
         proto: "udp"
@@ -246,10 +232,6 @@
     state: present
     project_src: "{{ stacks_base_path }}/hassio"
 
-- name: Setup HACS and custom integrations
-  when: homeassistant_hacs_enabled | bool
-  ansible.builtin.include_tasks: "setup_hacs.yml"
-
 - name: Bootstrap Home Assistant AI integrations after deployment
   when: homeassistant_ai_postdeploy_enabled | bool
   ansible.builtin.include_tasks: "postdeploy_ai_integrations.yml"
@@ -274,12 +256,6 @@
             app:
               name: "MyElectricalData"
               slug: "myelectricaldata"
-          - provider:
-              name: "zigbee2mqtt-provider"
-              external_host: "https://zigbee2mqtt.{{ app_domain_name }}"
-            app:
-              name: "Zigbee2Mqtt"
-              slug: "zigbee2mqtt"
           - provider:
               name: "frigate-provider"
               external_host: "https://frigate.{{ app_domain_name }}"
