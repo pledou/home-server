@@ -17,7 +17,6 @@ This Ansible playbook automates the deployment of:
 - **☁️ Nextcloud** - Self-hosted cloud storage and collaboration platform (v32)
 - **🏠 Home Assistant** - Home automation platform with:
   - Mosquitto MQTT broker
-  - Zigbee2MQTT
   - ESPHome
   - Frigate NVR
   - MyElectricalData integration

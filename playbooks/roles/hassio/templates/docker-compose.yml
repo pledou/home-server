@@ -26,6 +26,9 @@ services:
     {% if enocean_device_id is defined %}
       - /dev/serial/by-id/{{enocean_device_id}}:/dev/enocean
     {% endif %}
+    {% if zigbee_device_id is defined %}
+      - /dev/serial/by-id/{{ zigbee_device_id }}:/dev/ttyACM0
+    {% endif %}
     # image: "{{ homeassistant_image }}:{{ homeassistant_version }}"
     network_mode: host
     healthcheck:
@@ -47,37 +50,6 @@ services:
       - homeassistant:/config:rw
       - /etc/machine-id:/etc/machine-id:ro
     working_dir: /config
-
-  {% if zigbee2mqtt_device_id is defined %}
-  zigbee2mqtt:
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
-      - traefik.enable=true
-      - traefik.docker.network=traefik_backend
-      - traefik.constraint-label=traefik_backend
-      - traefik.http.routers.zigbee2mqtt-https.rule=Host(`zigbee2mqtt.{{app_domain_name}}`)
-      - traefik.http.routers.zigbee2mqtt-https.entrypoints=https
-      - traefik.http.routers.zigbee2mqtt-https.tls=true
-      - traefik.http.routers.zigbee2mqtt-https.tls.certresolver=le
-      - traefik.http.services.zigbee2mqtt.loadbalancer.server.port=8080
-      - traefik.http.services.zigbee2mqtt.loadbalancer.server.scheme=http
-      - traefik.http.routers.zigbee2mqtt-https.middlewares=authentik@docker
-    image: "{{ zigbee2mqtt_image }}:{{ zigbee2mqtt_version }}"
-    restart: always
-    volumes:
-      - zigbee2mqtt:/app/data:rw
-      - /run/udev:/run/udev:ro # only required for auto-detecting the port and some adapters like ConBee
-    devices:
-      - /dev/serial/by-id/{{ zigbee2mqtt_device_id }}:/dev/ttyACM0
-    environment:
-      TZ: Europe/Paris
-    expose:
-      - 8080
-    networks:
-      - backend
-      - traefik_backend
-
-  {% endif %}
 
   esphome:
     labels:
@@ -214,12 +186,6 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/enocean2mqtt"
-  zigbee2mqtt:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: "{{ docker_volumes_path }}/zigbee2mqtt"
   homeassistant:
     driver: local
     driver_opts:

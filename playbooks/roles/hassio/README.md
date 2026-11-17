@@ -20,35 +20,10 @@ For targeted deployment:
 ansible-playbook install.yml --tags hassio
 ```
 
-## HACS (Home Assistant Community Store)
-
-This role can automatically install HACS and configure custom integration repositories.
-
-### Automated Installation
-
-By default (`homeassistant_hacs_enabled: true`), the role will:
-
-1. Download and install HACS if not present
-2. Add the STT, TTS, and Home Agent integration repositories to HACS
-3. Prepare them for download via HACS UI
-
-To disable automatic HACS setup:
-```yaml
-homeassistant_hacs_enabled: false
-```
-
 ### Post-Installation Steps
 
-After Ansible completes:
-
-1. **First-time HACS setup** (if HACS was just installed):
-   - Restart Home Assistant
-   - Go to **Settings → Devices & Services**
-   - Configure HACS integration when prompted
-   - Link your GitHub account
-
-2. **Install the integrations**:
-   - Open HACS in Home Assistant
+After Ansible completes, **Install the integrations**:
+   - Open Marketplace in Home Assistant
    - Go to **Integrations**
    - Find and download:
      - **OpenAI Whisper Cloud** (fabio-garavini/ha-openai-whisper-stt-api)
@@ -58,18 +33,18 @@ After Ansible completes:
 
 3. **Configure via UI** (see sections below for details)
 
-## Speech-to-Text (OpenAI Whisper Cloud via HACS)
+## Speech-to-Text (OpenAI Whisper Cloud via MarketPlace)
 
 `OpenAI Whisper Cloud` is configured through Home Assistant UI (Config Entry), not via `configuration.yaml`.
 
 ### Installation
 
-The role automatically adds this repository to HACS (if `homeassistant_hacs_enabled: true`):
+The role automatically adds this repository to Marketplace:
 
 - Repository: `https://github.com/fabio-garavini/ha-openai-whisper-stt-api`
-- Integration name in HACS: `OpenAI Whisper Cloud`
+- Integration name in Marketplace: `OpenAI Whisper Cloud`
 
-After Ansible deployment, download the integration from HACS and restart Home Assistant.
+After Ansible deployment, download the integration from Marketplace and restart Home Assistant.
 
 ### Configuration (UI)
 
@@ -89,18 +64,18 @@ In Home Assistant:
 
 Automatic setup via Ansible `blockinfile` is not recommended for `OpenAI Whisper Cloud`, because this integration is managed by Home Assistant config entries (UI storage).
 
-## Text-to-Speech (openai_tts via HACS)
+## Text-to-Speech (openai_tts via Marketplace)
 
 `openai_tts` is primarily configured through Home Assistant UI (Config Entry), not reliably via `configuration.yaml`.
 
 ### Installation
 
-The role automatically adds this repository to HACS (if `homeassistant_hacs_enabled: true`):
+The role automatically adds this repository to Marketplace:
 
 - Repository: `https://github.com/sfortis/openai_tts`
-- Integration name in HACS: `OpenAI TTS`
+- Integration name in Marketplace: `OpenAI TTS`
 
-After Ansible deployment, download the integration from HACS and restart Home Assistant.
+After Ansible deployment, download the integration from Marketplace and restart Home Assistant.
 
 ### Configuration (UI)
 
@@ -129,7 +104,7 @@ There are two main options for integrating LLMs with Home Assistant:
 The official [Home Assistant Ollama integration](https://www.home-assistant.io/integrations/ollama/) is built-in and simple to configure:
 
 **Pros:**
-- ✅ Official integration (no HACS needed)
+- ✅ Official integration
 - ✅ Simple setup
 - ✅ Built-in to Home Assistant
 - ✅ Good for small homes
@@ -144,7 +119,7 @@ The official [Home Assistant Ollama integration](https://www.home-assistant.io/i
 
 **Configuration:** Settings → Devices & Services → Add Integration → Ollama
 
-### Option 2: Home Agent (HACS - Recommended for Advanced Use)
+### Option 2: Home Agent (Marketplace - Recommended for Advanced Use)
 
 **Best for**: Complex setups, large homes (> 25 entities), advanced features, custom integrations
 
@@ -161,7 +136,6 @@ The official [Home Assistant Ollama integration](https://www.home-assistant.io/i
 - ✅ Better entity control reliability
 
 **Cons:**
-- ❌ Requires HACS
 - ❌ More complex configuration
 - ❌ Custom integration (not official)
 
@@ -178,16 +152,14 @@ The official [Home Assistant Ollama integration](https://www.home-assistant.io/i
 - You want persistent conversations
 - You need custom tools or advanced features
 - You want better control reliability
-- You're willing to use HACS
+- You're willing to use Marketplace
 
 ### Home Agent Installation
 
-The role automatically adds this repository to HACS (if `homeassistant_hacs_enabled: true`):
-
 - Repository: `https://github.com/aradlein/hass-agent-llm`
-- Integration name in HACS: `Home Agent`
+- Integration name in Marketplace: `Home Agent`
 
-After Ansible deployment, download the integration from HACS and restart Home Assistant.
+After Ansible deployment, download the integration from Marketplace and restart Home Assistant.
 
 ### Configuration (UI)
 

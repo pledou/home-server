@@ -18,20 +18,20 @@ mqtt:
   host: mqtt
   port: 1883
 
-{% if gpu != "none" % }
+{% if gpu != "none" %}
 ffmpeg:
   hwaccel_args: {% if gpu == "intel" %}preset-intel-qsv-h265{% elif gpu == "nvidia" %}preset-nvidia{% endif %}
 {% endif %}
 
 detectors:
-  {% if gpu == "intel" %}
+{% if gpu == "intel" %}
   ov_0:
     type: openvino
     device: GPU
-  {% else %}
+{% else %}
   onnx_0:
     type: onnx
-  {% endif %}
+{% endif %}
 
 model:
   path: /config/model_cache/{{ frigate_model_filename }}
@@ -41,6 +41,6 @@ model:
   input_tensor: nchw
   input_pixel_format: rgb
   input_dtype: float
-  {% if gpu == "intel" %}
+{% if gpu == "intel" %}
   labelmap_path: /labelmap/coco-80.txt
-  {% endif %}
+{% endif %}

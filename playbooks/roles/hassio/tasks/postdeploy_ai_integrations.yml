@@ -125,13 +125,6 @@
     - hassio_ai_bootstrap_should_run
     - (hassio_ai_missing_custom_components | default([]) | length) > 0
 
-- name: Explain manual HACS requirement for missing custom components
-  ansible.builtin.debug:
-    msg: >-
-      Required custom components are not installed: {{ hassio_ai_missing_custom_components | join(', ') }}.
-      Install them manually via HACS first, then rerun hassio deployment.
-  when: (hassio_ai_missing_custom_components | default([]) | length) > 0
-
 - name: Bootstrap Home Assistant AI integrations in core.config_entries
   become: "{{ not local_safe }}"
   ansible.builtin.command:
