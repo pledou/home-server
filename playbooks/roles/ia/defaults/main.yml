@@ -83,8 +83,6 @@ ia_chromadb_host: "127.0.0.1"
 ia_chromadb_port: 8001
 ia_speaches_openai_base_url: "http://127.0.0.1:8000/v1"
 
-webui_secret_key: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
-
 ollama_memory_limit_ratio: 0.90
 ollama_min_memory_mb: 4096
 # ollama_shm_size_mb: 10240 # Sifficient for 8b, 13b models
@@ -143,3 +141,12 @@ ollama_num_threads: >-
 
 IA_openai_api_key: ""
 IA_openai_api_url: "https://api.mistral.ai/v1"
+
+nextcloud_mcp_image: "ghcr.io/cbcoutinho/nextcloud-mcp-server"
+nextcloud_mcp_version: "latest"
+nextcloud_mcp_oidc_client_id: ""
+nextcloud_mcp_oidc_client_secret: ""
+nextcloud_mcp_allowed_clients:
+  - nextcloud-std|https://ia.{{ app_domain_name }}/oauth/clients/mcp:nextcloud-std/callback
+nextcloud_mcp_allowed_mgmt_client: "{{ nextcloud_mcp_oidc_client_id }}"
+nextcloud_mcp_encryption_seed: ""

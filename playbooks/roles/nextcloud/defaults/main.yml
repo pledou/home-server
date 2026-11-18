@@ -14,6 +14,9 @@ redis_version: "8-alpine"
 nextcloud_image: "nextcloud"
 nextcloud_version: "stable"
 
+# Select the Nextcloud MCP implementation used by Open WebUI.
+nextcloud_mcp_backend: "existing"
+
 # PHP-FPM tuning to reduce request starvation under periodic background load.
 nextcloud_php_fpm_pm_max_children: 48
 nextcloud_php_fpm_pm_start_servers: 6
@@ -27,6 +30,11 @@ nextcloud_php_fpm_request_terminate_timeout: "3600s"
 # Disabled by default - previews are generated on-demand when accessed.
 # For large libraries, consider running manually during maintenance windows.
 nextcloud_preview_pregenerate_cron: ""  # Disabled - use on-demand generation
+
+# Weekly full rescan of the Music app library (php occ music:scan --rescan --all).
+# Scheduled via the in-container cron as www-data. Default: Sunday at 05:00.
+# Set to "" to disable the scheduled scan entirely.
+nextcloud_music_scan_cron: "0 5 * * 0"
 
 nextcloud_defaultapp_list:
   - viewer
@@ -52,6 +60,11 @@ nextcloud_defaultapp_list:
   - spreed # Talk
   - assistant
   - integration_openai # OpenAI-compatible provider app (Ollama/LocalAI/OpenAI)
+  - twofactor_admin
+  - twofactor_nextcloud_notification
+  - twofactor_webauthn
+  - twofactor_totp
+  - twofactor_email
 
 nextcloud_integration_openai_url: "http://webui-api-proxy:8080/v1"
 nextcloud_integration_openai_default_completion_model_id: "{{ ia_ollama_agent_model }}"
@@ -79,6 +92,11 @@ nextcloud_context_agent_tool_status:
   duckduckgo: false
   openproject: false
 
+# Enable the context-related ExApps (context_chat_backend + context_agent) and their
+# dependent setup (embedding model pull, ia_network connect, context_chat app install).
+# Disabled by default; set to true to deploy the Context Chat / Context Agent stack.
+exapp_context_apps_enabled: false
+
 nextcloud_exapp_list:
   - name: context_chat_backend
     # CC_EM_BASE_URL delegates embeddings to the dedicated Ollama Embeddings instance.
@@ -88,6 +106,8 @@ nextcloud_exapp_list:
       --env CC_EM_BASE_URL=http://ollama-embeddings:11434/v1
       --env CC_EM_MODEL_NAME={{ nextcloud_context_chat_embedding_model }}
   - name: context_agent # Context Agent integration for enhanced automation capabilities
+    options: ""
+  - name: mcp_connector
     options: ""
 
 nextcloud_system_config:

@@ -338,13 +338,12 @@ services:
     command: --oauth
     environment:
       NEXTCLOUD_HOST: "https://{{ app_domain_name }}"
+      OIDC_DISCOVERY_URL: "https://leducd.duckdns.org/index.php/.well-known/openid-configuration"
       MCP_DEPLOYMENT_MODE: "login_flow"
       TOKEN_ENCRYPTION_KEY: "{{ ia_nextcloud_mcp_token_encryption_key }}"
       TOKEN_STORAGE_DB: "/app/data/tokens.db"
       NEXTCLOUD_MCP_SERVER_URL: "https://mcp.{{ app_domain_name }}"
       NEXTCLOUD_PUBLIC_ISSUER_URL: "https://{{ app_domain_name }}"
-      # NEXTCLOUD_PUBLIC_URL: "https://{{ app_domain_name }}"
-      # NEXTCLOUD_RESOURCE_URI: "https://{{ app_domain_name }}"
       NEXTCLOUD_OIDC_CLIENT_ID: {{ nextcloud_mcp_oidc_client_id | to_json }}
       NEXTCLOUD_OIDC_CLIENT_SECRET: {{ nextcloud_mcp_oidc_client_secret | replace('$', '$$') | to_json }}
       ALLOWED_MCP_CLIENTS: {{ nextcloud_mcp_allowed_clients | join(',') | replace('$', '$$') | to_json }}

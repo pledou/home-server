@@ -191,7 +191,7 @@ ChromaDB is connected to the `ia_network` bridge network, which allows:
 
 To use ChromaDB with Home Agent:
 
-1. Install Home Agent from HACS
+1. Install Home Agent from Marketplace
 2. Configure vector database settings:
    - **Vector DB Type**: ChromaDB
    - **ChromaDB URL**: `http://chromadb:8000`
@@ -346,9 +346,9 @@ After IA deployment, configure Home Assistant/Home Agent voice endpoints to use 
 
 If Home Assistant runs on the same host/network, use the Docker host IP (or DNS name) from the Home Assistant container perspective.
 
-### HACS prerequisites (required)
+### Marketplace prerequisites (required)
 
-For Home Assistant voice with Speaches, install both custom integrations from HACS:
+For Home Assistant voice with Speaches, install both custom integrations from Marketplace:
 
 1. `openai_tts` for text-to-speech
 2. `OpenAI Whisper Cloud` for speech-to-text
@@ -368,7 +368,7 @@ You can use Speaches directly in Home Assistant with the custom integration:
 
 Recommended setup:
 
-1. Install `openai_tts` from HACS (or manually from the repository).
+1. Install `openai_tts` from Marketplace (or manually from the repository).
 2. In Home Assistant, add/configure the OpenAI TTS integration.
 3. Use your Speaches endpoint and model aliases from this role:
 	- Base URL: `http://<ia-host>:8000/v1`
@@ -383,11 +383,11 @@ Notes:
 
 ### Home Assistant STT with `OpenAI Whisper Cloud` custom integration
 
-Use Speaches for STT in Home Assistant with `OpenAI Whisper Cloud` (HACS custom integration).
+Use Speaches for STT in Home Assistant with `OpenAI Whisper Cloud` (Marketplace custom integration).
 
 Recommended setup:
 
-1. Install `OpenAI Whisper Cloud` from HACS.
+1. Install `OpenAI Whisper Cloud` from Marketplace.
 2. In Home Assistant, add/configure the integration via UI.
 3. Choose **Custom** as the source and configure:
 	- API Key: `openai-api-key` (or your configured value)
@@ -420,6 +420,11 @@ Recommended:
 - add one Home Assistant MCP server
 - avoid duplicate servers for the same capability
 
+When `nextcloud_mcp_backend` is `standalone`, this role deploys the standalone
+Nextcloud MCP server, manages its OIDC credentials and token-encryption key,
+and persists its data. The Nextcloud role continues to select and configure
+the corresponding Nextcloud ExApp backend.
+
 Reference:
 - Open WebUI Admin → Tools → MCP Servers
 
@@ -429,9 +434,9 @@ Home Assistant offers two ways to integrate LLMs:
 
 ### Native Ollama Integration vs Home Agent
 
-| Feature | Native Ollama | Home Agent (HACS) |
+| Feature | Native Ollama | Home Agent (Marketplace) |
 |---------|--------------|-------------------|
-| **Installation** | Built-in | HACS required |
+| **Installation** | Built-in | Marketplace required |
 | **Complexity** | Simple | Advanced |
 | **Entity Limit** | < 25 recommended | No limit (vector DB) |
 | **Conversation Memory** | ❌ No | ✅ Persistent |
@@ -448,7 +453,7 @@ Home Assistant offers two ways to integrate LLMs:
 
 This documentation covers **Home Agent** setup. For native Ollama, see [Home Assistant docs](https://www.home-assistant.io/integrations/ollama/).
 
-## Home Agent (HACS custom integration)
+## Home Agent (Marketplace custom integration)
 
 **Home Agent** is a Home Assistant custom integration that provides advanced natural language control via OpenAI-compatible LLMs.
 
@@ -464,9 +469,9 @@ Home Agent extends Home Assistant's native conversation platform to enable:
 
 ### Installation
 
-The **hassio** role automatically adds Home Agent to HACS. After deployment:
+The **hassio** role automatically adds Home Agent to Marketplace. After deployment:
 
-1. Open HACS in Home Assistant → Integrations
+1. Open Marketplace in Home Assistant → Integrations
 2. Search for **Home Agent** (aradlein/hass-agent-llm)
 3. Click Install
 4. Restart Home Assistant

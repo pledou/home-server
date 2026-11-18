@@ -20,6 +20,79 @@ For targeted deployment:
 ansible-playbook install.yml --tags nextcloud
 ```
 
+## Nextcloud MCP backend
+
+The role supports two MCP implementations:
+
+- `nextcloud_mcp_backend: existing` (default) keeps the Nextcloud `mcp_connector`
+  ExApp as the backend.
+- `nextcloud_mcp_backend: standalone` deploys
+  [`nextcloud-mcp-server`](https://github.com/cbcoutinho/nextcloud-mcp-server)
+  behind Traefik at `https://mcp.<app_domain_name>/mcp`.
+
+### Open WebUI configuration: existing connector
+
+In Open WebUI, add the following MCP server under **Admin → Tools → MCP Servers**
+when `nextcloud_mcp_backend` is `existing`:
+
+| Setting | Value |
+|---|---|
+| Type | MCP Streamable HTTP |
+| Username | Nextcloud |
+| Connection ID | `nextcloud` |
+| Description | Nextcloud MCP Connector |
+| URL | `https://<app_domain_name>/exapps/mcp_connector/mcp` |
+| Authentication | Oauth 2.1 |
+
+### Open WebUI configuration: standalone server
+
+When `nextcloud_mcp_backend` is `standalone`, add a separate MCP connection in
+Open WebUI (**Admin → Tools → MCP Servers**). Do not reuse the existing
+connector's URL or OAuth scope values:
+
+| Setting | Value |
+|---|---|
+| Type | MCP Streamable HTTP |
+| Name | Nextcloud (standalone) |
+| Connection ID | `nextcloud-std` |
+| Description | Standalone Nextcloud MCP server |
+| URL | `https://mcp.<app_domain_name>/mcp` |
+| Authentication | OAuth 2.1 |
+| OAuth scopes | Request only the Nextcloud app scopes you want to enable, such as `files.read`, `notes.read`, or `calendar.read`; add write scopes only when needed. `offline_access` is optional for refresh tokens. |
+
+Save the connection and authorize it when Open WebUI prompts you. The browser
+flow authenticates you with the configured OIDC provider. On first use, the
+MCP server may also ask you to complete Nextcloud Login Flow v2 to create a
+revocable app password for your own Nextcloud account. Open WebUI does not need
+your Nextcloud password or app password.
+
+The scope names differ from the existing connector. Available scope names are
+published by the standalone server at
+`https://mcp.<app_domain_name>/.well-known/oauth-protected-resource/mcp`
+in `scopes_supported`. The OIDC client configured on Nextcloud must be allowed
+to issue the requested app scopes (as well as `openid`, `profile`, and `email`);
+otherwise authentication may succeed while the server hides tools whose
+scopes were not granted.
+
+The standalone mode uses Nextcloud Login Flow v2 and a dedicated static OIDC
+client for the server itself. 
+
+The [IA role](../ia/README.md) deploys the standalone server and automatically
+generates and persists its token-encryption key.
+
+Switch the backend in `inventories/group_vars/all.yml`:
+
+```yaml
+nextcloud_mcp_backend: standalone
+```
+
+Then configure Open WebUI under **Admin → Tools → MCP Servers** to use the
+selected endpoint. The role does not edit Open WebUI's saved MCP connections,
+so update that URL in the UI when switching backends. Selecting `standalone`
+disables the existing `mcp_connector` ExApp; selecting `existing` removes the
+standalone container and re-enables the ExApp. Neither mode deletes the other
+backend's persistent data.
+
 ## Timeout Configuration for AI/LLM Tasks
 
 This role configures extended timeouts (3600s / 1 hour) to support long-running AI and LLM tasks:

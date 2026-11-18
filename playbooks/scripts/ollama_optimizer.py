@@ -63,20 +63,22 @@ def estimate_weight_vram(model_name, ollama_url):
     print("[!] Unknown model size. Falling back to 7B Q4 estimate.")
     return 7 * 10**9 * QUANTIZATION_BYTES["q4_K_M"]
 
-def calculate_max_context(available_vram_bytes, weight_vram_bytes, safety_margin_bytes):
-    """Calculates max context for FP16 and Q8_0."""
-    usable_vram = available_vram_bytes - weight_vram_bytes - safety_margin_bytes
-    
-    if usable_vram <= 0:
-        return None, None
+def calculate_max_context(target_bytes, weight_vram_bytes, bytes_per_token, margin_bytes):
+    usable = target_bytes - weight_vram_bytes - margin_bytes
+    if usable <= 0 or bytes_per_token <= 0:
+        return None
+    return int(usable / bytes_per_token)
 
-    # FP16
-    max_ctx_fp16 = int(usable_vram / BYTES_PER_TOKEN_FP16)
-    
-    # Q8_0
-    max_ctx_q8 = int(usable_vram / BYTES_PER_TOKEN_Q8_0)
-    
-    return max_ctx_fp16, max_ctx_q8
+def measure_bytes_per_token(model_name, ollama_url):
+    """Déduit le coût réel du KV cache à partir d'un modèle déjà chargé."""
+    r = requests.get(f"{ollama_url}/api/ps").json()
+    for m in r.get("models", []):
+        if m["name"].startswith(model_name):
+            size_vram = m["size_vram"]          # poids en VRAM
+            ctx = m["context_length"]           # ex: 262144
+            # Rechargez avec 2 tailles de contexte différentes et faites la
+            # différence de size_vram → coût exact par token.
+            ...
 
 def create_model(model_name, modelfile_content, container_name="ia-ollama-1"):
     """Creates a new Ollama model by executing the ollama CLI inside the

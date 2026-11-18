@@ -67,6 +67,9 @@ RUN echo 'pm.max_children = {{ nextcloud_php_fpm_pm_max_children }}' >> /usr/loc
 # Keep preview generation enabled, but avoid overlap and cap runtime.
 RUN echo '{{ nextcloud_preview_pregenerate_cron }}' >> /var/spool/cron/crontabs/www-data
 
+# Weekly music library rescan (default: Sunday 05:00), serialized by a lock.
+RUN echo '{{ nextcloud_music_scan_cron }} /bin/sh /music_scan.sh' >> /var/spool/cron/crontabs/www-data
+
 RUN mkdir -p \
     /var/log/supervisord \
     /var/run/supervisord \
@@ -74,6 +77,7 @@ RUN mkdir -p \
 
 COPY supervisord.conf /
 COPY fulltextsearch.sh /
+COPY music_scan.sh /
 
 ENV NEXTCLOUD_UPDATE=1
 

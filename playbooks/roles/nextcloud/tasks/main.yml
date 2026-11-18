@@ -40,6 +40,28 @@
     path: "{{ stacks_base_path }}/nc"
     state: directory
     mode: u=g=rwx,o=rx
+
+- name: Validate selected Nextcloud MCP backend
+  ansible.builtin.assert:
+    that:
+      - nextcloud_mcp_backend in ['existing', 'standalone']
+    fail_msg: "nextcloud_mcp_backend must be either 'existing' or 'standalone'."
+
+- name: Select Nextcloud ExApps for the configured MCP backend
+  ansible.builtin.set_fact:
+    nextcloud_exapp_effective_list: >-
+      {{
+        nextcloud_exapp_list
+        | rejectattr('name', 'in', excluded_exapp_names)
+        | list
+      }}
+  vars:
+    excluded_exapp_names: >-
+      {{
+        (['mcp_connector'] if nextcloud_mcp_backend == 'standalone' else [])
+        + (['context_chat_backend', 'context_agent'] if not exapp_context_apps_enabled else [])
+      }}
+
 - name: Retrive secret
   ansible.builtin.include_tasks: "retrieve_password.yml"
   vars:
@@ -116,6 +138,8 @@
       dest: supervisord.conf
     - src: nextcloud/fulltextsearch.sh
       dest: fulltextsearch.sh
+    - src: nextcloud/music_scan.sh
+      dest: music_scan.sh
     - src: elasticsearch.yml
       dest: elasticsearch.yml
 - name: PostgreSQL upgrade check and backup for Nextcloud
@@ -134,7 +158,8 @@
   ansible.builtin.template:
     src: docker-compose.yml
     dest: "{{ stacks_base_path }}/nc/docker-compose.yml"
-    mode: u=rw,g=o=r
+    mode: "{{ 'u=rw,g=,o=' if nextcloud_mcp_backend == 'standalone' else 'u=rw,g=o=r' }}"
+  no_log: "{{ nextcloud_mcp_backend == 'standalone' }}"
 
 - name: Try to pull latest images (continue on failure)
   community.docker.docker_compose_v2:
@@ -157,6 +182,12 @@
     build: "always"
     state: "{{ 'restarted' if (nginx1 is changed or nginx2 is changed) else 'present' }}"
     project_src: "{{ stacks_base_path }}/nc"
+
+- name: Remove standalone MCP container when the existing backend is selected
+  community.docker.docker_container:
+    name: nc-nextcloud-mcp-1
+    state: absent
+  when: nextcloud_mcp_backend == 'existing'
 
 - name: Copy Elasticsearch setup script
   ansible.builtin.copy:
@@ -329,6 +360,7 @@
   register: volume_create
   changed_when: volume_create.rc == 0
   failed_when: false
+  when: exapp_context_apps_enabled
 
 # Ensure the embedding model is present before ExApp registration.
 # bge-m3 is pulled here (not in the ia role) since it is only needed by Nextcloud.
@@ -347,6 +379,7 @@
   until: nc_embedding_pull.status == 200
   retries: 3
   delay: 10
+  when: exapp_context_apps_enabled
 
 - name: List registered ExApps
   ansible.builtin.command:
@@ -362,6 +395,15 @@
   changed_when: false
   failed_when: false
 
+- name: Disable the existing MCP ExApp when standalone backend is selected
+  ansible.builtin.command:
+    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app_api:app:disable mcp_connector'
+  when:
+    - nextcloud_mcp_backend == 'standalone'
+    - nc_enabled_app_list.rc == 0
+    - "'mcp_connector' in nc_enabled_app_list.stdout"
+  changed_when: true
+
 - name: Warn when exapps look stale (registered but disabled)
   ansible.builtin.debug:
     msg: >-
@@ -369,7 +411,8 @@
       a stale state. Deployment keeps normal mode and skips force cleanup.
   loop: >-
     {{
-      nextcloud_exapp_list
+      nextcloud_exapp_effective_list
+      | rejectattr('name', 'equalto', 'mcp_connector')
       | selectattr('name', 'in', appapi_exapp_list.stdout | default(''))
       | rejectattr('name', 'in', nc_enabled_app_list.stdout | default(''))
       | list
@@ -387,7 +430,7 @@
   register: register_exapp
   loop: >-
     {{
-      nextcloud_exapp_list
+      nextcloud_exapp_effective_list
       | rejectattr('name', 'in', appapi_exapp_list.stdout | default(''))
       | list
     }}
@@ -405,12 +448,13 @@
   register: nc_ia_connect
   changed_when: nc_ia_connect.rc == 0
   failed_when: false
+  when: exapp_context_apps_enabled
 
 - name: Enable exapps
   ansible.builtin.command:
     cmd: 'docker exec --user www-data nc-nextcloud-1 php occ -n app_api:app:enable {{ item.name }}'
   register: enable_exapp
-  loop: "{{ nextcloud_exapp_list }}"
+  loop: "{{ nextcloud_exapp_effective_list }}"
   changed_when: "'already enabled' not in (enable_exapp.stdout | lower)"
   failed_when: "enable_exapp.rc != 0 and 'already enabled' not in (enable_exapp.stdout | lower)"
 
@@ -419,6 +463,7 @@
   ansible.builtin.command:
     cmd: 'docker exec --user www-data nc-nextcloud-1 php occ app:install context_chat --no-interaction --no-warnings'
     creates: '{{ docker_volumes_path }}/nextcloud-www/apps/context_chat'
+  when: exapp_context_apps_enabled
 
 - name: Configure context_chat request timeout
   ansible.builtin.command:
@@ -428,6 +473,7 @@
   register: context_chat_timeout
   failed_when: false
   changed_when: "'set to' in context_chat_timeout.stdout or 'Config value' in context_chat_timeout.stdout"
+  when: exapp_context_apps_enabled
 
 - name: Add missing db objects
   ansible.builtin.command:
