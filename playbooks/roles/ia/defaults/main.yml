@@ -12,6 +12,8 @@ ollama_image: "ollama/ollama"
 ollama_version: "latest"
 ollama_intel_image: "intelanalytics/ipex-llm-inference-cpp-xpu"
 ollama_intel_version: "latest"
+qdrant_image: "qdrant/qdrant"
+qdrant_version: "latest"
 speaches_image: "ghcr.io/speaches-ai/speaches"
 speaches_cpu_version: "latest-cpu"
 speaches_cuda_version: "latest-cuda"
@@ -77,13 +79,11 @@ ollama_embeddings_num_threads: >-
 # Exposed IA runtime endpoints for cross-role integrations (e.g. hassio)
 ia_openai_base_url: "http://127.0.0.1:8080/v1"
 ia_embeddings_base_url: "http://127.0.0.1:8082"
-ia_ollama_agent_model: "gemma4:e4b"
+ia_ollama_agent_model: "gemma4:26b"
 ia_ollama_embedding_model: "nomic-embed-text-v2-moe"
 ia_chromadb_host: "127.0.0.1"
 ia_chromadb_port: 8001
 ia_speaches_openai_base_url: "http://127.0.0.1:8000/v1"
-
-webui_secret_key: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
 
 ollama_memory_limit_ratio: 0.90
 ollama_min_memory_mb: 4096
@@ -143,3 +143,12 @@ ollama_num_threads: >-
 
 IA_openai_api_key: ""
 IA_openai_api_url: "https://api.mistral.ai/v1"
+
+nextcloud_mcp_image: "ghcr.io/cbcoutinho/nextcloud-mcp-server"
+nextcloud_mcp_version: "latest"
+nextcloud_mcp_oidc_client_id: ""
+nextcloud_mcp_oidc_client_secret: ""
+nextcloud_mcp_allowed_clients:
+  - nextcloud-std|https://ia.{{ app_domain_name }}/oauth/clients/mcp:nextcloud-std/callback
+nextcloud_mcp_allowed_mgmt_client: "{{ nextcloud_mcp_oidc_client_id }}"
+nextcloud_mcp_encryption_seed: ""

@@ -338,17 +338,22 @@ services:
     command: --oauth
     environment:
       NEXTCLOUD_HOST: "https://{{ app_domain_name }}"
+      OIDC_DISCOVERY_URL: "https://leducd.duckdns.org/index.php/.well-known/openid-configuration"
       MCP_DEPLOYMENT_MODE: "login_flow"
       TOKEN_ENCRYPTION_KEY: "{{ ia_nextcloud_mcp_token_encryption_key }}"
       TOKEN_STORAGE_DB: "/app/data/tokens.db"
       NEXTCLOUD_MCP_SERVER_URL: "https://mcp.{{ app_domain_name }}"
       NEXTCLOUD_PUBLIC_ISSUER_URL: "https://{{ app_domain_name }}"
-      # NEXTCLOUD_PUBLIC_URL: "https://{{ app_domain_name }}"
-      # NEXTCLOUD_RESOURCE_URI: "https://{{ app_domain_name }}"
       NEXTCLOUD_OIDC_CLIENT_ID: {{ nextcloud_mcp_oidc_client_id | to_json }}
       NEXTCLOUD_OIDC_CLIENT_SECRET: {{ nextcloud_mcp_oidc_client_secret | replace('$', '$$') | to_json }}
       ALLOWED_MCP_CLIENTS: {{ nextcloud_mcp_allowed_clients | join(',') | replace('$', '$$') | to_json }}
       ALLOWED_MGMT_CLIENT: {{ nextcloud_mcp_allowed_mgmt_client | replace('$', '$$') | to_json }}
+      ENABLE_SEMANTIC_SEARCH: true
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: nextcloud_content
+      OLLAMA_BASE_URL: http://ollama-embeddings-metrics:8082
+      OLLAMA_EMBEDDING_MODEL: "{{ ia_ollama_embedding_model }}"
+      WEBHOOK_SECRET: {{ nextcloud_mcp_webhook_secret }}
     restart: unless-stopped
     volumes:
       - nextcloud-mcp-data:/app/data
@@ -376,6 +381,18 @@ services:
       retries: 3
       start_period: 30s
   {% endif %}
+  qdrant:
+    image: {{ qdrant_image }}:{{ qdrant_version }}
+    restart: unless-stopped
+    environment:
+      - QDRANT__STORAGE__PATH=/qdrant/storage
+      - QDRANT__SERVICE__GRPC_PORT=6334
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__LOG_LEVEL=info
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks:
+      - network
 
 volumes:
   ollama:
@@ -414,6 +431,12 @@ volumes:
       type: none
       o: bind
       device: "{{ docker_volumes_path }}/nextcloud-mcp-data"
+  qdrant-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: "{{ docker_volumes_path }}/qdrant-data"
 
 networks:
   network:

@@ -19,6 +19,215 @@
     - ollama-embeddings
     - open-webui
     - chromadb
+    - qdrant-data
+
+
+- name: Check if Nextcloud MCP OIDC secrets already exist
+  become: "{{ not local_safe }}"
+  ansible.builtin.stat:
+    path: "{{ docker_volumes_path }}/secrets/nextcloud_mcp_oidc_client_id"
+  register: ia_nextcloud_oidc_secrets_stat
+
+- name: Create Nextcloud MCP OIDC client (if not already provided)
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - --user
+      - www-data
+      - nc-nextcloud-1
+      - php
+      - occ
+      - oidc:create
+      - Nextcloud MCP Server
+      - "https://mcp.{{ app_domain_name }}/oauth/callback"
+      - --type=confidential
+      - "--resource_url=https://mcp.{{ app_domain_name }}/mcp"
+  register: ia_nextcloud_mcp_oidc_create_result
+  when:
+    - nextcloud_mcp_backend == 'standalone'
+    - nextcloud_mcp_oidc_client_id | length == 0
+    - not ia_nextcloud_oidc_secrets_stat.stat.exists
+  changed_when: ia_nextcloud_mcp_oidc_create_result.rc == 0
+  failed_when: false
+  no_log: true
+
+- name: Validate generated Nextcloud MCP OIDC credentials
+  ansible.builtin.assert:
+    that:
+      - ia_nextcloud_mcp_oidc_create_result.rc == 0
+      - ia_nextcloud_mcp_oidc_create_result.stdout is regex('"client_id"\s*:\s*".+"')
+      - ia_nextcloud_mcp_oidc_create_result.stdout is regex('"client_secret"\s*:\s*".+"')
+    fail_msg: >-
+      The H2CK OIDC app failed to create the MCP client or returned invalid
+      credentials. Verify the app is installed and the oidc:create command is
+      supported.
+  when:
+    - nextcloud_mcp_backend == 'standalone'
+    - nextcloud_mcp_oidc_client_id | length == 0
+    - not ia_nextcloud_oidc_secrets_stat.stat.exists
+
+- name: Save Nextcloud MCP OIDC credentials to secrets directory
+  become: "{{ not local_safe }}"
+  ansible.builtin.copy:
+    content: "{{ item.content }}"
+    dest: "{{ docker_volumes_path }}/secrets/{{ item.name }}"
+    mode: '0600'
+  no_log: true
+  loop:
+    - name: nextcloud_mcp_oidc_client_id
+      content: "{{ (ia_nextcloud_mcp_oidc_create_result.stdout | from_json).client_id }}"
+    - name: nextcloud_mcp_oidc_client_secret
+      content: "{{ (ia_nextcloud_mcp_oidc_create_result.stdout | from_json).client_secret }}"
+  when:
+    - nextcloud_mcp_backend == 'standalone'
+    - nextcloud_mcp_oidc_client_id | length == 0
+    - ia_nextcloud_mcp_oidc_create_result.stdout is defined
+
+- name: Retrive secret
+  ansible.builtin.include_tasks: "retrieve_password.yml"
+  vars:
+    secrets:
+      - webui_secret_key
+      - nextcloud_mcp_oidc_client_id
+      - nextcloud_mcp_oidc_client_secret
+      - nextcloud_mcp_webhook_secret
+
+- name: Validate standalone Nextcloud MCP OIDC credentials
+  ansible.builtin.assert:
+    that:
+      - nextcloud_mcp_oidc_client_id | length > 0
+      - nextcloud_mcp_oidc_client_secret | length > 0
+      - nextcloud_mcp_oidc_client_id != 'NOT_FOUND'
+      - nextcloud_mcp_oidc_client_secret != 'NOT_FOUND'
+    fail_msg: >-
+      Set or generate valid nextcloud_mcp_oidc_client_id and
+      nextcloud_mcp_oidc_client_secret for the standalone MCP server.
+  when: nextcloud_mcp_backend == 'standalone'
+
+- name: List clients registered in the H2CK OIDC app
+  become: "{{ not local_safe }}"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - --user
+      - www-data
+      - nc-nextcloud-1
+      - php
+      - occ
+      - oidc:list
+  register: ia_nextcloud_mcp_oidc_clients
+  changed_when: false
+  failed_when: false
+  no_log: true
+  when: nextcloud_mcp_backend == 'standalone'
+
+- name: Validate H2CK OIDC app client registration
+  ansible.builtin.assert:
+    that:
+      - ia_nextcloud_mcp_oidc_clients.rc == 0
+      - ia_nextcloud_mcp_oidc_clients.stdout is regex('(?s)^\s*\[.*\]\s*$')
+    fail_msg: >-
+      Could not read the client list from the H2CK OIDC app. Verify that the
+      app is installed and its oidc:list command returns JSON.
+  when: nextcloud_mcp_backend == 'standalone'
+
+- name: Check whether the MCP client exists in the H2CK OIDC app
+  ansible.builtin.set_fact:
+    ia_nextcloud_mcp_oidc_client_found: >-
+      {{
+        nextcloud_mcp_oidc_client_id | length > 0
+        and nextcloud_mcp_oidc_client_secret | length > 0
+        and (
+          ia_nextcloud_mcp_oidc_clients.stdout | from_json
+          | selectattr('client_id', 'equalto', nextcloud_mcp_oidc_client_id)
+          | list | length
+        ) > 0
+      }}
+  when: nextcloud_mcp_backend == 'standalone'
+
+- name: Re-enroll Nextcloud MCP OIDC client when it is missing
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - --user
+      - www-data
+      - nc-nextcloud-1
+      - php
+      - occ
+      - oidc:create
+      - Nextcloud MCP Server
+      - "https://mcp.{{ app_domain_name }}/oauth/callback"
+      - --type=confidential
+      - "--resource_url=https://mcp.{{ app_domain_name }}/mcp"
+  register: ia_nextcloud_mcp_oidc_reenroll_result
+  when:
+    - nextcloud_mcp_backend == 'standalone'
+    - not ia_nextcloud_mcp_oidc_client_found
+  changed_when: ia_nextcloud_mcp_oidc_reenroll_result.rc == 0
+  failed_when: false
+  no_log: true
+
+- name: Validate re-enrolled Nextcloud MCP OIDC credentials
+  ansible.builtin.assert:
+    that:
+      - ia_nextcloud_mcp_oidc_reenroll_result.rc == 0
+      - ia_nextcloud_mcp_oidc_reenroll_result.stdout is regex('"client_id"\s*:\s*".+"')
+      - ia_nextcloud_mcp_oidc_reenroll_result.stdout is regex('"client_secret"\s*:\s*".+"')
+    fail_msg: >-
+      The H2CK OIDC app could not re-enroll the Nextcloud MCP client.
+      Verify the app is installed and the oidc:create command is supported.
+  when:
+    - nextcloud_mcp_backend == 'standalone'
+    - not ia_nextcloud_mcp_oidc_client_found
+
+- name: Save re-enrolled Nextcloud MCP OIDC credentials
+  become: "{{ not local_safe }}"
+  ansible.builtin.copy:
+    content: "{{ item.content }}"
+    dest: "{{ docker_volumes_path }}/secrets/{{ item.name }}"
+    mode: '0600'
+  no_log: true
+  loop:
+    - name: nextcloud_mcp_oidc_client_id
+      content: "{{ (ia_nextcloud_mcp_oidc_reenroll_result.stdout | from_json).client_id }}"
+    - name: nextcloud_mcp_oidc_client_secret
+      content: "{{ (ia_nextcloud_mcp_oidc_reenroll_result.stdout | from_json).client_secret }}"
+  when:
+    - nextcloud_mcp_backend == 'standalone'
+    - not ia_nextcloud_mcp_oidc_client_found
+
+- name: Use re-enrolled Nextcloud MCP OIDC credentials
+  ansible.builtin.set_fact:
+    nextcloud_mcp_oidc_client_id: "{{ (ia_nextcloud_mcp_oidc_reenroll_result.stdout | from_json).client_id }}"
+    nextcloud_mcp_oidc_client_secret: "{{ (ia_nextcloud_mcp_oidc_reenroll_result.stdout | from_json).client_secret }}"
+  when:
+    - nextcloud_mcp_backend == 'standalone'
+    - not ia_nextcloud_mcp_oidc_client_found
+
+- name: Retrieve or generate the Nextcloud MCP encryption seed
+  ansible.builtin.include_tasks: "retrieve_password.yml"
+  vars:
+    secrets:
+      - nextcloud_mcp_encryption_seed
+  when: nextcloud_mcp_backend == 'standalone'
+
+- name: Derive the Fernet token encryption key
+  ansible.builtin.set_fact:
+    ia_nextcloud_mcp_token_encryption_key: "{{ nextcloud_mcp_encryption_seed | b64encode }}"
+  when: nextcloud_mcp_backend == 'standalone'
+
+- name: Create persistent data directory for Nextcloud MCP
+  become: "{{ not local_safe }}"
+  ansible.builtin.file:
+    path: "{{ docker_volumes_path }}/nextcloud-mcp-data"
+    state: directory
+    owner: "1000"
+    group: "1000"
+    mode: u=rwx,g=rx,o=
+  when: nextcloud_mcp_backend == 'standalone'
 
 - name: Create Speaches cache directory (ubuntu-owned)
   become: "{{ not local_safe }}"

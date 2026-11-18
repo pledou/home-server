@@ -1,0 +1,6 @@
+{
+  "pendantBackgroundTerminals": true,
+  "defaultTools": [
+    "+codemode"
+  ]
+}
