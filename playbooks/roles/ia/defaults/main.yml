@@ -12,6 +12,8 @@ ollama_image: "ollama/ollama"
 ollama_version: "latest"
 ollama_intel_image: "intelanalytics/ipex-llm-inference-cpp-xpu"
 ollama_intel_version: "latest"
+qdrant_image: "qdrant/qdrant"
+qdrant_version: "latest"
 speaches_image: "ghcr.io/speaches-ai/speaches"
 speaches_cpu_version: "latest-cpu"
 speaches_cuda_version: "latest-cuda"
@@ -77,7 +79,7 @@ ollama_embeddings_num_threads: >-
 # Exposed IA runtime endpoints for cross-role integrations (e.g. hassio)
 ia_openai_base_url: "http://127.0.0.1:8080/v1"
 ia_embeddings_base_url: "http://127.0.0.1:8082"
-ia_ollama_agent_model: "gemma4:e4b"
+ia_ollama_agent_model: "gemma4:26b"
 ia_ollama_embedding_model: "nomic-embed-text-v2-moe"
 ia_chromadb_host: "127.0.0.1"
 ia_chromadb_port: 8001

@@ -65,8 +65,9 @@ nextcloud_defaultapp_list:
   - twofactor_webauthn
   - twofactor_totp
   - twofactor_email
+  - astrolabe
 
-nextcloud_integration_openai_url: "http://webui-api-proxy:8080/v1"
+nextcloud_integration_openai_url: "http://webui-api-proxy:8080/api/"
 nextcloud_integration_openai_default_completion_model_id: "{{ ia_ollama_agent_model }}"
 nextcloud_integration_openai_request_timeout: 3600
 nextcloud_integration_openai_max_tokens: 768

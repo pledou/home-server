@@ -73,6 +73,7 @@
       - nc_elastic_secret
       - AppAPISecret
       - turn_secret
+      - nextcloud_mcp_webhook_secret
 
 - name: Create nextcloud provisionning directories
   become: "{{ not local_safe }}"
@@ -403,6 +404,15 @@
     - nc_enabled_app_list.rc == 0
     - "'mcp_connector' in nc_enabled_app_list.stdout"
   changed_when: true
+
+- name: Configure astrolabe app when standalone mcp bakend is selected
+  ansible.builtin.command:
+    cmd: 'docker exec --user-data nc-nextcloud-1 php php occ config:system:set {{ item }}'
+  when: nextcloud_mcp_backend == 'standalone'
+  changed_when: true
+  loop:
+    - mcp_server_url --value="https://mcp.{{ app_domain_name }}"
+    - mcp_webhook_secret --value="{{ nextcloud_mcp_webhook_secret }}"
 
 - name: Warn when exapps look stale (registered but disabled)
   ansible.builtin.debug:

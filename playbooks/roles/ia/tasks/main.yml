@@ -19,6 +19,7 @@
     - ollama-embeddings
     - open-webui
     - chromadb
+    - qdrant-data
 
 
 - name: Check if Nextcloud MCP OIDC secrets already exist
@@ -90,6 +91,7 @@
       - webui_secret_key
       - nextcloud_mcp_oidc_client_id
       - nextcloud_mcp_oidc_client_secret
+      - nextcloud_mcp_webhook_secret
 
 - name: Validate standalone Nextcloud MCP OIDC credentials
   ansible.builtin.assert:
