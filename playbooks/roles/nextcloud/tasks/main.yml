@@ -407,7 +407,7 @@
 
 - name: Configure astrolabe app when standalone mcp bakend is selected
   ansible.builtin.command:
-    cmd: 'docker exec --user-data nc-nextcloud-1 php php occ config:system:set {{ item }}'
+    cmd: 'docker exec --user www-data nc-nextcloud-1 php occ config:system:set {{ item }}'
   when: nextcloud_mcp_backend == 'standalone'
   changed_when: true
   loop:
