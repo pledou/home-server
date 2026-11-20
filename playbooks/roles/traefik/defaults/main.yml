@@ -2,7 +2,7 @@
 ---
 # Docker image versions for Traefik role
 traefik_image: "traefik"
-traefik_version: "v3.7"
+traefik_version: "v3"
 unbound_image: "alpinelinux/unbound"
 unbound_version: "latest"
 unbound_offline_fallback_enabled: true
