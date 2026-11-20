@@ -91,7 +91,6 @@
       "matchUpdateTypes": [
         "major"
       ],
-      "prCreation": "not-pinned",
       "dependencyDashboardApproval": true,
       "automerge": false
     }
