@@ -22,14 +22,13 @@
   ],
   "packageRules": [
     {
-      "description": "Allow non-major updates to create PRs immediately",
-      "excludeDepNames": [],
+      "description": "Non-major updates (only relevant for tags that include minor versions, e.g. traefik v3) - open PR, no auto-merge",
       "matchUpdateTypes": [
         "minor",
         "patch"
       ],
-      "automerge": false,
-      "prCreation": "immediate"
+      "prCreation": "immediate",
+      "automerge": false
     },
     {
       "description": "Group all monitoring role updates",
@@ -88,11 +87,13 @@
       "groupName": "ai services"
     },
     {
-      "description": "Separate major updates",
+      "description": "Separate major updates - require manual approval, never auto-merge",
       "matchUpdateTypes": [
         "major"
       ],
-      "dependencyDashboardApproval": true
+      "prCreation": "not-pinned",
+      "dependencyDashboardApproval": true,
+      "automerge": false
     }
   ]
 }

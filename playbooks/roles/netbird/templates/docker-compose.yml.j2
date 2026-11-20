@@ -26,6 +26,7 @@ services:
       # pages. Paired with NB_PROXY_PRIVATE=true on the proxy side.
       #NETBIRD_AGENT_NETWORK_ONLY=true
     labels:
+      com.centurylinklabs.watchtower.enable: "true"
       traefik.enable: "true"
       traefik.docker.network: "traefik_backend"
       traefik.constraint-label: "traefik_backend"
@@ -50,6 +51,7 @@ services:
       - "{{ docker_volumes_path }}/netbird/config/config.yaml:/etc/netbird/config.yaml"
     command: ["--config", "/etc/netbird/config.yaml"]
     labels:
+      com.centurylinklabs.watchtower.enable: "true"
       traefik.enable: "true"
       traefik.docker.network: "traefik_backend"
       traefik.constraint-label: "traefik_backend"
