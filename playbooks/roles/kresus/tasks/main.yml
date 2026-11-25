@@ -63,6 +63,15 @@
     state: present
     project_src: "{{ stacks_base_path }}/kresus"
 
+- name: Provision Kresus users
+  ansible.builtin.command: >
+    docker exec -w /home/user kresus-kresus-1 ./app/bin/kresus
+    create:user "{{ item.login }}"
+    {{ '--admin' if item.admin | default(false) else '' }}
+  loop: "{{ kresus_users | default([]) }}"
+  when: kresus_http_header_login | default(false)
+  failed_when: false
+
 - name: PostgreSQL restore after upgrade for Kresus k-db
   ansible.builtin.include_tasks: "tasks/restore_postgres_service.yml"
   vars:

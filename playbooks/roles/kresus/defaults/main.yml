@@ -7,3 +7,20 @@ apprise_image: "caronc/apprise"
 apprise_version: "1.5"
 kresus_image: "bnjbvr/kresus"
 kresus_version: "0.26.0"
+
+# Authentication mode:
+#   false (default): Kresus runs in single-user mode (first created user is
+#     admin, no SSO header). No users need to be provisioned.
+#   true: Kresus trusts the authentik HTTP header and users are provisioned
+#     from the kresus_users list below.
+kresus_http_header_login: false
+kresus_user_login_http_header: "X-authentik-username"
+
+# Users to provision when kresus_http_header_login is true.
+# Each entry: login (required), admin (default: false).
+# Example:
+#   kresus_users:
+#     - login: "user@example.com"
+#       admin: true
+#     - login: "family@example.com"
+kresus_users: []
