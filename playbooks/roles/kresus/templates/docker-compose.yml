@@ -68,6 +68,9 @@ services:
       - KRESUS_EMAIL_PORT={{ kresus_email_port }}
       - KRESUS_EMAIL_USER={{ kresus_email_user }}
       - KRESUS_EMAIL_PASSWORD={{ kresus_email_password }}
+{%- if kresus_http_header_login | default(false) %}
+      - KRESUS_USER_LOGIN_HTTP_HEADER={{ kresus_user_login_http_header | default('X-authentik-username') }}
+{%- endif %}
     depends_on:
       - k-db
       - apprise
